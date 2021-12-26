@@ -1,0 +1,13 @@
+pydantic==1.8.2
+requests==2.26.0
+uvicorn==0.16.0
+fastapi==0.70.1
+python-dotenv==0.19.1
+tronpy==0.2.6
+
+
+
+
+
+
+

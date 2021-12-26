@@ -1,0 +1,2 @@
+class BitcoinNodeException(Exception):
+    pass

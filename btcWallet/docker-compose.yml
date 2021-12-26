@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  btc_api:
+    build:
+      context: api/
+      dockerfile: Dockerfile
+    container_name: btc_api
+    command: python app.py
+    env_file:
+      - ./.env
+    ports:
+      - "81:5000"
+    expose:
+      - 81
+    networks:
+      - btc_net
+    volumes:
+      - ./files:/home/app/files
+    logging:
+      options:
+        max-size: 100m
+
+  btc_demon:
+    build:
+      context: transactions_demon/
+      dockerfile: Dockerfile
+    container_name: btc_demon
+    command: /usr/bin/supervisord
+    env_file:
+      - ./.env
+    networks:
+      - btc_net
+    volumes:
+      - ./files:/home/app/files
+    logging:
+      options:
+        max-size: 100m
+
+
+networks:
+  btc_net:
+    driver: bridge

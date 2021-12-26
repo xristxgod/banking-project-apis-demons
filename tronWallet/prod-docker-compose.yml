@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  solana_api:
+    build:
+      context: api/
+      dockerfile: Dockerfile
+    container_name: tron_api
+    command: python app.py
+    env_file:
+      - ./.env
+    expose:
+      - 5000
+    networks:
+      - tron_net
+    logging:
+      options:
+        max-size: 100m
+
+  solana_demon:
+    build:
+      context: transactions_demon/
+      dockerfile: Dockerfile
+    container_name: tron_demon
+    command: python run_demon.py
+    env_file:
+      - ./.env
+    expose:
+      - 8080
+    networks:
+      - tron_net
+    logging:
+      options:
+        max-size: 100m
+
+
+networks:
+  solana_net:
+    driver: bridge
