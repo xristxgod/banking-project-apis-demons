@@ -1,41 +1,49 @@
 import asyncio
-import math
 import os
 import uuid
-import time
 import json
 import datetime as dt
-from time import time as timer
+from time import time as timer, sleep
 from decimal import Decimal
-from typing import List, Optional
-import web3.exceptions
+from typing import List
 from web3 import Web3, HTTPProvider, AsyncHTTPProvider
 from web3.eth import AsyncEth
 from .external_data.database import DB
 from .external_data.rabbit_mq import RabbitMQ
 from .utils import convert_time
-from config import ERROR, NOT_SEND, LAST_BLOCK, logger
-
+from config import ERROR, NOT_SEND, LAST_BLOCK, logger, NODE_URL, BASE_DIR
 
 ERC20_ABI = json.loads('[{"constant": true, "inputs": [], "name": "name", "outputs": [{"name": "", "type": "string"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_spender", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "approve", "outputs": [{"name": "success", "type": "bool"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_from", "type": "address"}, {"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transferFrom", "outputs": [{"name": "success", "type": "bool"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [{"name": "", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "owner", "outputs": [{"name": "", "type": "address"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "string"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transfer", "outputs": [], "payable": false, "type": "function"}, {"constant": true, "inputs": [{"name": "", "type": "address"}, {"name": "", "type": "address"}], "name": "allowance", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}]')
 
 
-class TransactionsDemonConfig:
+class TransactionsDemon:
     db: DB = DB()
     rabbit: RabbitMQ = RabbitMQ()
-    provider: HTTPProvider = HTTPProvider(
-        os.environ.get("NodeURL", 'https://mainnet.infura.io/v3/2a8e1d2dafe9470d8eb6c6a115a45d17')
-    )
     abi = ERC20_ABI
 
-
-class TransactionsDemon(TransactionsDemonConfig):
     def __init__(self):
-        self.__node = Web3(self.provider)
+        self.__node = None
+        self.connect()
+        self.__contracts = {}
+        with open(f'{BASE_DIR}/tokens.txt', 'r') as f:
+            rows = f.read().split('\n')
+        self.tokens_addresses = [int(x.split('==')[-1], 0) for x in rows]
+        sleep(3)
+
+    def connect(self):
+        provider: HTTPProvider = HTTPProvider(NODE_URL)
+        self.__node = Web3(provider)
 
     def __get_block_number(self) -> int:
         """Get block number"""
-        return int(self.__node.eth.block_number)
+        while True:
+            try:
+                return int(self.__node.eth.block_number)
+            except Exception as e:
+                logger.error(e)
+                sleep(3)
+                self.connect()
+                continue
 
     def __get_block_info(self, block: int = None):
         """Returns a block with transaction"""
@@ -50,7 +58,7 @@ class TransactionsDemon(TransactionsDemonConfig):
                 last_block = int(last_block)
                 # Will wait until a new block appears
                 while block == last_block:
-                    time.sleep(2)
+                    sleep(0.3)
                     block = self.__get_block_number()
                     logger.error(f"BLOCK: {block} | LAST_BLOCK: {last_block}")
                 # If the block has increased by more than zero, then go to the next block.
@@ -65,19 +73,20 @@ class TransactionsDemon(TransactionsDemonConfig):
             if block > self.__get_block_number():
                 last_block = self.__get_block_number()
                 while block != last_block:
-                    time.sleep(2)
+                    sleep(0.3)
                     last_block = self.__get_block_number()
 
         return self.__node.eth.get_block(int(block))
 
     async def processing_transactions(self, transactions, addresses, timestamp):
         funded_trx_for_sending = []
-        async_provider: AsyncHTTPProvider = AsyncHTTPProvider(
-            os.environ.get("NodeURL", 'https://mainnet.infura.io/v3/2a8e1d2dafe9470d8eb6c6a115a45d17')
-        )
+        async_provider: AsyncHTTPProvider = AsyncHTTPProvider(NODE_URL)
         async_w3 = Web3(async_provider, modules={'eth': (AsyncEth,)}, middlewares=[])
         for tx_bytes in transactions:
-            tx = dict(await async_w3.eth.get_transaction(async_w3.toHex(tx_bytes)))
+            try:
+                tx = dict(await async_w3.eth.get_transaction(async_w3.toHex(tx_bytes)))
+            except:
+                continue
             try:
                 tx_addresses = []
                 if tx['from'] is not None:
@@ -87,21 +96,9 @@ class TransactionsDemon(TransactionsDemonConfig):
             except Exception as e:
                 logger.error(f'{e}')
                 logger.error(tx)
-                raise e
-            if 10 < len(tx["input"]) < 160:
-                try:
-                    smart_contract: dict = await self.__smart_contract_transaction(
-                        async_w3=async_w3,
-                        input_=tx["input"],
-                        contract_address=tx["to"]
-                    )
-                    tx_addresses.append(smart_contract["toAddress"])
-                except Exception:
-                    smart_contract = tx["input"]
-            elif len(tx["input"]) < 10:
-                smart_contract = {}
-            else:
-                smart_contract = tx["input"]
+                continue
+
+            contract_values = await self.processing_smart_contract(async_w3, tx, tx_addresses)
 
             #  Check the presence of such addresses in DB
             address = None
@@ -110,13 +107,21 @@ class TransactionsDemon(TransactionsDemonConfig):
                     address = tx_address
                     break
             if address is not None:
-                funded_trx_for_sending.extend(self.__packaging_for_dispatch(
-                    address=address,
-                    trx=tx,
-                    smart_contract=smart_contract,
-                    block_time=timestamp,
-                    funded_trx_for_sending=funded_trx_for_sending
-                ))
+                receipt = self.__node.eth.wait_for_transaction_receipt(tx["hash"])
+                fee = "%.18f" % (self.__node.fromWei(receipt["gasUsed"] * tx["gasPrice"], "ether"))
+                values = {
+                    "time": str(timestamp),
+                    "datetime": str(convert_time(str(timestamp)[:10])),
+                    "transactionHash": str(self.__node.toHex(tx["hash"])),
+                    "amount": str(self.__node.fromWei(tx["value"], "ether")),
+                    "fee": fee,
+                    "senders": [tx["from"]],
+                    "recipients": [tx["to"]]
+                }
+                values.update(contract_values)
+                funded_trx_for_sending.append(
+                    {"address": address, "transactions": [values]}
+                )
             else:
                 continue
         return funded_trx_for_sending
@@ -128,79 +133,79 @@ class TransactionsDemon(TransactionsDemonConfig):
         if 'transactions' in block.keys() and isinstance(block['transactions'], list):
             count_trx = len(block['transactions'])
         else:
+            logger.error(f"Block: {block['number']} is not have transactions!!")
             return
-
-        if count_trx > 15:
-            in_split = 7
-            trx_in_splits = await asyncio.gather(*[
-                self.processing_transactions(
-                    block['transactions'][right_border * in_split: (right_border + 1) * in_split],
-                    addresses, block['timestamp']
-                )
-                for right_border in range(0, math.ceil(count_trx / in_split))
-            ])
-            for tx_split in trx_in_splits:
-                funded_trx_for_sending.extend(tx_split)
-        else:
-            funded_trx_for_sending = await self.processing_transactions(
-                block['transactions'],
+        if count_trx == 0:
+            return
+        trx_in_splits = await asyncio.gather(*[
+            self.processing_transactions(
+                block['transactions'][right_border: (right_border + 1)],
                 addresses, block['timestamp']
             )
+            for right_border in range(count_trx)
+        ])
+        for tx_split in trx_in_splits:
+            funded_trx_for_sending.extend(tx_split)
         if len(funded_trx_for_sending) > 0:
-            for package in funded_trx_for_sending:
-                self.__send_to_rabbit_mq(json.dumps([
-                    {"network": "eth", "block": block['number']},
-                    package
-                ]))
+            packing = await self.__packing_before_sending(block['number'], funded_trx_for_sending)
+            for package in packing:
+                self.__send_to_rabbit_mq(json.dumps(package))
 
-    async def __smart_contract_transaction(self, async_w3, input_: str, contract_address: str) -> dict:
+    async def processing_smart_contract(self, async_w3, tx, tx_addresses):
+        if len(tx["input"]) > 10:
+            smart_contract = await self.__get_smart_contract_info(
+                async_w3=async_w3,
+                input_=tx["input"],
+                contract_address=tx["to"]
+            )
+            if smart_contract is not None:
+                tx_addresses.append(smart_contract["tokenAddress"])
+                return {
+                    "token": smart_contract['token'],
+                    "name": smart_contract['name'],
+                    "amount": smart_contract['amount'],
+                }
+        return {}
+
+    async def __get_smart_contract_info(self, async_w3, input_: str, contract_address: str) -> dict:
         """If the transaction is inside a smart counter, it will look for"""
         try:
-            contract = async_w3.eth.contract(
-                address=async_w3.toChecksumAddress(contract_address),
-                abi=self.abi
-            )
+            if int(contract_address, 0) not in self.tokens_addresses:
+                return None
+            if contract_address not in self.__contracts.keys():
+                contract_obj = self.__node.eth.contract(
+                    address=async_w3.toChecksumAddress(contract_address),
+                    abi=self.abi
+                )
+                self.__contracts.update({contract_address: {
+                    "tokenAddress": async_w3.toChecksumAddress("0x" + input_[34:74]),
+                    "token": str(contract_obj.functions.symbol().call()),
+                    "name": str(contract_obj.functions.name().call()),
+                    "decimals": int(contract_obj.functions.decimals().call())
+                }})
+            contract = self.__contracts[contract_address]
             return {
-                "toAddress": async_w3.toChecksumAddress("0x" + input_[34:74]),
-                "token": str(contract.functions.symbol().call()),
-                "amount": str(round(Decimal(int("0x" + input_[122:], 0) / 10 ** int(contract.functions.decimals().call()), ), 9))
+                "tokenAddress": contract['tokenAddress'],
+                "token": contract['token'],
+                "name": contract['name'],
+                "amount": str(round(Decimal(int("0x" + input_[-64:], 0) / 10 ** contract['decimals'], ), 9))
             }
-        except web3.exceptions.ABIFunctionNotFound:
-            return {}
-        except Exception:
-            return {}
+        except:
+            return None
 
-    def __packaging_for_dispatch(
-            self, address: str,
-            trx: dict,
-            smart_contract: dict,
-            block_time: int,
-            funded_trx_for_sending: List
-    ):
-        """Packaging for further sending to RabbitMQ"""
-        values = {
-            "time": str(block_time),
-            "datetime": str(convert_time(str(block_time)[:10])),
-            "transactionHash": str(self.__node.toHex(trx["hash"])),
-            "amount": str(self.__node.fromWei(trx["value"], "ether")),
-            "fee": str(self.__node.fromWei(trx["gas"] * trx["gasPrice"], "ether")),
-            "senders": trx["from"],
-            "recipients": trx["to"],
-            "smartContract": smart_contract
-        }
-        return self.__add_into_addresses(
-            address=address, transaction=values, funded_trx_for_sending=funded_trx_for_sending
-        )
-
-    def __add_into_addresses(self, address: str, transaction: dict, funded_trx_for_sending: List):
+    async def __packing_before_sending(self, block: int, packages: List[dict]):
         """Add a transaction to the array for the desired address"""
-        for addresses in funded_trx_for_sending:
-            if address == addresses["address"]:
-                addresses["transactions"].append(transaction)
-                break
-        else:
-            funded_trx_for_sending.append({"address": address, "transactions": [transaction]})
-        return funded_trx_for_sending
+        return [
+            [
+                {
+                    "network": f"eth__mainnet__{package['transactions'][0]['token'].lower()}"
+                    if "token" in package['transactions'][0].keys()
+                    else 'eth',
+                    "block": block
+                },
+                package
+            ] for package in packages
+        ]
 
     def __send_to_rabbit_mq(self, values: list) -> None:
         """Send collected data to queue"""
@@ -228,7 +233,7 @@ class TransactionsDemon(TransactionsDemonConfig):
             ))
 
             addresses = self.db.get_addresses()
-            await self.__script(block=block, addresses=addresses,)
+            await self.__script(block=block, addresses=addresses, )
 
             logger.error("End block: {}. Time taken: {} sec".format(
                 block['number'], str(dt.timedelta(seconds=int(timer() - start)))

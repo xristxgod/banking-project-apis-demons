@@ -8,17 +8,14 @@ load_dotenv()
 
 class DB:
     """Class for receiving data for processing"""
-    def __init__(self):
-        """Connect to database"""
-        try:
-            self.__connection = psycopg2.connect(os.getenv('DataBaseURL'))
-        except Exception as error:
-            raise RuntimeError("Error: Step 26 {}".format(error))
-        self.__cursor = self.__connection.cursor()
-
     def get_addresses(self):
-        self.__cursor.execute("""SELECT wallet FROM eth_wallet""")
-        return [int(x, 0) for x in self.__cursor.fetchall()]
-
-    def close_connection(self):
-        self.__connection.close()
+        connection = psycopg2.connect(os.getenv('DataBaseURL'))
+        cursor = connection.cursor()
+        cursor.execute("""SELECT wallet FROM eth_wallet""")
+        data = [int(x, 0) for x in cursor.fetchall()]
+        connection.close()
+        return data
+        # return [int(x, 0) for x in [
+        #     '0x6fAE511E40F582C50cD487a4999dc857a7bc3527',
+        #     '0xeC25655F2E03E3d88E376b1f10292752C4cb551A'
+        # ]]

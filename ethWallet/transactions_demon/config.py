@@ -26,3 +26,4 @@ if "last_block.txt" not in os.listdir(BASE_DIR):
         file.write("")
 
 logger = getLogger(__name__)
+NODE_URL = os.environ.get("NodeURL", 'http://127.0.0.1:8545')

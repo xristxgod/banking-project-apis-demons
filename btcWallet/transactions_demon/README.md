@@ -46,7 +46,7 @@ Search for transactions by node.
 After all the above actions have been performed, you can run the script.
 
 ```python
-from transactions_demon.src.demon import TransactionDemon
+from src.demon import TransactionDemon
 
 if __name__ == '__main__':
     TransactionDemon().start()

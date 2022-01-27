@@ -1,7 +1,9 @@
-import logging
 import requests
-from os import environ
-from config import decimal, Decimal
+from os import getenv
+
+from hdwallet import BIP44HDWallet
+
+from config import decimal, Decimal, logger
 from .method import RPCMethod
 from ..exceptions import BitcoinNodeException
 
@@ -11,14 +13,15 @@ class RPCHost:
 
     __SATOSHI_IN_BTC = 10 ** 8
 
-    __user: str = environ.get("rpcUser", 'test')
-    __password: str = environ.get("rpcPass", 'test')
-    __host: str = environ.get("rpcHost", '127.0.0.1')
-    __port: int = int(environ.get("rpcPort", 8080))
+    __user: str = getenv("rpcUser", 'test')
+    __password: str = getenv("rpcPass", 'test')
+    __host: str = getenv("rpcHost", '127.0.0.1')
+    __port: int = int(getenv("rpcPort", 8080))
+    __wallet: str = getenv("rpcWallet", "prod_wallet")
 
     def __init__(self):
         self._session = requests.Session()
-        self._url = f"http://{self.__user}:{self.__password}@{self.__host}:{self.__port}/"
+        self._url = f"http://{self.__user}:{self.__password}@{self.__host}:{self.__port}/wallet/prod_wallet"
         self._headers = {"content-type": "application/json"}
         self._session.verify = False
 
@@ -59,6 +62,9 @@ class RPCHost:
             for tx in result
         ]
 
+    def get_balance(self, address):
+        return sum([x[0] for x in self.get_unspent(address)])
+
     def create_raw_transaction(self, inputs: list, outputs: dict) -> str or bool:
         """
         Create a transaction spending the given inputs and creating new outputs.
@@ -77,9 +83,9 @@ class RPCHost:
             outputs = list(outputs)
         try:
             return self.createrawtransaction(inputs, outputs)
-        except BitcoinNodeException as e:
-            logging.warning(e)
-            return False
+        except Exception as e:
+            logger.error(e)
+            return {'error': str(e)}
 
     def sign_raw_transaction(self, tx_hash: str, private_key: list) -> dict or bool:
         """
@@ -98,9 +104,9 @@ class RPCHost:
             private_key = [private_key]
         try:
             sing_trx = self.signrawtransactionwithkey(tx_hash, private_key)
-        except BitcoinNodeException as e:
-            logging.warning(e)
-            return False
+        except Exception as e:
+            logger.error(e)
+            return {'error': str(e)}
         return sing_trx
 
     def send_raw_transaction(self, tx_hex, max_fee_rate):
@@ -117,7 +123,7 @@ class RPCHost:
         try:
             tx_hash = self.sendrawtransaction(tx_hex, max_fee_rate)
         except BitcoinNodeException as e:
-            logging.warning(e)
+            logger.error(e)
             return False
         return tx_hash
 
@@ -136,11 +142,12 @@ class RPCHost:
             private_key = wallet.to_wif()
             public_key = wallet.pub_to_hex()
             address = wallet.segwit_address
-            self.importaddress(address, "optional-label", False)
-            self.importprivkey(private_key, "optional-label", False)
-            self.importpubkey(public_key, "optional-label", False)
+            self.importaddress(address, "mango-bank", False)
+            self.importprivkey(private_key, "mango-bank", False)
+            self.importpubkey(public_key, "mango-bank", False)
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f'IMPORT WALLET ERROR: {e}')
             return False
 
     def is_trx_unspent(self, tx_id, v_out):

@@ -1,0 +1,25 @@
+[
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_tokenAddr",
+                "type": "address"
+            },
+            {
+                "internalType": "address[]",
+                "name": "dests",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "values",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "multisend",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    }
+]

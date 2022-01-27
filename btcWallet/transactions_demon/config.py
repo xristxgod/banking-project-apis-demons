@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
 from logging import getLogger
+from decimal import Decimal, Context
+
+decimal = Context()
+decimal.prec = 8
 
 
 load_dotenv()

@@ -3,6 +3,8 @@ from src.node import btc
 from src import services
 from config import logger, decimal
 
+from src.routers.v2 import v2_router
+
 
 app = Flask(__name__)
 
@@ -44,14 +46,8 @@ def create_deterministic_wallet():
     if request.method == 'POST':
         if not request.json:
             return jsonify(btc.create_deterministic_wallet())
-        if 'child' not in request.json:
-            child = 10
-        else:
-            child = request.json['child']
-        if "words" not in request.json:
-            return jsonify(btc.create_deterministic_wallet(child=child))
-        else:
-            return jsonify(btc.create_deterministic_wallet(words=request.json['words'], child=child))
+        if "words" in request.json:
+            return jsonify(btc.create_deterministic_wallet(words=request.json['words']))
     else:
         return jsonify({'error': 'Use a "POST" request'})
 
@@ -64,7 +60,7 @@ def get_balance():
             return jsonify({'error': 'The argument "privateKey" was not found'})
         return jsonify(btc.get_balance(private_key=request.json['privateKey']))
     else:
-        return jsonify({'error': 'Use a "GET" request'})
+        return jsonify({'error': 'Use a "POST" request'})
 
 
 @app.route('/get-received', methods=['POST', 'GET'])
@@ -136,7 +132,7 @@ def create_transaction():
         a = services.create_transaction(
             from_address=request.json['fromAddress'],
             outputs=request.json['outputs'],
-            private_key=request.json['privateKey']
+            private_key=request.json['privateKey'],
         )
         logger.error(f'RETURN: {a}')
         return jsonify(a)
@@ -209,6 +205,9 @@ def get_unspent():
         return jsonify(btc.get_unspent(address=request.json["address"]))
     else:
         return jsonify({'error': 'Use a "GET" request'})
+
+
+app.register_blueprint(v2_router, url_prefix='/v2')
 
 
 if __name__ == '__main__':

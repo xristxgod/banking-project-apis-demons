@@ -2,19 +2,15 @@ import time
 import json
 import os
 import uuid
-from decimal import Decimal, Context
 from time import time as t
 import datetime as dt
 
 from bit.network.services import NetworkAPI
-from config import ERROR, NOT_SEND, LAST_BLOCK, logger
+from config import ERROR, NOT_SEND, LAST_BLOCK, logger, decimal, Decimal
 from .external_data.database import DB
 from .external_data.rabbit_mq import RabbitMQ
 from .utils import convert_time
 from typing import Optional, List
-
-ctx = Context()
-ctx.prec = 10
 
 
 class FindTransactionsConfig:
@@ -34,6 +30,9 @@ class TransactionsDemon(FindTransactionsConfig):
             user=self.user, password=self.password,
             host=self.host, port=self.port,
         )
+        # self.__addresses = [{"network": "btc", "block": 0}]
+        # self.__time: int = 0
+        # self.__datetime: str = ''
 
     def _get_block(self) -> int:
         """ Returns the last available block """
@@ -101,6 +100,9 @@ class TransactionsDemon(FindTransactionsConfig):
             addresses_to: list = recipient[0]
             amount_to: float = recipient[1]
             for_pack_recipient: list = recipient[2]
+
+            fee = round(Decimal(amount_from - amount_to), 8)
+
             #  Check the presence of such addresses in DB
             address = None
             if any([x in addresses for x in addresses_from]):
@@ -114,8 +116,8 @@ class TransactionsDemon(FindTransactionsConfig):
                         tx_id=tx_id["txid"],
                         from_=for_pack_senders,
                         to_=for_pack_recipient,
-                        amount=format(ctx.create_decimal(repr(amount_from)), 'f'),
-                        fee=round(Decimal(amount_from - amount_to), 8),
+                        amount="%.8f" % decimal.create_decimal(repr(amount_from)),
+                        fee=fee,
                         time_stamp=time_stamp, date_time=date_time
                     )
                 )
@@ -142,8 +144,8 @@ class TransactionsDemon(FindTransactionsConfig):
                 full.append({
                     "address": values["scriptPubKey"]["addresses"][0],
                     # ToDo remove amountBTC
-                    "amountBTC": format(ctx.create_decimal(repr(values["value"])), 'f'),
-                    "amount": format(ctx.create_decimal(repr(values["value"])), 'f')
+                    "amountBTC": format(decimal.create_decimal(repr(values["value"])), 'f'),
+                    "amount": format(decimal.create_decimal(repr(values["value"])), 'f')
                 })
             except Exception:
                 continue
@@ -158,8 +160,8 @@ class TransactionsDemon(FindTransactionsConfig):
                 amount += v["value"]
                 full.append({
                     "address": v["scriptPubKey"]["addresses"][0],
-                    "amountBTC": format(ctx.create_decimal(repr(v["value"])), 'f'),
-                    "amount": format(ctx.create_decimal(repr(v["value"])), 'f')
+                    "amountBTC": format(decimal.create_decimal(repr(v["value"])), 'f'),
+                    "amount": format(decimal.create_decimal(repr(v["value"])), 'f')
                 })
             except Exception:
                 continue
@@ -197,7 +199,7 @@ class TransactionsDemon(FindTransactionsConfig):
             packages_by_addresses.append({"address": address, "transactions": [transaction]})
         return packages_by_addresses
 
-    def __send_to_rabbit_mq(self, values: json) -> None:
+    def __send_to_rabbit_mq(self, values: list) -> None:
         """ Send collected data to queue """
         try:
             self.rabbit.send_message(values)

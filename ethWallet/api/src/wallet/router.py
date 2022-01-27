@@ -46,19 +46,19 @@ def create_deterministic_wallet():
 @wallet_router.route("/get-balance", methods=["POST", "GET"])
 def get_balance():
     """ Show Ether balance at wallet address """
-    if request.method == "GET":
+    if request.method == "POST":
         logger.error(f"Calling '/get-balance'")
         if not request.json or "address" not in request.json:
             return jsonify({"error": "The argument 'address' was not found"})
         return jsonify(wallet_ethereum.get_balance(address=request.json['address']))
     else:
-        return jsonify({'error': 'Use a "GET" request!'})
+        return jsonify({'error': 'Use a "POST" request!'})
 
 
 @wallet_router.route("/get-token-balance", methods=["POST", "GET"])
 def get_token_balance():
     """Get token balance"""
-    if request.method == "GET":
+    if request.method == "POST":
         logger.error(f"Calling 'get-token-balance'")
         if not request.json or "address" not in request.json:
             return jsonify({"error": "The argument 'address' was not found"})
@@ -69,7 +69,7 @@ def get_token_balance():
             symbol=request.json["token"]
         ))
     else:
-        return jsonify({'error': 'Use a "GET" request!'})
+        return jsonify({'error': 'Use a "POST" request!'})
 
 
 @wallet_router.route("/add-new-token", methods=["POST", "GET"])

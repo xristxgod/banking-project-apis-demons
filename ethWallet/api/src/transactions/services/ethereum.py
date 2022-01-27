@@ -1,29 +1,28 @@
 import json
-from decimal import Decimal
 import web3.exceptions
-from config import logger
+from config import logger, decimal, Decimal, CONTRACT_MULTI_SEND, CONTRACT_MULTI_SEND_ABI
 from src.utils.node import NodeETH
 from src.utils.utils import convert_time
+from typing import List
 
 
 class TransactionETH(NodeETH):
     """This class works with ethereum transactions"""
-    def create_and_sign_transaction(self, from_private_key, from_address, to_address, amount, gas=2000000) -> json:
+
+    def create_transaction(
+            self, from_address,
+            outputs,
+            gas=21000,
+            admin_address=None,
+            admin_fee=None
+    ) -> json:
         """
         This function only signs the transaction
-        :param from_private_key: Sender's private key
-          :type from_private_key: str
-        :param from_address: Sender's address
-          :type from_address: str
-        :param to_address: Recipient's address
-          :type to_address: str
-        :param amount: Number of files to send
-          :type amount: float or int or str
-        :param gas: Transaction fees. Default 2_000_000
-          :type gas: int or str
-
         :return: Signed transaction
         """
+        # TMP. Only for time, when we can't send transaction to multiple wallets
+        to_address, amount = list(outputs[0].items())[0]
+
         try:
             from_address = self.node.toChecksumAddress(from_address)
             to_address = self.node.toChecksumAddress(to_address)
@@ -31,26 +30,30 @@ class TransactionETH(NodeETH):
         except web3.exceptions.InvalidAddress as error:
             return {"error": str(error)}
 
+        with_admin = admin_address is not None and admin_fee is not None
+        if with_admin:
+            admin_fee = self.node.toWei(admin_fee, "ether")
         create_transaction = {
             "nonce": nonce,
+            "from": from_address,
             "to": to_address,
-            "value": self.node.toWei(float(amount), "ether"),
+            "value": self.node.toWei(amount, "ether"),
             "gasPrice": self.gas_price,
             "gas": gas,
-            "data": b""
+            'admin': {
+                'adminFee': (
+                    admin_fee - gas
+                    if admin_fee - gas > (admin_fee / 10)
+                    else (admin_fee / 10)
+                ),
+                'adminAddress': admin_address
+            } if with_admin else None
         }
         try:
-            signed_transaction = self.node.eth.account.sign_transaction(
-                create_transaction, private_key=from_private_key
-            )
-            logger.error(
-                f"TRANSACTION CREATED AND SIGNED "
-                f"| {from_address} -- {amount} -> {to_address} "
-                f"| TX: {signed_transaction }"
-            )
             return {
-                "createTxHex": self.node.toHex(signed_transaction.rawTransaction),
-                **create_transaction
+                "fee": gas,
+                "maxFeeRate": create_transaction['gasPrice'],
+                "payload": create_transaction
             }
         except web3.exceptions.InvalidTransaction as error:
             logger.error(f"THE TRANSACTION WAS NOT CREATED | STEP 37 ERROR: {error}")
@@ -62,23 +65,53 @@ class TransactionETH(NodeETH):
             logger.error(f"THE TRANSACTION WAS NOT CREATED | STEP 37 ERROR: {error}")
             return {"error": str(error)}
 
-    def send_transaction(self, raw_transaction: str) -> json:
+    def sign_send_transaction(self, payload: dict, private_keys: List[str]) -> json:
         """
         Submits a signed transaction
-        :param raw_transaction: Signed `rawTransaction`
+        :param payload: Signed `rawTransaction`
+        :param private_keys: Private keys' list
         :return: Transaction hash
         """
         try:
-            transaction_hash = self.node.eth.send_raw_transaction(transaction=raw_transaction)
+            if payload['admin'] is not None:
+                contract = self.node.eth.contract(
+                    address=self.node.toChecksumAddress(CONTRACT_MULTI_SEND), abi=CONTRACT_MULTI_SEND_ABI
+                )
+                to_1 = self.node.toChecksumAddress(payload['admin']['adminAddress'])
+                to_2 = self.node.toChecksumAddress(payload['to'])
+                amounts = [payload['admin']['adminFee'], payload['value']]
+                transfer = contract.functions.withdrawls(
+                    [to_1, to_2], amounts
+                ).buildTransaction({
+                    "nonce": payload['nonce'],
+                    "gasPrice": payload['gasPrice'],
+                    "gas": payload['gas'],
+                    "value": sum(amounts)
+                })
+            else:
+                transfer = {
+                    "nonce": payload['nonce'],
+                    "to": payload['to'],
+                    "value": payload['value'],
+                    "gasPrice": payload['gasPrice'],
+                    "gas": payload['gas'],
+                    "data": b"",
+                }
+            signed_transaction = self.node.eth.account.sign_transaction(
+                transfer, private_key=private_keys[0]
+            )
+            transaction_hash = self.node.eth.send_raw_transaction(
+                transaction=self.node.toHex(signed_transaction.rawTransaction)
+            )
             logger.error(f"THE TRANSACTION HAS BEEN SENT | TX: {self.node.toHex(transaction_hash)}")
             tx = self.node.eth.get_transaction(transaction_hash)
             block = self.node.eth.get_block(tx['blockNumber'])
             return {
                 "time": block['timestamp'],
                 "datetime": convert_time(block['timestamp']),
-                "transactionHash": tx['hash'],
-                "amount": self.node.eth.toWei(tx['value'], "ether"),
-                "fee": self.node.eth.toWei(tx['gas'], 'ether'),
+                "transactionHash": tx['hash'].hex(),
+                "amount": tx['value'],
+                "fee": tx['gas'],
                 "senders": [tx['from']],
                 "recipients": [tx['to']]
             }

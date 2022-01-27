@@ -1,70 +1,46 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-import uvicorn
 
-import src
-from src.config import logger
-
-from src.services.wallet.schemas import (
-    BodyCreateWallet, BodyAddNewTokenTRC20,
-    BodyFreezeBalance, BodyUnfreezeBalance,
-)
-from src.services.transaction.schemas import (
-    BodyCreateTransaction, BodySignAndSendTransaction
-)
+from src.v1.schemas import BodyCreateWallet, BodyCreateTransaction, BodySignAndSendTransaction
+from src import router
+from config import logger, network
 
 app = FastAPI(
-    title="TronNetwork",
+    title=f"TronNetwork '{network}'",
     description="Service for interacting with the Tron network.",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/tron/docs",
+    redoc_url="/tron/redoc"
 )
 
-app.include_router(src.router)
+app.include_router(router)
 
 @app.get(
-    "/docs-json",
-    description="Documentation in json",
-    response_class=JSONResponse,
-    tags=["Documentation in json format"]
+    "/tron/docs-json", description="Documentation in json",
+    response_class=JSONResponse, tags=["Utils"]
 )
-def documentation_json():
+async def documentation_json():
     logger.error(f"Calling '/docs-json'")
     return JSONResponse({
-        # TRX
-        "create_wallet": ["POST", "/create-wallet", BodyCreateWallet.schema()],
-        "get_balance": ["GET", "/get-balance/{address}"],
-        # TRC10 token
-        "get_trc10_balance": ["GET", "/get-trc10-balance/{address}/{token}"],
-        # TRC20 token
-        "get_trc20_balance": ["GET", "/get-trc20-balance/{address}/{token}"],
-        "add_trc20_token": ["POST", "/add-trc20-token", BodyAddNewTokenTRC20.schema()],
-        # Freeze and Unfreeze
-        "create_freeze_balance": ["POST", "/create-freeze-balance", BodyFreezeBalance.schema()],
-        "create_unfreeze_balance": ["POST", "/create-unfreeze-balance", BodyUnfreezeBalance.schema()],
-        # Transaction TRX
-        "create_transaction_trx": ["POST", "/create-transaction", BodyCreateTransaction.schema()],
-        # Transaction TRC10 token
-        "create_transaction_trc10": ["POST", "/create-trc10-transaction", BodyCreateTransaction.schema()],
-        # Transaction TRC20 token
-        "create_transaction_trc20": ["POST", "/create-trc20-transaction", BodyCreateTransaction.schema()],
-        # Sign and send transaction
-        "sign_send_transaction": ["POST", "/sign-send-transaction", BodySignAndSendTransaction.schema()],
+        # Wallet
+        "create_wallet": ["POST", "/{network}/create-wallet", BodyCreateWallet.schema()],
+        "get_balance": ["GET", "/tron-trc20-{coin}/get-balance/{address}"],
+        # Transaction
+        "create_transaction": ["POST", "/tron-trc20-{coin}/create-transaction-for-internal-services", BodyCreateTransaction.schema()],
+        "sign_send_transaction": ["POST", "/tron-trc20-{coin}/sign-send-transaction-for-internal-services", BodySignAndSendTransaction.schema()],
+        # Transaction Admin
+        "create_admin_transaction": ["POST", "/tron-trc20-{coin}/create-transaction", BodyCreateTransaction.schema()],
+        "sign_send_admin_transaction": ["POST", "/tron-trc20-{coin}/sign-send-transaction", BodySignAndSendTransaction.schema()],
         # Transaction info
-        "get_transaction": ["GET", "/get-transaction/{trxHash}"],
-        "get_all_transactions": ["GET", "/get-all-transactions/{address}"],
-        # Account info
-        "get_account_resource": ["GET", "/get-account-resource/{address}"],
-        "get_unspent_bandwidth": ["GET", "/get-unspent-bandwidth/{address}"],
-        "get_unspent_energy": ["GET", "/get-unspent-energy/{address}"],
-        # Transaction info
-        "get_total_received": ["GET", "/get-received/{address}"],
-        "get_total_send": ["GET", "/get-send/{address}"],
-        "get_total_fee": ["GET", "/get-fee-spent/{address}"],
-        # Fee info
-        "get_fee_limit_trc20": ["GET", "/get-trc20-fee/{token}"],
-        "get_fee_limit_trx_trc10": ["GET", "/get-fee/{address}"]
+        "get_transaction": ["GET", "/tron/get-transaction/{trxHash}"],
+        "get_all_transactions": ["GET", "/tron/get-all-transactions/{address}"],
+        # Fee
+        "get_optimal_fee": ["GET", "/tron-trc20-{coin}/get-optimal-fee/{fromAddress}&{toAddress}"],
+        # Utils
+        "get_all_tokens": ["GET", "/tron/get-all-tokens/"],
+        "docs": ["GET", "/tron/docs/ or /tron/redoc/"]
     })
 
 if __name__ == '__main__':
-    # Run app
-    uvicorn.run("api.app:app")
+    import uvicorn
+    uvicorn.run("app:app")

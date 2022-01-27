@@ -1,0 +1,23 @@
+
+[
+  {
+    "name": "Tether USD",
+    "symbol": "USDT",
+    "address": "TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3",
+    "decimals": 18,
+    "bandwidth": 345,
+    "feeLimit": 1000,
+    "isBalanceNotNullEnergy": 13516,
+    "isBalanceNullEnergy": 28516
+  },
+  {
+    "name": "USD Coin",
+    "symbol": "USDC",
+    "address": "TLBaRhANQoJFTqre9Nf1mjuwNWjCJeYqUL",
+    "decimals": 18,
+    "bandwidth": 345,
+    "feeLimit": 20,
+    "isBalanceNotNullEnergy": 13516,
+    "isBalanceNullEnergy": 28516
+  }
+]

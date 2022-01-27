@@ -18,8 +18,13 @@ class NodeETH:
 
     def __init__(self):
         self.node = Web3(HTTPProvider(
-            os.environ.get("NodeURL", 'https://mainnet.infura.io/v3/7dc5bd3523794cd8acea7199da9e108e')
+            os.environ.get("NodeURL", 'http://127.0.0.1:8545')
         ))
+
+    def get_contract_address(self, symbol: str) -> str:
+        """Get a contract address for a token, if it is in the system"""
+        contract_address = self.db.get_token(symbol=symbol)
+        return self.node.toChecksumAddress(contract_address)
 
     def get_contract(self, symbol: str) -> web3.contract.Contract or bool:
         """Get a contract for a token, if it is in the system"""

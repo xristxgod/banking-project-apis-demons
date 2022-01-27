@@ -5,7 +5,9 @@ from src.wallet import wallet_router
 
 from config import logger
 
+
 app = Flask(__name__)
+
 
 app.register_blueprint(transactions_router, url_prefix='')
 app.register_blueprint(wallet_router, url_prefix='')
@@ -20,6 +22,7 @@ def is_connected():
         return jsonify({"message": "Connection established"})
     return jsonify({"message": "No connection"})
 
+
 @app.route("/get-gas-price", methods=["POST", "GET"])
 def get_gas_price():
     gas_price = wallet_ethereum.gas_price
@@ -27,6 +30,7 @@ def get_gas_price():
         logger.error(f"Calling '/get-gas-price' | {gas_price}")
         return jsonify({"gasPrice": str(gas_price)})
     return jsonify({"message": "No connection"})
+
 
 @app.route("/docs", methods=["POST", "GET"])
 def index():
@@ -79,6 +83,7 @@ def index():
             "GET", "/get-gas-price", "Description: Will return the gas price"
         ]
     })
+
 
 if __name__ == '__main__':
     """Start API"""

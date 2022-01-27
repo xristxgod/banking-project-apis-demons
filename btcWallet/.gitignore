@@ -1,0 +1,10 @@
+/.idea
+/.env
+/.env.local
+/.env.local.php
+/.env.*.local
+.DS_Store
+docker-compose.override.yaml
+venv
+__pycache__
+.idea

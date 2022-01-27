@@ -1,16 +1,19 @@
 import os
 import json
 import requests
-from config import decimal, Decimal, logger
+from dotenv import load_dotenv
+
+from config import decimal, Decimal, logger, X_ACCOUNT_PRIVATE_KEY
 from bit import PrivateKey, PrivateKeyTestnet
 from mnemonic import Mnemonic
 from hdwallet.cryptocurrencies import BitcoinMainnet, BitcoinTestnet
-from hdwallet.derivations import BIP44Derivation
 from hdwallet.hdwallet import BIP44HDWallet
 from .rpc.host import RPCHost
 from .utils import get_bip_key, convert_time
 from .exceptions import BitcoinNodeException
 from typing import List
+
+load_dotenv()
 
 
 class NodeBTC:
@@ -46,35 +49,41 @@ class NodeBTC:
         except BitcoinNodeException as e:
             return {"error": e}
 
-    def create_deterministic_wallet(self, words: str = None, child: int = 10) -> json:
+    def create_deterministic_wallet(self, words: str = None) -> json:
         """Create deterministic Bitcoin wallet"""
         try:
             if not words:
                 words: str = Mnemonic("english").generate(strength=128)
 
-            if self.testnet:
-                network = BitcoinTestnet
-            else:
-                network = BitcoinMainnet
+            network = BitcoinTestnet if self.testnet else BitcoinMainnet
 
-            wallet = BIP44HDWallet(cryptocurrency=network).from_mnemonic(words, language="english")
-            self.__rpc_host.import_wallet(wallet)
-            values = {"mnemonicPhrase": words,
-                      "privateKey": wallet.wif(),
-                      "publicKey": wallet.public_key(),
-                      "address": wallet.address(),
-                      "addresses": {}}
+            wallet = BIP44HDWallet(
+                cryptocurrency=network, account=0, change=False, address=0
+            ).from_mnemonic(words, language="english")
+            xprv = wallet.xprivate_key()
             wallet.clean_derivation()
-            for i in range(child):
-                bip44_derivation = BIP44Derivation(cryptocurrency=network, account=0, change=False, address=i + 1)
-                wallet.from_path(path=bip44_derivation)
-                self.__rpc_host.import_wallet(wallet)
-                values["addresses"][f"{wallet.path()}"] = {
-                    "address": wallet.address(),
-                    "privateKey": wallet.wif(),
-                    "publicKey": wallet.public_key()
-                }
-                wallet.clean_derivation()
+            wallet.from_path(path="m/44'/0'/0'")
+            account = {
+                "accountPrivateKey": wallet.xprivate_key(),
+                "accountPublicKey": wallet.xpublic_key(),
+            }
+
+            wallet.clean_derivation()
+            wallet.from_path(path="m/44'/0'/0'/0")
+            values = {
+                **account,
+                "rootXPrivateKey": xprv,
+                "mnemonicPhrase": words,
+                "xBIP32PrivateKey": wallet.xprivate_key(),
+                "xBIP32PublicKey": wallet.xpublic_key(),
+                "privateKey": wallet.private_key(),
+                "publicKey": wallet.public_key(),
+                "address": wallet.p2sh_address(),
+                "path": wallet.path(),
+            }
+            key = PrivateKey(wif=wallet.wif())
+            btc.rpc_host.import_wallet(key)
+            wallet.clean_derivation()
             return values
         except BitcoinNodeException as e:
             return {"error": e}
@@ -139,8 +148,8 @@ class NodeBTC:
             except Exception as e:
                 return {'error': f'Cant get transaction after signing: {e}'}
 
-            senders, amount = self.__get_senders(tx['vin'])
-            recipients, _ = self.__get_recipients(tx['vout'])
+            senders, amount = self.get_senders(tx['vin'])
+            recipients, _ = self.get_recipients(tx['vout'])
 
             return {
                 "time": None,
@@ -205,33 +214,53 @@ class NodeBTC:
             return {"totalSent": 0}
         return {"totalSent": str(data)}
 
-    def get_transactions_for_address(self, private_key: str) -> List[dict]:
+    def get_tx_by_id(self, tx_id: int):
+        trx = self.__rpc_host.get_transactions_by_id(tx_id)
+        # Exclude not
+        if "blocktime" not in trx.keys():
+            return None
+
+        addresses_from, amount_from = self.get_senders(trx["vin"])
+        addresses_to, amount_to = self.get_recipients(trx["vout"])
+        fee = amount_from - amount_to
+
+        logger.error(f'GET TX FOR ADDRESS: {trx["txid"]} : {amount_from}')
+        return {
+            "time": trx["blocktime"],
+            "datetime": convert_time(trx["blocktime"]),
+            "transactionHash": trx["txid"],
+            "amount": "%.8f" % amount_from,
+            "amountBTC": "%.8f" % amount_from,
+            "fee": "%.8f" % fee,
+            "senders": addresses_from,
+            "recipients": addresses_to
+        }
+
+    def get_unspent_transactions_by_address(self, address: str) -> List[dict]:
+        trx_for_address = []
+        trx_all = btc.rpc_host.listunspent(0, 99999999, [address])
+        for tx in trx_all:
+            trx = self.get_tx_by_id(tx['txid'])
+            # Exclude not
+            if trx is None:
+                continue
+            trx_for_address.append(trx)
+        return trx_for_address
+
+    def get_transactions_by_private_key(self, private_key: str) -> List[dict]:
         wallet = PrivateKey(wif=private_key)
         self.__rpc_host.import_wallet(wallet)
 
         trx_all = wallet.get_transactions()
         trx_for_address = []
         for trx_id in trx_all:
-            trx = self.__rpc_host.get_transactions_by_id(trx_id)
+            trx = self.get_tx_by_id(trx_id)
             # Exclude not
-            if "blocktime" not in trx.keys():
+            if trx is None:
                 continue
 
-            addresses_from, amount_from = self.__get_senders(trx["vin"])
-            addresses_to, amount_to = self.__get_recipients(trx["vout"])
-            fee = amount_from - amount_to
-
-            logger.error(f'GET TX FOR ADDRESS: {trx}')
-            trx_for_address.append({
-                "time": trx["blocktime"],
-                "datetime": convert_time(trx["blocktime"]),
-                "transactionHash": trx["txid"],
-                "amount": "%.8f" % amount_from,
-                "amountBTC": "%.8f" % amount_from,
-                "fee": "%.8f" % fee,
-                "senders": addresses_from,
-                "recipients": addresses_to
-            })
+            logger.error(f'GET TX FOR ADDRESS: {trx["transactionHash"]} : {trx["amount"]}')
+            trx_for_address.append(trx)
         return trx_for_address
 
     def get_all_transactions(self, addresses) -> json:
@@ -239,10 +268,10 @@ class NodeBTC:
             addresses_back = []
 
             if isinstance(addresses, str):
-                addresses = list(addresses)
+                addresses = [addresses]
 
             for address in addresses:
-                trx_for_address = self.get_transactions_for_address(address)
+                trx_for_address = self.get_unspent_transactions_by_address(address)
                 addresses_back.append({
                     "address": address,
                     "transactions": trx_for_address
@@ -252,7 +281,7 @@ class NodeBTC:
         except BitcoinNodeException as e:
             return {"error": e}
 
-    def __get_senders(self, vin: list):
+    def get_senders(self, vin: list):
         """ Get the input addresses and the sum of the output """
         full = []
         amount = decimal.create_decimal(0)
@@ -264,15 +293,15 @@ class NodeBTC:
                 amount += current_amount
                 full.append({
                     "address": values["scriptPubKey"]["addresses"][0],
-                    "amount": current_amount,
-                    "amountBTC": current_amount,
+                    "amount": "%.8f" % current_amount,
+                    "amountBTC": "%.8f" % current_amount,
                 })
             except Exception as e:
                 logger.error(f'GET SENDERS: {e}')
                 continue
         return full, amount
 
-    def __get_recipients(self, vout: list) -> tuple:
+    def get_recipients(self, vout: list) -> tuple:
         """ Get output address and amount """
         full = []
         amount = decimal.create_decimal(0)
@@ -290,9 +319,6 @@ class NodeBTC:
                 logger.error(f'GET RECIPIENTS: {e}')
                 continue
         return full, amount
-
-    def get_transactions_list(self, address: str):
-        return self.__rpc_host.getrawtransaction(address)
 
 
 btc = NodeBTC()
