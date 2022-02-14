@@ -1,21 +1,11 @@
 import json
 from typing import Dict
 
-import psycopg2
-import psycopg2.extras
 from aiofiles import open as async_open
 
-from src.utils import ContractAddress
-from config import DataBaseUrl, fileTokens, network
-
-async def __get_db() -> Dict:
-    """Get information from a file"""
-    connection = psycopg2.connect(DataBaseUrl)
-    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("""SELECT *  FROM contract WHERE type='tron'""")
-    data: Dict = cursor.fetchall()
-    connection.close()
-    return data
+from src.external_data.database import get_contracts
+from src.utils import ContractAddress, to_base58check_address
+from config import fileTokens, network, decimals
 
 async def __get_file() -> Dict:
     async with async_open(fileTokens, "r", encoding="utf-8") as file:
@@ -26,8 +16,24 @@ async def get_asset_trc20(address: ContractAddress) -> Dict:
     if network == "shasta" or network == "nile":
         tokens = await __get_file()
     else:
-        tokens = await __get_db()
+        tokens = get_contracts()
     for token in tokens:
         if address in [token["name"], token["symbol"], token["address"]]:
             return token
 
+async def smart_contract_transaction(data: str, contract_address: ContractAddress) -> Dict:
+    """
+    Unpacking a smart contract
+    :param data: Smart Contract Information
+    :param contract_address: Smart contract (Token TRC20) address
+    """
+    token_dict = await get_asset_trc20(address=contract_address)
+    amount = decimals.create_decimal(int("0x" + data[72:], 0) / 10 ** int(token_dict["decimals"]))
+    to_address = to_base58check_address("41" + data[32:72])
+    token_symbol, token_name = token_dict["symbol"], token_dict["name"]
+    return {
+        "to_address": to_address,
+        "token": token_symbol,
+        "name": token_name,
+        "amount": "%.8f" % amount
+    }

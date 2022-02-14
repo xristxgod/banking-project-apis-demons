@@ -12,8 +12,6 @@ SUN = Decimal("1000000")
 MIN_SUN = 0
 MAX_SUN = 2**256 - 1
 
-# <<<----------------------------------->>> Helpers <<<-------------------------------------------------------------->>>
-
 def from_sun(num: Union[int, float]) -> Union[int, Decimal]:
     """
     Helper function that will convert a value in TRX to SUN

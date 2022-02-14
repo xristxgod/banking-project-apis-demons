@@ -4,6 +4,7 @@ from src import services
 from config import logger, decimal
 
 from src.routers.v2 import v2_router
+from src.routers.v3 import v3_router
 
 
 app = Flask(__name__)
@@ -208,6 +209,7 @@ def get_unspent():
 
 
 app.register_blueprint(v2_router, url_prefix='/v2')
+app.register_blueprint(v3_router, url_prefix='/v3')
 
 
 if __name__ == '__main__':

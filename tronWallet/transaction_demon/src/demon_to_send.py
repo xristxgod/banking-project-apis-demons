@@ -1,19 +1,25 @@
 import os
 import uuid
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
-from src.external_data.rabbit_mq import send_message, send_to_balancer
 from src.utils import TronAccountAddress
-from config import logger, ERROR, NOT_SEND, AdminAddress, NOT_SEND_TO_TRANSACTION
+from src.external_data.rabbit_mq import send_message, send_to_balancer
+from src.external_data.database import get_all_transactions_hash, get_transaction_hash
+from config import ERROR, NOT_SEND, NOT_SEND_TO_TRANSACTION, AdminAddress, ReportingAddress, logger, decimals
 
+AdminsWallets = [AdminAddress, ReportingAddress]
+
+def is_valid(value: dict, string: str):
+    func = lambda v, s: True if s in v and len(v[s]) > 0 else False
+    return func(v=value, s=string)
 
 def export_transactions(all_transactions: List, addresses: List[TronAccountAddress], block_number: int) -> None:
     """
-    :param all_transactions:
-    :param addresses:
-    :param block_number:
-    :return:
+    Sending packaging in RabbitMQ.
+    :param all_transactions: All transactions collected from the block
+    :param addresses: Addresses in the system
+    :param block_number: Block number
     """
     ## TRX transactions, as well as defrost and freeze balance
     trx_tnx = []
@@ -23,7 +29,6 @@ def export_transactions(all_transactions: List, addresses: List[TronAccountAddre
     usdc_tnx = []
     # For the balance transfer script
     balancer_tnx = []
-
     transactions: Tuple = add_into_addresses(
         addresses=addresses, all_transactions=all_transactions, block_number=block_number
     )
@@ -42,14 +47,13 @@ def export_transactions(all_transactions: List, addresses: List[TronAccountAddre
         logger.error(f"New TX in balancer: {block_number}")
         send_to_rabbit_mq_balancer(values=json.dumps(balancer_tnx))
 
-
-def add_into_addresses(addresses: List[TronAccountAddress], all_transactions: List[dict], block_number: int) -> Tuple:
+def add_into_addresses(addresses: List[TronAccountAddress], all_transactions: List[Dict], block_number: int) -> Tuple:
     """
-    Add a transaction to the array for the desired address
-    :param addresses:
-    :param all_transactions:
-    :param block_number
-    """
+        Add a transaction to the array for the desired address
+        :param addresses: Addresses in the system
+        :param all_transactions: All transactions collected from the block
+        :param block_number Block number
+        """
     # TRX transactions, as well as defrost and freeze balance
     trx_tnx = []
     # TRC20 token transaction only, namely USDT.
@@ -58,26 +62,42 @@ def add_into_addresses(addresses: List[TronAccountAddress], all_transactions: Li
     usdc_tnx = []
     # For the balance transfer script
     balancer_tnx = []
-
+    all_transactions_hash_in_db = get_all_transactions_hash()
     for txn in all_transactions:
         trigger = "TRX"
-        if "senders" in txn and txn["senders"][0]["address"] in addresses or txn["senders"][0]["address"] == AdminAddress:
+
+        is_senders = is_valid(value=txn, string="senders")
+        is_recipients = is_valid(value=txn, string="recipients")
+
+        if is_senders and txn["senders"][0]["address"] in [*addresses, *AdminsWallets]:
             address = txn["senders"][0]["address"]
-        elif "recipients" in txn and len(txn["recipients"]) > 0 \
-                and txn["recipients"][0]["address"] in addresses \
-                or txn["recipients"][0]["address"] == AdminAddress:
+        elif is_recipients and txn["recipients"][0]["address"] in [*addresses, *AdminsWallets]:
             address = txn["recipients"][0]["address"]
         else:
             address = ""
-        if "transactionType" in txn and txn["transactionType"] == "TriggerSmartContract" and "token" in txn:
-            if txn["token"] == "USDT":
-                trigger = "USDT"
-            elif txn["token"] == "USDC":
-                trigger = "USDC"
 
-        if AdminAddress != address and "senders" in txn and txn["senders"][0]["address"] != AdminAddress \
-                and "recipients" in txn and txn["recipients"][0]["address"] != AdminAddress:
+        if address in addresses and is_senders \
+                and txn["senders"][0]["address"] in addresses and is_recipients \
+                and txn["recipients"][0]["address"] in AdminsWallets:
+            continue
+
+        if "transactionType" in txn and txn["transactionType"] == "TriggerSmartContract" and "token" in txn:
+            trigger = "USDT" if txn["token"] == "USDT" else "USDC"
+
+        if address not in AdminsWallets and is_senders and txn["senders"][0]["address"] not in AdminsWallets and \
+                is_recipients and txn["recipients"][0]["address"] not in AdminsWallets:
+            # If the transaction was outside the admin address, and was addressed to the user from the Nth person.
+            # We send it to the balancer to withdraw funds from the account.
             balancer_tnx.append({"address": address, "token": trigger})
+
+        if address in AdminsWallets and is_senders and txn["senders"][0]["address"] in AdminsWallets:
+            if is_recipients and txn["recipients"][0]["address"] in addresses and trigger == "TRX":
+                # If the transaction was sent from the admin to the user's wallet to pay the commission.
+                txn = get_transaction_for_fee(transaction=txn)
+            elif txn["transactionHash"] in all_transactions_hash_in_db:
+                # If the transaction was sent from the admin wallet to another wallet (outside the system).
+                txn = get_transaction_in_db(transaction_hash=txn["transactionHash"], transaction=txn)
+            address = ReportingAddress
 
         if trigger == "USDT":
             usdt_tnx: List = final_packing(address=address, transaction=txn, list_transactions=usdt_tnx)
@@ -95,6 +115,34 @@ def add_into_addresses(addresses: List[TronAccountAddress], all_transactions: Li
 
     return trx_tnx, usdt_tnx, usdc_tnx, balancer_tnx
 
+def get_transaction_in_db(transaction_hash: str, transaction: Dict) -> Dict:
+    """
+    If the transaction is in the database, then we adjust it to the standard
+    :param transaction_hash: Transaction hash
+    :param transaction: The transaction itself
+    """
+    transaction_in_db = get_transaction_hash(transaction_hash=transaction_hash)
+    if transaction_in_db is not None:
+        transaction["senders"] = transaction_in_db["from_wallets"]
+        transaction["recipients"] = transaction_in_db["to_wallets"]
+    return transaction
+
+def get_transaction_for_fee(transaction: Dict) -> Dict:
+    """
+    If the transaction is a fee payment
+    :param transaction: The transaction itself
+    """
+    amount = decimals.create_decimal(transaction["amount"])
+    fee = decimals.create_decimal(transaction["fee"]) if float(transaction["fee"]) > 0 else 0
+    from_amount = amount + fee
+    return {
+        "time": transaction["time"],
+        "transactionHash": transaction["transactionHash"],
+        "amount": "%.8f" % amount,
+        "fee": "%.8f" % fee,
+        "recipients": [],
+        "senders": [{"address": ReportingAddress, "amount": "%.8f" % from_amount}]
+    }
 
 def final_packing(address: TronAccountAddress, transaction: dict, list_transactions: List) -> List:
     """
@@ -110,7 +158,6 @@ def final_packing(address: TronAccountAddress, transaction: dict, list_transacti
     else:
         list_transactions.append({"address": address, "transactions": [transaction]})
     return list_transactions
-
 
 def send_to_rabbit_mq(values: json) -> None:
     """
@@ -129,7 +176,6 @@ def send_to_rabbit_mq(values: json) -> None:
             # Write all the verified data to a json file, and do not praise the work
             file.write(str(values))
 
-
 def send_to_rabbit_mq_balancer(values: json) -> None:
     """
         Send collected data to queue
@@ -146,7 +192,6 @@ def send_to_rabbit_mq_balancer(values: json) -> None:
         with open(new_not_send_file, 'w') as file:
             # Write all the verified data to a json file, and do not praise the work
             file.write(str(values))
-
 
 # <<<----------------------------------->>> Send everything that was not sent <<<------------------------------------>>>
 

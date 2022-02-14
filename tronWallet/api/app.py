@@ -15,29 +15,24 @@ app = FastAPI(
 
 app.include_router(router)
 
-@app.get(
-    "/tron/docs-json", description="Documentation in json",
-    response_class=JSONResponse, tags=["Utils"]
-)
+@app.get("/tron/docs-json", description="Documentation in json", response_class=JSONResponse, tags=["Utils"])
 async def documentation_json():
     logger.error(f"Calling '/docs-json'")
     return JSONResponse({
         # Wallet
         "create_wallet": ["POST", "/{network}/create-wallet", BodyCreateWallet.schema()],
-        "get_balance": ["GET", "/tron-trc20-{coin}/get-balance/{address}"],
+        "get_balance": ["GET", "/{network}/get-balance/{address}"],
         # Transaction
-        "create_transaction": ["POST", "/tron-trc20-{coin}/create-transaction-for-internal-services", BodyCreateTransaction.schema()],
-        "sign_send_transaction": ["POST", "/tron-trc20-{coin}/sign-send-transaction-for-internal-services", BodySignAndSendTransaction.schema()],
+        "create_transaction": ["POST", "/{network}/create-transaction-for-internal-services", BodyCreateTransaction.schema()],
+        "sign_send_transaction": ["POST", "/{network}/sign-send-transaction-for-internal-services", BodySignAndSendTransaction.schema()],
         # Transaction Admin
-        "create_admin_transaction": ["POST", "/tron-trc20-{coin}/create-transaction", BodyCreateTransaction.schema()],
-        "sign_send_admin_transaction": ["POST", "/tron-trc20-{coin}/sign-send-transaction", BodySignAndSendTransaction.schema()],
+        "create_admin_transaction": ["POST", "/{network}/create-transaction", BodyCreateTransaction.schema()],
+        "sign_send_admin_transaction": ["POST", "/{network}/sign-send-transaction", BodySignAndSendTransaction.schema()],
         # Transaction info
         "get_transaction": ["GET", "/tron/get-transaction/{trxHash}"],
         "get_all_transactions": ["GET", "/tron/get-all-transactions/{address}"],
-        # Fee
-        "get_optimal_fee": ["GET", "/tron-trc20-{coin}/get-optimal-fee/{fromAddress}&{toAddress}"],
         # Utils
-        "get_all_tokens": ["GET", "/tron/get-all-tokens/"],
+        "get_optimal_fee": ["GET", "/tron-trc20-{coin}/get-optimal-fee/{fromAddress}&{toAddress}"],
         "docs": ["GET", "/tron/docs/ or /tron/redoc/"]
     })
 

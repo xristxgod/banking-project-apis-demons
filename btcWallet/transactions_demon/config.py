@@ -9,6 +9,8 @@ decimal.prec = 8
 
 load_dotenv()
 
+DB_URL = os.getenv("DataBaseURL")
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.join(ROOT_DIR, 'files')
 

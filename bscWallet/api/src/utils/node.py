@@ -3,10 +3,7 @@ from dotenv import load_dotenv
 import web3.contract
 from web3 import Web3, AsyncHTTPProvider, HTTPProvider
 from web3.eth import AsyncEth
-from time import sleep
-
 from web3.middleware import geth_poa_middleware
-
 from config import logger
 from src.utils.utils import ERC20_ABI
 from src.utils.tokens_database import TokenDB

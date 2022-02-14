@@ -2,9 +2,9 @@ from json import dumps
 from typing import List
 from decimal import Decimal
 from datetime import datetime
-from config import ADMIN_ADDRESS, decimal, logger
+from config import ADMIN_ADDRESS, decimal
 from src.node import btc
-from src.services.v2.sign_send_transaction import formatted_tx, get_fee_for_transaction
+from src.services.v3.sign_send_transaction import get_fee_for_transaction, formatted_tx
 
 
 def create_transaction(outputs: List[dict], admin_fee, from_address: str):
@@ -16,11 +16,16 @@ def create_transaction(outputs: List[dict], admin_fee, from_address: str):
 
         unsigned_tx = btc.rpc_host.send(
             outputs, 1, 'economical', None,
-            {'add_to_wallet': False, 'change_address': ADMIN_ADDRESS}
+            {
+                'add_to_wallet': False,
+                'change_address': ADMIN_ADDRESS,
+                'change_position': 0,
+                'subtract_fee_from_outputs': [1]
+            }
         )
 
         tx = btc.rpc_host.decode_transaction(unsigned_tx['hex'])
-        formatted_tx_info = formatted_tx(tx, 0, admin_fee)
+        formatted_tx_info = formatted_tx(tx, 0)
 
         if not isinstance(admin_fee, Decimal):
             admin_fee = decimal.create_decimal(str(admin_fee))
@@ -40,25 +45,20 @@ def create_transaction(outputs: List[dict], admin_fee, from_address: str):
             }),
             'fee': '%.8f' % node_fee,
             'maxFeeRate': '%.8f' % fee_rate,
-
             'time': int(round(datetime.now().timestamp())),
             'transactionHash': tx['hash'],
-            'amount': "%.8f" % (value + node_fee),
+            'amount': "%.8f" % value,
             'senders': [
                 {
                     'address': from_address,
-                    'amount': "%.8f" % (value + admin_fee)
+                    'amount': "%.8f" % value
                 }
             ],
             'recipients': [
                 {
                     'address': to_address,
-                    'amount': "%.8f" % value
-                },
-                {
-                    'address': ADMIN_ADDRESS,
-                    'amount': "%.8f" % (admin_fee - node_fee)
-                },
+                    'amount': "%.8f" % (value - node_fee)
+                }
             ],
         }
     except Exception as e:

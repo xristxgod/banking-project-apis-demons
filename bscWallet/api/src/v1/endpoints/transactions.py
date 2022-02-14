@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from config import logger, ADMIN_ADDRESS, ADMIN_PRIVATE_KEY
+from config import logger, ADMIN_PRIVATE_KEY
 from src.v1.schemas import BodyCreateTransaction, ResponseCreateTransaction, BodySendTransaction, \
     ResponseSendTransaction, BodyGetTx, BodyGetOptimalGas
 from src.v1.services.trx_eth import transaction_bsc
@@ -12,20 +12,31 @@ transactions_router = APIRouter(tags=['Transactions'])
 
 
 @transactions_router.post(
+    "/bnb/create-transaction",
+    description="Create a BSC transaction for sending ONLY from ADMIN_ADDRESS",
+    response_model=ResponseCreateTransaction,
+)
+async def create_transactions_bnb(body: BodyCreateTransaction):
+    return await __create_transaction(coin='bnb', body=body)
+
+
+@transactions_router.post(
     "/bsc_bip20_{coin}/create-transaction",
     description="Create a BSC transaction for sending ONLY from ADMIN_ADDRESS",
     response_model=ResponseCreateTransaction,
 )
 async def create_transactions(coin: str, body: BodyCreateTransaction):
+    return await __create_transaction(coin=coin, body=body)
+
+
+async def __create_transaction(coin: str, body: BodyCreateTransaction):
     try:
         logger.error(f"Calling '/{coin}/create-transaction'")
         logger.error(f"REQUEST: {body.json()}")
-        body.fromAddress = ADMIN_ADDRESS
-        logger.error(f"<= SET addressFrom = ADMIN_ADDRESS: {body.json()}")
         if Coins.is_native(coin):
-            return await transaction_bsc.create_transaction(body=body)
+            return await transaction_bsc.create_transaction(body=body, is_admin=True)
         elif Coins.is_token(coin):
-            return await transaction_token.create_transaction(body=body, token=coin)
+            return await transaction_token.create_transaction(body=body, token=coin, is_admin=True)
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Coin "{coin}" was not found')
     except Exception as error:
@@ -58,22 +69,37 @@ async def create_transactions(coin: str, body: BodyCreateTransaction):
 
 
 @transactions_router.post(
+    "/bnb/sign-send-transaction",
+    description="Sign and send a BSC transaction",
+    response_model=ResponseSendTransaction,
+)
+async def send_transaction_bnb(body: BodySendTransaction):
+    return await __send_transaction(coin='bnb', body=body)
+
+
+@transactions_router.post(
     "/bsc_bip20_{coin}/sign-send-transaction",
     description="Sign and send a BSC transaction",
     response_model=ResponseSendTransaction,
 )
 async def send_transaction(coin: str, body: BodySendTransaction):
+    return await __send_transaction(coin=coin, body=body)
+
+
+async def __send_transaction(coin: str, body: BodySendTransaction):
     """Create, sign and send token transaction"""
     logger.error(f"Calling '/{coin}/sign-send-transaction'")
     logger.error(f"REQUEST: {body.json()}")
     body.privateKeys = [ADMIN_PRIVATE_KEY]
     logger.error(f"<= SET privateKeys = [ADMIN_PRIVATE_KEY]: {body.json()}")
     if Coins.is_native(coin):
-        return await transaction_bsc.sign_send_transaction(body=body)
+        tx = await transaction_bsc.sign_send_transaction(body=body, is_sender_from_body=True)
     elif Coins.is_token(coin):
-        return await transaction_token.sign_send_transaction(body=body)
+        tx = await transaction_token.sign_send_transaction(body=body, is_sender_from_body=True)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Coin "{coin}" was not found')
+    logger.error(f'SENDED TX: {tx.json()}')
+    return tx
 
 
 @transactions_router.post(

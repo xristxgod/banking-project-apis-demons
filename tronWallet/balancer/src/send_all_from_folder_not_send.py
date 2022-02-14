@@ -7,6 +7,7 @@ from config import rabbit_url, queue, logger, NOT_SEND
 
 def send_all_from_folder_not_send():
     """Send those transits that were not sent due to any errors"""
+    logger.error("--> Started looking for unsent transactions")
     files = os.listdir(NOT_SEND)
     for file_name in files:
         try:

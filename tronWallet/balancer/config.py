@@ -8,18 +8,18 @@ load_dotenv()
 decimals = Context()
 decimals.prec = 18
 
-AdminAddress = os.getenv("ADMIN_WALLET")
-AdminPrivateKey = os.getenv("ADMIN_PRIVATE_KEY")
+AdminAddress = os.getenv("AdminWallet")
+AdminPrivateKey = os.getenv("AdminPrivateKey")
 
-API_URL = os.getenv("API_URL")
-DB_URL = os.getenv('DB_URL')
+API_URL = os.getenv("ApiURL")
+DB_URL = os.getenv('DataBaseURL')
 
-rabbit_url = os.getenv("RABBITMQ_URL")
-queue = os.getenv("QUEUE")
+rabbit_url = os.getenv("RabbitMQURL")
+queue = os.getenv("QueueBalancer")
 
-minTokenCost = decimals.create_decimal(os.getenv("MIN_TOKEN_COST"))
-tokenCostUSDT = decimals.create_decimal(os.getenv('TOKEN_COST_USDT'))
-tokenCostUSDC = decimals.create_decimal(os.getenv('TOKEN_COST_USDC'))
+minTokenCost = decimals.create_decimal(os.getenv("MinTokenCost"))
+tokenCostUSDT = decimals.create_decimal(os.getenv('TokenCostUSDT'))
+tokenCostUSDC = decimals.create_decimal(os.getenv('TokenCostUSDC'))
 tokens = {"usdc": tokenCostUSDC, "usdt": tokenCostUSDT}
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

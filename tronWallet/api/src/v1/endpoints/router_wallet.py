@@ -31,7 +31,7 @@ async def create_wallet(body: BodyCreateWallet, network: Optional[str] = "tron")
 async def get_balance(address: TronAccountAddress):
     try:
         logger.error(f"Calling 'tron/get-balance/{address}'")
-        return wallet.get_balance(address=address)
+        return await wallet.get_balance(address=address)
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
 
@@ -43,25 +43,10 @@ async def get_trc20_balance(address: TronAccountAddress, coin: str):
     try:
         logger.error(f"Calling 'tron-trc20-{coin}/get-balance/{address}'")
         if Coins.is_native(coin=coin):
-            return wallet.get_balance(address=address)
+            return await wallet.get_balance(address=address)
         elif Coins.is_token(coin=coin):
-            return wallet.get_token_balance(address=address, token=coin)
+            return await wallet.get_token_balance(address=address, token=coin)
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Coin "{coin}" was not found')
-    except Exception as error:
-        return JSONResponse(content={"error": str(error)})
-
-# <<<------------------------------------>>> Token info <<<---------------------------------------------------------->>>
-
-@router.get(
-    "/tron/get-all-tokens/",
-    description="Get all tokens",
-    response_class=JSONResponse,
-    tags=["Utils"]
-)
-async def get_all_tokens():
-    try:
-        logger.error(f"Calling '/get-all-tokens'")
-        return JSONResponse(content=wallet.get_all_tokens())
     except Exception as error:
         return JSONResponse(content={"error": str(error)})

@@ -1,6 +1,6 @@
 import sys
 import argparse
-from run_demon import TransactionsDemon, logger
+from src.demon import TransactionsDemon, logger
 from asyncio import run
 
 

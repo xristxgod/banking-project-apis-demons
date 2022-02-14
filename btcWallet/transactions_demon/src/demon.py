@@ -9,7 +9,7 @@ from bit.network.services import NetworkAPI
 from config import ERROR, NOT_SEND, LAST_BLOCK, logger, decimal, Decimal
 from .external_data.database import DB
 from .external_data.rabbit_mq import RabbitMQ
-from .utils import convert_time
+from .utils import convert_time, get_transaction_in_db
 from typing import Optional, List
 
 
@@ -82,6 +82,7 @@ class TransactionsDemon(FindTransactionsConfig):
     ) -> None:
         """ Transaction search script """
 
+        all_transactions_hash_in_db = DB.get_all_transactions_hash()
         if db_addresses is None:
             addresses = self.db.get_addresses()
         else:
@@ -125,12 +126,10 @@ class TransactionsDemon(FindTransactionsConfig):
                 continue
         if len(packages_by_addresses) > 0:
             for package in packages_by_addresses:
-                self.__send_to_rabbit_mq(json.dumps(
-                    [
-                        {"network": "btc", "block": block},
-                        package
-                    ]
-                ))
+                self.__send_to_rabbit_mq(
+                    [{"network": "btc", "block": block}, package],
+                    all_transactions_hash_in_db
+                )
 
     def __get_senders(self, vin: list) -> tuple:
         """ Get the input addresses and the sum of the output """
@@ -139,13 +138,11 @@ class TransactionsDemon(FindTransactionsConfig):
             try:
                 inp = self.__node.getrawtransaction(v["txid"], True)
                 values = inp["vout"][int(v["vout"])]
-                addresses.append(*values["scriptPubKey"]["addresses"])
+                addresses.extend(values["scriptPubKey"]["addresses"])
                 amount += values["value"]
                 full.append({
                     "address": values["scriptPubKey"]["addresses"][0],
-                    # ToDo remove amountBTC
-                    "amountBTC": format(decimal.create_decimal(repr(values["value"])), 'f'),
-                    "amount": format(decimal.create_decimal(repr(values["value"])), 'f')
+                    "amount": "%.8f" % decimal.create_decimal(repr(values["value"]))
                 })
             except Exception:
                 continue
@@ -156,12 +153,11 @@ class TransactionsDemon(FindTransactionsConfig):
         addresses, amount, full = [], 0, []
         for v in vout:
             try:
-                addresses.append(*v["scriptPubKey"]["addresses"])
+                addresses.extend(v["scriptPubKey"]["addresses"])
                 amount += v["value"]
                 full.append({
                     "address": v["scriptPubKey"]["addresses"][0],
-                    "amountBTC": format(decimal.create_decimal(repr(v["value"])), 'f'),
-                    "amount": format(decimal.create_decimal(repr(v["value"])), 'f')
+                    "amount": "%.8f" % decimal.create_decimal(repr(v["value"]))
                 })
             except Exception:
                 continue
@@ -177,7 +173,6 @@ class TransactionsDemon(FindTransactionsConfig):
             "time": time_stamp,
             "datetime": date_time,
             "transactionHash": tx_id,
-            "amountBTC": str(amount),
             "amount": str(amount),
             "fee": str(fee),
             "senders": from_,
@@ -199,19 +194,26 @@ class TransactionsDemon(FindTransactionsConfig):
             packages_by_addresses.append({"address": address, "transactions": [transaction]})
         return packages_by_addresses
 
-    def __send_to_rabbit_mq(self, values: list) -> None:
+    def __send_to_rabbit_mq(self, package: list, all_transactions_hash_in_db) -> None:
         """ Send collected data to queue """
         try:
-            self.rabbit.send_message(values)
+            for index in range(len(package[1]['transactions'])):
+                if package[1]["transactions"][index]["transactionHash"] in all_transactions_hash_in_db:
+                    txn = get_transaction_in_db(
+                        transaction_hash=package[1]['transactions'][index]["transactionHash"],
+                        transaction=package[1]['transactions'][index]
+                    )
+                    package[1]['transactions'][index] = txn
+            self.rabbit.send_message(json.dumps(package))
         except Exception as e:
             logger.error(f'SENDING TO MQ ERROR: {e}')
             with open(ERROR, 'a', encoding='utf-8') as file:
                 # If an error occurred on the RabbitMQ side, write about it.
-                file.write(f"Error: {values} | RabbitMQ not responding {e} \n")
+                file.write(f"Error: {package} | RabbitMQ not responding {e} \n")
             new_not_send_file = os.path.join(NOT_SEND, f'{uuid.uuid4()}.json')
             with open(new_not_send_file, 'w') as file:
                 # Write all the verified data to a json file, and do not praise the work
-                file.write(str(values))
+                file.write(str(package))
 
     def __run(self):
         """ The script runs all the time """
@@ -239,12 +241,13 @@ class TransactionsDemon(FindTransactionsConfig):
 
     def __send_all_from_folder_not_send(self):
         files = os.listdir(NOT_SEND)
+        all_transactions_hash_in_db = DB.get_all_transactions_hash()
         for file_name in files:
             try:
                 path = os.path.join(NOT_SEND, file_name)
                 with open(path, 'r') as file:
-                    values = file.read()
-                self.__send_to_rabbit_mq(values)
+                    values = json.loads(file.read())
+                self.__send_to_rabbit_mq(values, all_transactions_hash_in_db)
                 os.remove(path)
             except:
                 continue

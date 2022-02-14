@@ -2,12 +2,12 @@ import json
 import web3.exceptions
 from fastapi import HTTPException
 from starlette import status
-
-from config import logger, Decimal
+from datetime import datetime
+from config import logger, Decimal, ADMIN_ADDRESS, ADMIN_FEE, decimal
 from src.utils.node import node_singleton
-
 from src.v1.schemas import BodyCreateTransaction, ResponseCreateTransaction, ResponseSendTransaction, \
     BodySendTransaction, ResponseAddressWithAmount
+from .decode_raw_tx import decode_raw_tx, DecodedTx
 
 
 class TransactionBSC:
@@ -15,7 +15,9 @@ class TransactionBSC:
     def __init__(self):
         self.node_bridge = node_singleton
 
-    async def create_transaction(self, body: BodyCreateTransaction) -> ResponseCreateTransaction:
+    async def create_transaction(
+            self, body: BodyCreateTransaction, is_admin: bool = False
+    ) -> ResponseCreateTransaction:
         """
         This function only signs the transaction
         :return: Signed transaction
@@ -24,7 +26,9 @@ class TransactionBSC:
             if isinstance(body.outputs, str):
                 body.outputs = json.loads(body.outputs)
             to_address, amount = list(body.outputs[0].items())[0]
-            from_address = self.node_bridge.node.toChecksumAddress(body.fromAddress)
+            from_address = self.node_bridge.node.toChecksumAddress(
+                ADMIN_ADDRESS if is_admin else body.fromAddress
+            )
             to_address = self.node_bridge.node.toChecksumAddress(to_address)
             nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
         except Exception as error:
@@ -39,18 +43,54 @@ class TransactionBSC:
                 "gasPrice": await self.node_bridge.gas_price,
                 "gas": body.fee
             }
+
+            value = decimal.create_decimal(amount)
+            node_fee = decimal.create_decimal(create_transaction['gas']) / (10 ** 8)
+            admin_fee = decimal.create_decimal(body.adminFee) if body.adminFee is not None else ADMIN_FEE
+            sender = body.fromAddress if is_admin else from_address
+
+            admin_address = body.adminAddress if body.adminAddress is not None else ADMIN_ADDRESS
+
+            create_transaction.update({
+                'adminFee': "%.8f" % admin_fee,
+                'fromAddress': sender,
+                'adminAddress': admin_address
+            })
+            tx_hex = json.dumps(create_transaction)
+
             return ResponseCreateTransaction(
-                fee=create_transaction['gas'],
+                fee="%.8f" % node_fee,
                 maxFeeRate=create_transaction['gasPrice'],
-                createTxHex=json.dumps(create_transaction)
+                createTxHex=tx_hex,
+                time=int(round(datetime.now().timestamp())),
+                amount="%.18f" % (value + node_fee),
+                senders=[
+                    ResponseAddressWithAmount(
+                        address=sender,
+                        amount="%.18f" % (value + admin_fee)
+                    )
+                ],
+                recipients=[
+                    ResponseAddressWithAmount(
+                        address=to_address,
+                        amount="%.18f" % value
+                    ),
+                    ResponseAddressWithAmount(
+                        address=admin_address,
+                        amount="%.18f" % (admin_fee - node_fee)
+                    )
+                ]
             )
         except Exception as error:
             logger.error(f"THE TRANSACTION WAS NOT CREATED | ERROR: {error}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
-    async def sign_send_transaction(self, body: BodySendTransaction) -> json:
+    async def sign_send_transaction(self, body: BodySendTransaction, is_sender_from_body: bool = False) -> json:
         try:
             payload = json.loads(body.createTxHex)
+            admin_fee = payload.pop('adminFee', None)
+            from_address = payload.pop('fromAddress', None)
+            admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
             transfer = {
                 "nonce": payload['nonce'],
                 "to": payload['to'],
@@ -66,19 +106,36 @@ class TransactionBSC:
                 transaction=self.node_bridge.async_node.toHex(signed_transaction.rawTransaction)
             )
             logger.error(f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}")
-            tx = await self.node_bridge.async_node.eth.get_transaction(transaction_hash)
-            # block = await self.async_node.eth.get_block(tx['blockNumber'])
+            tx: DecodedTx = decode_raw_tx(signed_transaction.rawTransaction.hex())
+
+            value = decimal.create_decimal(tx.value) / (10 ** 18)
+            node_fee = decimal.create_decimal(tx.gas) / (10 ** 8)
+            admin_fee = decimal.create_decimal(admin_fee) if admin_fee is not None else ADMIN_FEE
+
             return ResponseSendTransaction(
-                time=None,
-                datetime=None,
-                transactionHash=tx['hash'].hex(),
-                amount=tx['value'],
-                fee=tx['gas'],
-                senders=[ResponseAddressWithAmount(address=tx['from'], amount=tx['value'])],
-                recipients=[ResponseAddressWithAmount(address=tx['to'], amount=tx['value'])],
+                time=int(round(datetime.now().timestamp())),
+                transactionHash=tx.hash_tx,
+                amount="%.18f" % (value + node_fee),
+                fee="%.8f" % node_fee,
+                senders=[
+                    ResponseAddressWithAmount(
+                        address=from_address if is_sender_from_body and from_address is not None else tx.from_,
+                        amount="%.18f" % (value + admin_fee)
+                    )
+                ],
+                recipients=[
+                    ResponseAddressWithAmount(
+                        address=tx.to,
+                        amount="%.18f" % value
+                    ),
+                    ResponseAddressWithAmount(
+                        address=admin_address,
+                        amount="%.18f" % (admin_fee - node_fee)
+                    ),
+                ],
             )
         except Exception as error:
-            logger.error(f"THE TRANSACTION WAS NOT SENT | STEP 109 ERROR: {error}")
+            logger.error(f"THE TRANSACTION WAS NOT SENT: {error}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def get_optimal_gas(self, from_address: str, to_address: str, amount) -> json:

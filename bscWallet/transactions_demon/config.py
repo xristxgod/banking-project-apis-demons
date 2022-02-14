@@ -37,3 +37,4 @@ NODE_URL = os.environ.get("NodeURL", 'https://data-seed-prebsc-2-s3.binance.org:
 
 ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '0xbB10Db443c7eE8c871b073326be9c156d0E1C963')
 SEND_TO_MAIN_WALLET_LIMIT = decimal.create_decimal(os.getenv('SEND_TO_MAIN_WALLET_LIMIT', '0.0001'))
+DB_URL = os.getenv('DataBaseURL', 'postgresql://mango:mango@172.31.3.130:35432/mango_crypto_master')

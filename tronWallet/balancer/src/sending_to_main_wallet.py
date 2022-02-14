@@ -4,9 +4,10 @@ from typing import Dict
 from aio_pika import connect_robust, IncomingMessage, RobustConnection, Channel
 from asyncio import sleep as async_sleep
 
+from src.send_all_from_folder_not_send import send_all_from_folder_not_send
 from src.utils.types import TronAccountAddress, TokenTRC20
-from .services.to_main_wallet_native import send_to_main_wallet_native
-from .services.to_main_wallet_token import send_to_main_wallet_token
+from src.services.to_main_wallet_native import send_to_main_wallet_native
+from src.services.to_main_wallet_token import send_to_main_wallet_token
 from config import logger, rabbit_url, queue
 
 async def send_to_main_wallet(address: TronAccountAddress, token: TokenTRC20):
@@ -49,3 +50,4 @@ async def sending_to_main_wallet(loop):
                         await __processing_message(message=message)
         except Exception as error:
             logger.error(f"--> Error | SENDING_TO_MAIN_WALLET: {error}")
+        send_all_from_folder_not_send()

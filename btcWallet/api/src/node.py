@@ -3,7 +3,7 @@ import json
 import requests
 from dotenv import load_dotenv
 
-from config import decimal, Decimal, logger, X_ACCOUNT_PRIVATE_KEY
+from config import decimal, Decimal, logger
 from bit import PrivateKey, PrivateKeyTestnet
 from mnemonic import Mnemonic
 from hdwallet.cryptocurrencies import BitcoinMainnet, BitcoinTestnet
@@ -37,8 +37,6 @@ class NodeBTC:
                 wallet = PrivateKeyTestnet(wif=keys.WalletImportFormat())
             else:
                 wallet = PrivateKey(wif=keys.WalletImportFormat())
-
-            self.__rpc_host.import_wallet(wallet)
 
             return {
                 "mnemonicPhrase": words,
@@ -74,8 +72,7 @@ class NodeBTC:
                 **account,
                 "rootXPrivateKey": xprv,
                 "mnemonicPhrase": words,
-                "xBIP32PrivateKey": wallet.xprivate_key(),
-                "xBIP32PublicKey": wallet.xpublic_key(),
+                "BIP32RootKey": wallet.root_xprivate_key(),
                 "privateKey": wallet.private_key(),
                 "publicKey": wallet.public_key(),
                 "address": wallet.p2sh_address(),

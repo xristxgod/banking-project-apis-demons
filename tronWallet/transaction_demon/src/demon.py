@@ -2,17 +2,16 @@ import asyncio
 import time
 from typing import List, Dict
 from time import time as timer
-from datetime import datetime as dt, timedelta
+from datetime import timedelta, datetime as dt
 
 import tronpy.exceptions
 from tronpy.tron import Tron, HTTPProvider
 
+from src.token_db import smart_contract_transaction
 from src.demon_to_send import export_transactions, send_all_from_folder_not_send
-from src.utils import to_base58check_address, from_sun, convert_time, TronAccountAddress, ContractAddress
-from src.token_db import get_asset_trc20
-from src.external_data.database import get_addresses
-from config import logger, LAST_BLOCK, network, USDT, USDC, decimals, node
-
+from src.utils import to_base58check_address, from_sun, convert_time, TronAccountAddress
+from src.external_data.database import get_addresses, get_all_transactions_hash
+from config import LAST_BLOCK, USDT, USDC, AdminAddress, ReportingAddress, logger, decimals, node, network
 
 class TransactionDemon:
     # Provider config
@@ -113,6 +112,7 @@ class TransactionDemon:
         :param timestamp: Block appearance time
         """
         funded_trx_for_sending = []
+        all_transactions_hash_in_db = get_all_transactions_hash()
         for txn in transactions:
             # If the transaction is not approved, then we skip it.
             if txn["ret"][0]["contractRet"] != "SUCCESS":
@@ -138,10 +138,11 @@ class TransactionDemon:
                 raise error
             address = None
             for address_in_transaction in addresses_in_transaction:
-                if address_in_transaction in addresses:
+                if address_in_transaction in addresses or address_in_transaction == AdminAddress \
+                        or address_in_transaction == ReportingAddress:
                     address = address_in_transaction
                     break
-            if address is not None:
+            if address is not None or txn["txID"] in all_transactions_hash_in_db:
                 funded_trx_for_sending.append(await self.__packaging_for_dispatch(
                     txn=txn,
                     txn_type=txn_type,
@@ -195,7 +196,7 @@ class TransactionDemon:
                 values["senders"][0]["amount"] = amount
             # TRC20
             else:
-                smart_contract = await self.__smart_contract_transaction(
+                smart_contract = await smart_contract_transaction(
                     data=txn_values["data"], contract_address=txn_values["contract_address"]
                 )
                 if "data" in smart_contract:
@@ -210,27 +211,16 @@ class TransactionDemon:
                     values["token"] = smart_contract["token"]
                     values["name"] = smart_contract["name"]
                     values["amount"] = amount
+            try:
+                if txn_type == "TransferContract" \
+                        and decimals.create_decimal(values["amount"]) == decimals.create_decimal("0.1"):
+                    values["fee"] = "1"
+            except Exception as error:
+                logger.error(f"{error}")
             return values
         except Exception as error:
             logger.error(f"Error Step 205 packaging for dispatch: {error}")
             return {}
-
-    async def __smart_contract_transaction(self, data: str, contract_address: ContractAddress) -> Dict:
-        """
-        Unpacking a smart contract
-        :param data: Smart Contract Information
-        :param contract_address: Smart contract (Token TRC20) address
-        """
-        token_dict = await get_asset_trc20(address=contract_address)
-        amount = decimals.create_decimal(int("0x" + data[72:], 0) / 10 ** int(token_dict["decimals"]))
-        to_address = to_base58check_address("41" + data[32:72])
-        token_symbol, token_name = token_dict["symbol"], token_dict["name"]
-        return {
-            "to_address": to_address,
-            "token": token_symbol,
-            "name": token_name,
-            "amount": "%.8f" % amount
-        }
 
     async def __run(self):
         """The script runs all the time"""
@@ -285,11 +275,11 @@ class TransactionDemon:
         :param end_block: Finish on block
         """
         if start_block and end_block:
-            await self.__start_in_range(start_block=start_block, end_block=end_block)
+            await self.__start_in_range(start_block=start_block, end_block=end_block+1)
         elif start_block and not end_block:
             await self.__start_in_range(start_block=start_block, end_block=self.get_block_number + 1)
         elif not start_block and end_block:
-            await self.__start_in_range(start_block=self.get_block_number, end_block=end_block)
+            await self.__start_in_range(start_block=self.get_block_number, end_block=end_block+1)
         else:
             send_all_from_folder_not_send()
             await self.__run()

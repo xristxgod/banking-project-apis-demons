@@ -1,24 +1,22 @@
 import json
-import math
 import asyncio
 import requests
-from unsync import unsync
 from decimal import Decimal
-from typing import List
+from typing import List, Dict
 
 from src.utils.node import NodeTron
 from src.utils.types import TransactionHash, TronAccountAddress, ContractAddress
-from config import node, decimals
+from config import decimals, network
 
 class TransactionParser(NodeTron):
 
     async def get_transaction(self, transaction_hash: TransactionHash):
-        return await self.__get_transactions(transactions=[self.node.get_transaction(txn_id=transaction_hash)])
+        return await self.__get_transactions(transactions=[await self.async_node.get_transaction(txn_id=transaction_hash)])
 
     async def get_all_transactions(self, address: TronAccountAddress) -> json:
         """Get all transactions by address"""
-        url_trx_and_trc10 = f"{node}/v1/accounts/{address}/transactions"
-        url_trx_and_trc10 = f"https://api.trongrid.io/v1/accounts/{address}/transactions"
+        url = "" if network == "mainnet" else f"{network.lower()}."
+        url_trx_and_trc10 = f"https://api.{url}trongrid.io/v1/accounts/{address}/transactions"
         headers = {
             "Accept": "application/json",
             "TRON-PRO-API-KEY": "a684fa6d-6893-4928-9f8e-8decd5f034f2"
@@ -67,7 +65,7 @@ class TransactionParser(NodeTron):
             fee = 0
             if "fee_limit" in txn["raw_data"]:
                 try:
-                    fee_limit = self.node.get_transaction_info(txn["txID"])
+                    fee_limit = await self.async_node.get_transaction_info(txn["txID"])
                     if "fee" not in fee_limit:
                         raise Exception
                     fee = "%.8f" % decimals.create_decimal(self.fromSun(fee_limit["fee"]))
@@ -159,8 +157,8 @@ class TransactionParser(NodeTron):
         try:
             contract = self.node.get_contract(addr=contract_address)
             token_name = contract.functions.symbol()
-            decimals = contract.functions.decimals()
-            amount = Decimal(value=int("0x" + data[72:], 0) / 10 ** int(decimals))
+            dec = contract.functions.decimals()
+            amount = Decimal(value=int("0x" + data[72:], 0) / 10 ** int(dec))
             to_address = self.node.to_base58check_address("41" + data[32:72])
             return {
                 "to_address": to_address,
@@ -170,10 +168,35 @@ class TransactionParser(NodeTron):
         except Exception as error:
             return {"data": str(data)}
 
-@unsync
-def get_all_transactions(address: TronAccountAddress):
-    return asyncio.run(TransactionParser().get_all_transactions(address=address))
+def get_txn(tnx: Dict, user: TronAccountAddress, admin_fee: int, tnx_type: str, reporter: TronAccountAddress) -> Dict:
+    amount, tx_fee = decimals.create_decimal(tnx["amount"]), decimals.create_decimal(tnx["fee"])
+    tx_amount = amount + tx_fee if tnx_type == "TransferContract" else amount
+    sender_amount = amount + admin_fee
+    admin_amount = admin_fee - tx_fee if tnx_type == "TransferContract" else admin_fee
+    tx = {
+        "time": tnx["time"],
+        "transactionHash": tnx["transactionHash"],
+        "amount": "%.8f" % tx_amount,
+        "fee": tnx["fee"],
+        "senders": [
+            {
+                "address": user,
+                "amount": "%.8f" % sender_amount
+            }
+        ],
+        "recipients": [
+            {
+                "address": tnx["recipients"][0]["address"],
+                "amount": "%.8f" % amount
+            },
+            {
+                "address": reporter,
+                "amount": "%.8f" % admin_amount
+            }
+        ]
+    }
+    if tnx_type == "TriggerSmartContract":
+        tx["token"] = tnx["token"]
+    return tx
 
-@unsync
-def get_transaction(transaction_hash: TransactionHash):
-    return asyncio.run(TransactionParser().get_transaction(transaction_hash=transaction_hash))
+transaction_parser = TransactionParser()

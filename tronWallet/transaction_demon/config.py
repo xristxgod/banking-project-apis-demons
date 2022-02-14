@@ -3,7 +3,6 @@ from logging import getLogger
 from decimal import Context
 
 from dotenv import load_dotenv
-from tronpy.providers import HTTPProvider
 
 load_dotenv()
 
@@ -23,17 +22,18 @@ if "files" not in os.listdir(ROOT_DIR):
     os.mkdir(BASE_DIR)
 
 if network == "mainnet":
-    __token = "tokens/tokensMainNet.json"
-    USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
-    USDC = "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8"
+    __token, USDT, USDC = (
+        "tokens/tokensMainNet.json", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8"
+    )
 elif network == "shasta":
-    __token = "tokens/tokensShastaNet.json"
-    USDT = "TRvz1r3URQq5otL7ioTbxVUfim9RVSm1hA"
-    USDC = "TK8fX7TpZqedXNYVn6RA24Xcxqox7hbn59"
+    __token, USDT, USDC = (
+        "tokens/tokensShastaNet.json", "TRvz1r3URQq5otL7ioTbxVUfim9RVSm1hA", "TK8fX7TpZqedXNYVn6RA24Xcxqox7hbn59"
+    )
 else:
-    __token = "tokens/tokensNileNet.json"
-    USDT = "TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3"
-    USDC = "TLBaRhANQoJFTqre9Nf1mjuwNWjCJeYqUL"
+    __token, USDT, USDC = (
+        "tokens/tokensNileNet.json", "TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3", "TLBaRhANQoJFTqre9Nf1mjuwNWjCJeYqUL"
+    )
+
 # File for TRC20 tokens
 fileTokens = os.path.join(BASE_DIR, __token)
 
@@ -46,7 +46,9 @@ if 'not_send' not in os.listdir(BASE_DIR):
     os.mkdir(NOT_SEND)
 if 'not_sent_to_transaction' not in os.listdir(BASE_DIR):
     os.mkdir(NOT_SEND_TO_TRANSACTION)
+
 node = os.getenv("NodeURL")
-AdminAddress = os.getenv("ADMIN_WALLET")
+AdminAddress = os.getenv("AdminWallet")
+ReportingAddress = os.getenv("ReportingAddress")
 
 logger = getLogger(__name__)

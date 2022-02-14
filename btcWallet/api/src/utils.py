@@ -3,6 +3,12 @@ from mnemonic import Mnemonic
 import bip32utils
 
 
+def get_status(response: dict) -> int:
+    if not isinstance(response, dict) or 'error' in response.keys():
+        return 500
+    return 200
+
+
 def convert_time(t: int) -> str:
     return datetime.fromtimestamp(int(t)).strftime('%Y-%m-%d %H:%M:%S')
 

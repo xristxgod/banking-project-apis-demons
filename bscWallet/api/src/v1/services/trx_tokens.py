@@ -1,14 +1,15 @@
 import json
 from fastapi import HTTPException
 from starlette import status
-
-from config import logger, decimal
+from datetime import datetime
+from config import logger, decimal, ADMIN_FEE, ADMIN_ADDRESS
 from src.utils.node import node_singleton
 from src.utils.tokens_database import TokenDB
 from src.v1.schemas import (
     BodyCreateTransaction, ResponseCreateTransaction,
     ResponseCreateTokenTransaction, ResponseSendTransaction, BodySendTransaction, ResponseAddressWithAmount
 )
+from .decode_raw_tx import decode_raw_tx, DecodedTx
 
 
 class TransactionToken:
@@ -17,10 +18,14 @@ class TransactionToken:
         self.__contracts = {}
 
     """This class works with token transactions"""
-    async def create_transaction(self, body: BodyCreateTransaction, token: str) -> ResponseCreateTransaction:
+    async def create_transaction(
+            self, body: BodyCreateTransaction, token: str, is_admin: bool = False
+    ) -> ResponseCreateTransaction:
         to_address, amount = list(body.outputs[0].items())[0]
         try:
-            from_address = self.node_bridge.node.toChecksumAddress(body.fromAddress)
+            from_address = self.node_bridge.node.toChecksumAddress(
+                ADMIN_ADDRESS if is_admin else body.fromAddress
+            )
             to_address = self.node_bridge.node.toChecksumAddress(to_address)
             nonce = self.node_bridge.node.eth.get_transaction_count(from_address)
         except Exception as error:
@@ -33,6 +38,7 @@ class TransactionToken:
         token_contract = await self.node_bridge.get_contract(symbol=symbol)
         if token_contract and token_contract is not None:
             coin_decimals = 10**int(token_contract.functions.decimals().call())
+            value = decimal.create_decimal(amount)
             amount = int(float(amount) * int(coin_decimals))
             try:
                 price = await self.node_bridge.gas_price
@@ -45,17 +51,49 @@ class TransactionToken:
                     'gas': 2000000,
                     'value': 0,
                 })
-                estimate_gas: int = self.node_bridge.node.eth.estimateGas(transfer)
+                gas: int = self.node_bridge.node.eth.estimateGas(transfer)
                 payload = {
-                    key: transfer[key] for key in ['value', 'chainId', 'nonce', 'gasPrice', 'to', 'data']
+                    key: transfer[key] for key in ['value', 'chainId', 'nonce', 'gasPrice', 'to', 'data', 'gas']
                 }
-                gas = estimate_gas * price // (10 ** 10)
+
                 payload.update({'gas': gas})
+
+                node_fee = decimal.create_decimal(payload['gas']) / (10 ** 8)
+                admin_fee = decimal.create_decimal(body.adminFee) if body.adminFee is not None else ADMIN_FEE
+                sender = body.fromAddress if is_admin else from_address
+
+                admin_address = body.adminAddress if body.adminAddress is not None else ADMIN_ADDRESS
+
+                payload.update({
+                    'adminFee': "%.8f" % admin_fee,
+                    'fromAddress': sender,
+                    'adminAddress': admin_address
+                })
+                tx_hex = json.dumps(payload)
+
                 return ResponseCreateTokenTransaction(
-                    createTxHex=json.dumps(payload),
-                    fee=str(gas),
+                    createTxHex=tx_hex,
+                    fee=node_fee,
                     maxFeeRate=str(price),
-                    token=symbol
+                    token=symbol,
+                    time=int(round(datetime.now().timestamp())),
+                    amount="%.18f" % (value + node_fee),
+                    senders=[
+                        ResponseAddressWithAmount(
+                            address=body.fromAddress if is_admin else from_address,
+                            amount="%.18f" % (value + admin_fee)
+                        )
+                    ],
+                    recipients=[
+                        ResponseAddressWithAmount(
+                            address=to_address,
+                            amount="%.18f" % value
+                        ),
+                        ResponseAddressWithAmount(
+                            address=admin_address,
+                            amount="%.18f" % (admin_fee - node_fee)
+                        )
+                    ]
                 )
             except Exception as error:
                 logger.error(f"THE TRANSACTION TOKEN WAS NOT CREATED | ERROR: {error}")
@@ -93,11 +131,11 @@ class TransactionToken:
             logger.error(f'ERROR GET CONTRACT: {e}. CONTRACT ADDRESS: {contract_address} | {self.__contracts}')
             return None
 
-    async def processing_smart_contract(self, tx):
-        if len(tx["input"]) > 64:
+    async def processing_smart_contract(self, tx: DecodedTx):
+        if len(tx.data) > 64:
             smart_contract = await self.__get_smart_contract_info(
-                input_=tx["input"],
-                contract_address=tx["to"]
+                input_=tx.data,
+                contract_address=tx.to
             )
             if smart_contract is not None:
                 return {
@@ -111,13 +149,18 @@ class TransactionToken:
                 }
         return {}
 
-    async def sign_send_transaction(self, body: BodySendTransaction) -> ResponseSendTransaction:
+    async def sign_send_transaction(
+            self, body: BodySendTransaction, is_sender_from_body: bool = False
+    ) -> ResponseSendTransaction:
         """
         This function sends the transaction
         :return: Transaction hash
         """
         try:
-            payload = json.loads(body.createTxHex)
+            payload: dict = json.loads(body.createTxHex)
+            admin_fee = payload.pop('adminFee', None)
+            from_address = payload.pop('fromAddress', None)
+            admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
             signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
                 payload, private_key=body.privateKeys[0]
             )
@@ -128,20 +171,34 @@ class TransactionToken:
                 f"| TX: {self.node_bridge.async_node.toHex(send_transaction)}"
             )
 
-            tx = await self.node_bridge.async_node.eth.get_transaction(send_transaction)
+            tx = decode_raw_tx(signed_transaction.rawTransaction.hex())
             contract_values = await self.processing_smart_contract(tx)
-            print('++', contract_values)
+
+            value = decimal.create_decimal(contract_values['amount'])
+            node_fee = decimal.create_decimal(payload['gas']) / (10 ** 8)
+            admin_fee = decimal.create_decimal(admin_fee) if admin_fee is not None else ADMIN_FEE
+
             return ResponseSendTransaction(
-                time=None,
-                datetime=None,
-                transactionHash=tx['hash'].hex(),
-                amount=contract_values['amount'],
-                fee="%.8f" % (decimal.create_decimal(tx['gas']) / 10 ** 8),
-                senders=[ResponseAddressWithAmount(
-                    address=tx['from'],
-                    amount=contract_values['amount']
-                )],
-                recipients=contract_values['recipients'],
+                time=int(round(datetime.now().timestamp())),
+                transactionHash=tx.hash_tx,
+                fee="%.8f" % node_fee,
+                amount="%.8f" % (value + node_fee),
+                senders=[
+                    ResponseAddressWithAmount(
+                        address=from_address if is_sender_from_body and from_address is not None else tx.from_,
+                        amount="%.8f" % (value + admin_fee)
+                    )
+                ],
+                recipients=[
+                    ResponseAddressWithAmount(
+                        address=contract_values['recipients'][0].address,
+                        amount="%.8f" % value
+                    ),
+                    ResponseAddressWithAmount(
+                        address=admin_address,
+                        amount="%.8f" % (admin_fee - node_fee)
+                    )
+                ]
             )
         except Exception as error:
             logger.error(f"THE TRANSACTION TOKEN WAS NOT SENDER | ERROR: {error}")

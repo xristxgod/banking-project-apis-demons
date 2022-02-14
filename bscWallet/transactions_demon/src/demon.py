@@ -1,19 +1,21 @@
 import asyncio
 import os
+import aiohttp
 import uuid
 import json
 import datetime as dt
+import aiofiles
 from time import time as timer, sleep
 from config import ADMIN_ADDRESS, decimal
 from typing import List, Optional
-from web3 import Web3, HTTPProvider, AsyncHTTPProvider
-from web3.eth import AsyncEth
+from web3 import Web3, HTTPProvider
 from .external_data.database import DB
 from .external_data.rabbit_mq import RabbitMQ
-from .utils import convert_time
+from .utils import convert_time, get_transaction_in_db
 from config import ERROR, NOT_SEND, LAST_BLOCK, logger, NODE_URL
 from web3.middleware import geth_poa_middleware
 
+INT_ADMIN_ADDRESS = int(ADMIN_ADDRESS, 0)
 
 ERC20_ABI = json.loads('[{"constant": true, "inputs": [], "name": "name", "outputs": [{"name": "", "type": "string"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_spender", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "approve", "outputs": [{"name": "success", "type": "bool"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_from", "type": "address"}, {"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transferFrom", "outputs": [{"name": "success", "type": "bool"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [{"name": "", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "owner", "outputs": [{"name": "", "type": "address"}], "payable": false, "type": "function"}, {"constant": true, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "string"}], "payable": false, "type": "function"}, {"constant": false, "inputs": [{"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transfer", "outputs": [], "payable": false, "type": "function"}, {"constant": true, "inputs": [{"name": "", "type": "address"}, {"name": "", "type": "address"}], "name": "allowance", "outputs": [{"name": "", "type": "uint256"}], "payable": false, "type": "function"}]')
 
@@ -36,7 +38,7 @@ class TransactionsDemon:
                 "decimals": contract[4]
             }})
 
-        self.tokens_addresses = [int(x, 0) for x in self.__contracts.keys()]
+        self.__tokens_addresses = [int(x, 0) for x in self.__contracts.keys()]
         sleep(3)
 
     def connect(self):
@@ -45,158 +47,29 @@ class TransactionsDemon:
         if NODE_URL.startswith('https'):
             self.__node.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    def __get_block_number(self) -> int:
-        """Get block number"""
-        while True:
-            try:
-                return int(self.__node.eth.block_number)
-            except Exception as e:
-                logger.error(e)
-                sleep(0.3)
-                self.connect()
-                continue
+    async def __rpc_request(self, method: str, *params):
+        async with aiohttp.ClientSession(headers={'Content-Type': 'application/json'}) as session:
+            async with session.post(
+                NODE_URL,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": method,
+                    "params": params,
+                    "id": 1
+                },
+            ) as resp:
+                data = await resp.json()
+        return data['result']
 
-    def __get_block_info(self, block: int = None):
-        """Returns a block with transaction"""
-        if not block:
-            block = self.__get_block_number()
-            with open(LAST_BLOCK, "r") as file:
-                # We read from the file if the last block is more than 2, then we take it away,
-                # if it has not changed in any way, then we wait.
-                last_block = file.read()
-            logger.error("START PROCESSING TRANSACTION")
-            if last_block:
-                last_block = int(last_block)
-                # Will wait until a new block appears
-                while block == last_block:
-                    sleep(0.2)
-                    block = self.__get_block_number()
-                    logger.error(f"BLOCK: {block} | LAST_BLOCK: {last_block}")
-                # If the block has increased by more than zero, then go to the next block.
-                if block - last_block > 0:
-                    block = last_block + 1
-            logger.error("END PROCESSING TRANSACTION")
-            with open(LAST_BLOCK, "w") as file:
-                # Writing down the last block
-                logger.error(f"WRITE TO {LAST_BLOCK} NEW DATA {block}")
-                file.write(str(block))
-        # else:
-        #     last_block = self.__get_block_number()
-        #     while block != last_block:
-        #         sleep(0.3)
-        #         last_block = self.__get_block_number()
-
-        return self.__node.eth.get_block(int(block))
-
-    async def processing_transactions(self, transactions, addresses, timestamp):
-        funded_trx_for_sending = []
-        async_provider: AsyncHTTPProvider = AsyncHTTPProvider(NODE_URL)
-        async_w3 = Web3(async_provider, modules={'eth': (AsyncEth,)}, middlewares=[])
-        for tx_bytes in transactions:
-            try:
-                tx_hash = async_w3.toHex(tx_bytes)
-                if self.__node.eth.get_transaction_receipt(tx_hash) is None:
-                    continue
-                tx = dict(await async_w3.eth.get_transaction(tx_hash))
-            except Exception as e:
-                continue
-            try:
-                tx_addresses = []
-                if tx['from'] is not None:
-                    tx_addresses.append(async_w3.toChecksumAddress(tx["from"]))
-                if tx['to'] is not None:
-                    tx_addresses.append(async_w3.toChecksumAddress(tx["to"]))
-            except Exception as e:
-                logger.error(f'{e}')
-                logger.error(tx)
-                continue
-            contract_values = await self.processing_smart_contract(tx, tx_addresses)
-
-            #  Check the presence of such addresses in DB
-            address = None
-            for tx_address in tx_addresses:
-                if int(tx_address, 0) in addresses:
-                    address = tx_address
-                    break
-
-            if address is not None:
-                amount = str(self.__node.fromWei(tx["value"], "ether"))
-                receipt = self.__node.eth.wait_for_transaction_receipt(tx["hash"])
-                fee = "%.18f" % (self.__node.fromWei(receipt["gasUsed"] * tx["gasPrice"], "ether"))
-                values = {
-                    "time": timestamp,
-                    "datetime": str(convert_time(str(timestamp)[:10])),
-                    "transactionHash": tx_hash,
-                    "amount": amount,
-                    "fee": fee,
-                    "senders": [{
-                        "address": tx['from'],
-                        "amount": amount if 'amount' not in contract_values.keys() else contract_values['amount'],
-                    }],
-                    "recipients": [{
-                        "address": tx['to'],
-                        "amount": amount,
-                    }],
-                }
-                values.update(contract_values)
-                funded_trx_for_sending.append(
-                    {"address": address, "transactions": [values]}
-                )
-            else:
-                continue
-        return funded_trx_for_sending
-
-    async def __script(self, block: dict, addresses: List):
-        """Searching for the right transactions"""
-        funded_trx_for_sending = []
-
-        if 'transactions' in block.keys() and isinstance(block['transactions'], list):
-            count_trx = len(block['transactions'])
-        else:
-            logger.error(f"Block: {block['number']} is not have transactions!!")
-            return
-        if count_trx == 0:
-            return
-        trx_in_splits = await asyncio.gather(*[
-            self.processing_transactions(
-                block['transactions'][right_border: (right_border + 1)],
-                addresses, block['timestamp']
-            )
-            for right_border in range(count_trx)
-        ])
-        for tx_split in trx_in_splits:
-            funded_trx_for_sending.extend(tx_split)
-        if len(funded_trx_for_sending) > 0:
-            packing = await self.__packing_before_sending(block['number'], funded_trx_for_sending)
-            for package in packing:
-                self.__send_to_rabbit_mq(package, addresses)
-
-    async def processing_smart_contract(self, tx, tx_addresses):
-        if len(tx["input"]) > 64:
-            smart_contract = await self.__get_smart_contract_info(
-                input_=tx["input"],
-                contract_address=tx["to"]
-            )
-            if smart_contract is not None:
-                tx_addresses.append(smart_contract["toAddress"])
-                return {
-                    "token": smart_contract['token'],
-                    "name": smart_contract['name'],
-                    "amount": smart_contract['amount'],
-                    "recipients": [{
-                        "address": smart_contract['toAddress'],
-                        "amount": smart_contract['amount'],
-                    }]
-                }
-        return {}
+    async def __get_block_by_number(self, number: int):
+        return self.__node.eth.get_block(number)
 
     async def __get_smart_contract_info(self, input_: str, contract_address: str) -> dict:
-        """If the transaction is inside a smart counter, it will look for"""
         try:
             if contract_address is None:
                 return None
             contract_address: str = contract_address.lower()
-            if int(contract_address, 0) not in self.tokens_addresses:
+            if int(contract_address, 0) not in self.__tokens_addresses:
                 return None
             amount = input_[-64:]
             to_address = f'0x{input_[-104:-64]}'
@@ -214,92 +87,238 @@ class TransactionsDemon:
             logger.error(f'ERROR GET CONTRACT: {e}. CONTRACT ADDRESS: {contract_address} | {self.__contracts}')
             return None
 
-    async def __packing_before_sending(self, block: int, packages: List[dict]):
-        """Add a transaction to the array for the desired address"""
-        return [
-            [
-                {
-                    "network": f"bsc_bip20_{package['transactions'][0]['token'].lower()}"
-                               if "token" in package['transactions'][0].keys()
-                               else 'bnb',
-                    "block": block
-                },
-                package
-            ] for package in packages
-        ]
+    async def __processing_smart_contract(self, tx, tx_addresses):
+        if len(tx["input"]) > 64:
+            input_ = tx["input"]
+            contract_address = tx["to"]
+            if contract_address is None:
+                return {}
+            contract_address: str = contract_address.lower()
+            if int(contract_address, 0) not in self.__tokens_addresses:
+                return {}
+            amount = input_[-64:]
+            to_address = f'0x{input_[-104:-64]}'.lower()
 
-    def __send_to_rabbit_mq(self, package, addresses) -> None:
-        """Send collected data to queue"""
+            contract = self.__contracts[contract_address]
+            format_str = f"%.{contract['decimals']}f"
+
+            tx_addresses.append(to_address)
+            format_amount = format_str % (decimal.create_decimal(int("0x" + amount, 0)) / 10 ** contract['decimals'])
+            return {
+                "token": contract['token'],
+                "name": contract['name'],
+                "amount": format_amount,
+                "recipients": [{
+                    "address": to_address,
+                    "amount": format_amount,
+                }]
+            }
+        return {}
+
+    async def __processing_transaction(self, tx, addresses, timestamp, all_transactions_hash_in_db):
         try:
-            package[1]['transactions'][0]['recipients'][0]['address'] = package[1]['transactions'][0]['recipients'][0]['address'].lower()
-            package[1]['transactions'][0]['senders'][0]['address'] = package[1]['transactions'][0]['senders'][0]['address'].lower()
-            package[1]['address'] = package[1]['address'].lower()
+            tx_hash = tx['hash'].hex()
+            tx_addresses = []
+            tx_from = None
+            tx_to = None
+            if tx['from'] is not None:
+                tx_from = tx['from'].lower()
+                tx_addresses.append(self.__node.toChecksumAddress(tx_from))
+            if tx['to'] is not None:
+                tx_to = tx['to'].lower()
+                tx_addresses.append(self.__node.toChecksumAddress(tx_to))
 
-            token = (
-                package[1]['transactions'][0]['token']
-                if 'token' in package[1]['transactions'][0].keys()
-                else None
-            )
-            recipient = int(package[1]['transactions'][0]['recipients'][0]['address'], 0)
-            sender = int(package[1]['transactions'][0]['senders'][0]['address'], 0)
-            admin = int(ADMIN_ADDRESS, 0)
-            if sender == admin and recipient in addresses and token is None:
+            contract_values = await self.__processing_smart_contract(tx, tx_addresses)
+
+            address = None
+
+            for tx_address in tx_addresses:
+                if int(tx_address, 0) in addresses:
+                    address = tx_address
+                    break
+
+            if address is not None or tx_hash in all_transactions_hash_in_db:
+                receipt = await self.__rpc_request('eth_getTransactionReceipt', tx_hash)
+
+                if receipt is None or receipt['status'] == '0x0':
+                    return None
+
+                if address is None:
+                    address = tx_from
+
+                amount = str(self.__node.fromWei(tx["value"], "ether"))
+                fee = "%.18f" % (self.__node.fromWei(int(receipt["gasUsed"], 0) * tx["gasPrice"], "ether"))
+                values = {
+                    "time": timestamp,
+                    "datetime": str(convert_time(str(timestamp)[:10])),
+                    "transactionHash": tx_hash,
+                    "amount": amount,
+                    "fee": fee,
+                    "senders": [{
+                        "address": tx_from,
+                        "amount": amount if 'amount' not in contract_values.keys() else contract_values['amount'],
+                    }],
+                    "recipients": [{
+                        "address": tx_to,
+                        "amount": amount,
+                    }],
+                }
+                values.update(contract_values)
+                return {"address": address, "transactions": [values]}
+            return None
+        except Exception as e:
+            logger.error(f'PROC TX ERROR: {e} | {tx["from"]} | {tx["to"]}')
+            return None
+
+    async def __processing_block(self, block_number: int, addresses):
+        try:
+            start = timer()
+            logger.error(f'RUN NEW ITERATION: {str(dt.datetime.now()).split(".")[0]} | Block: {block_number}')
+
+            block = self.__node.eth.get_block(block_number, True)
+
+            if 'transactions' in block.keys() and isinstance(block['transactions'], list):
+                count_trx = len(block['transactions'])
+            else:
+                return True
+            if count_trx == 0:
+                return True
+            all_transactions_hash_in_db = await DB.get_all_transactions_hash()
+            trx = await asyncio.gather(*[
+                self.__processing_transaction(
+                    tx=block['transactions'][index],
+                    addresses=addresses,
+                    timestamp=block['timestamp'],
+                    all_transactions_hash_in_db=all_transactions_hash_in_db
+                )
+                for index in range(count_trx)
+            ])
+            trx = list(filter(lambda x: x is not None, trx))
+
+            if len(trx) > 0:
+                await asyncio.gather(*[
+                    self.__send_to_rabbit_mq(
+                        package=tx,
+                        addresses=addresses,
+                        all_transactions_hash_in_db=all_transactions_hash_in_db,
+                        block_number=block_number
+                    ) for tx in trx
+                ])
+            logger.error(f"END BLOCK: {block_number}. Time: {dt.timedelta(seconds=int(timer() - start))} sec")
+            return True
+        except Exception as e:
+            logger.error(f'BLOCK ERROR: {e}')
+            return False
+
+    def __send_message_tx_from_admin_address(self, package: List[dict]):
+        package[1]['transactions'][0]['recipients'] = []
+        self.rabbit.send_founded_message(package)
+
+    async def __send_to_rabbit_mq(self, package, addresses, all_transactions_hash_in_db, block_number) -> None:
+        """Send collected data to queue"""
+        token = (
+            package['transactions'][0]['token'].lower()
+            if 'token' in package['transactions'][0].keys()
+            else None
+        )
+        package_for_sending = [
+            {
+                "network": f"bsc_bip20_{token}" if token is not None else 'bnb',
+                "block": block_number
+            },
+            package
+        ]
+        try:
+            recipient = package['transactions'][0]['recipients'][0]['address']
+            recipient_int = int(recipient, 0)
+
+            sender = package['transactions'][0]['senders'][0]['address']
+            sender_int = int(sender, 0)
+
+            if (sender_int == INT_ADMIN_ADDRESS) and (token is None) and (recipient_int in addresses):
                 logger.error(f'RECIEVED FEE FOR SENDING TOKEN')
                 # If it's sending fee for transfer tokens to main wallet between main wallet and one of our wallets
-                self.rabbit.got_fee_for_sending_token_to_main_wallet(
-                    package[1]['transactions'][0]['recipients'][0]['address']
-                )
-            elif recipient != admin:
+                self.rabbit.got_fee_for_sending_token_to_main_wallet(recipient)
+                self.__send_message_tx_from_admin_address(package_for_sending)
+            elif (sender_int == INT_ADMIN_ADDRESS) and (recipient_int not in addresses):
+                logger.error(f'SENDING FROM MAIN WALLET')
+                tx_hash = package["transactions"][0]["transactionHash"]
+                if tx_hash in all_transactions_hash_in_db:
+                    package_for_sending[1]['transactions'][0] = await get_transaction_in_db(
+                        transaction_hash=tx_hash,
+                        transaction=package['transactions'][0]
+                    )
+                self.rabbit.send_founded_message(package_for_sending)
+            elif recipient_int != INT_ADMIN_ADDRESS:
                 # If it's not sending to main wallet
-                self.rabbit.send_founded_message(package)
-                self.rabbit.request_for_sending_to_main_wallet(
-                    token=token,
-                    address=package[1]['transactions'][0]['recipients'][0]['address']
-                )
+                self.rabbit.send_founded_message(package_for_sending)
+                self.rabbit.request_for_sending_to_main_wallet(token=token, address=recipient)
         except Exception as e:
-            logger.error(f'SENDING TO MQ ERROR: {e} | {package}')
-            with open(ERROR, 'a', encoding='utf-8') as file:
+            logger.error(f'SENDING TO MQ ERROR: {e} | {package_for_sending}')
+            async with aiofiles.open(ERROR, 'a', encoding='utf-8') as file:
                 # If an error occurred on the RabbitMQ side, write about it.
-                file.write(f"Error: {package} | RabbitMQ not responding {e} \n")
+                await file.write(f"Error: {package_for_sending} | RabbitMQ not responding {e} \n")
             new_not_send_file = os.path.join(NOT_SEND, f'{uuid.uuid4()}.json')
-            with open(new_not_send_file, 'w') as file:
+            async with aiofiles.open(new_not_send_file, 'w') as file:
                 # Write all the verified data to a json file, and do not praise the work
-                file.write(json.dumps(package))
+                await file.write(json.dumps(package_for_sending))
+
+    async def get_node_block_number(self):
+        return int(self.__node.eth.block_number)
+
+    async def __get_last_block_number(self):
+        async with aiofiles.open(LAST_BLOCK, "r") as file:
+            current_block = await file.read()
+        if current_block:
+            return int(current_block)
+        else:
+            return await self.get_node_block_number()
+
+    @staticmethod
+    async def __save_block_number(block_number: int):
+        async with aiofiles.open(LAST_BLOCK, "w") as file:
+            await file.write(str(block_number))
 
     async def __run(self):
         """ The script runs all the time """
+        start = await self.__get_last_block_number()
+        pack_size = 1
         while True:
-            start = timer()
-            logger.error(f'RUN NEW ITERATION: START = {start}')
-            block = self.__get_block_info()
-
-            logger.error("Getting started: {} | Block: {}".format(
-                str(dt.datetime.now()).split(".")[0], block['number']
-            ))
-
-            addresses = self.db.get_addresses()
-            await self.__script(block=block, addresses=addresses,)
-
-            logger.error("End block: {}. Time taken: {} sec".format(
-                block['number'], str(dt.timedelta(seconds=int(timer() - start)))
-            ))
+            end = await self.get_node_block_number()
+            if end - start < pack_size:
+                logger.error('WAIT 3 sec.')
+                await asyncio.sleep(3)
+            else:
+                addresses = await self.db.get_addresses()
+                success = await asyncio.gather(*[
+                    self.__processing_block(block_number=block_number, addresses=addresses)
+                    for block_number in range(start, start + pack_size)
+                ])
+                if all(success):
+                    start += pack_size
+                    await self.__save_block_number(start)
+                else:
+                    logger.error(f'BLOCK ERROR. RUN BLOCK AGAIN')
+                    continue
 
     async def __start_in_range(self, start_block, end_block):
         for block_number in range(start_block, end_block):
-            addresses = self.db.get_addresses()
+            addresses = await self.db.get_addresses()
             logger.error(f'PROCESSING BLOCK: {block_number}')
-            block = self.__get_block_info(block=block_number)
-            await self.__script(block=block, addresses=addresses)
+            await self.__processing_block(block_number=block_number, addresses=addresses)
 
-    def __send_all_from_folder_not_send(self):
+    async def __send_all_from_folder_not_send(self):
         files = os.listdir(NOT_SEND)
-        addresses = self.db.get_addresses()
+        addresses = await self.db.get_addresses()
+        all_transactions_hash_in_db = await DB.get_all_transactions_hash()
+
         for file_name in files:
             try:
                 path = os.path.join(NOT_SEND, file_name)
                 with open(path, 'r') as file:
                     values = json.loads(file.read())
-                self.__send_to_rabbit_mq(values, addresses)
+                block = values[0]['block']
+                await self.__send_to_rabbit_mq(values, addresses, all_transactions_hash_in_db, block)
                 os.remove(path)
             except:
                 continue
@@ -308,9 +327,9 @@ class TransactionsDemon:
         if start_block and end_block:
             await self.__start_in_range(start_block, end_block)
         elif start_block and not end_block:
-            await self.__start_in_range(start_block, self.__get_block_number() + 1)
+            await self.__start_in_range(start_block, await self.get_node_block_number() + 1)
         elif not start_block and end_block:
-            await self.__start_in_range(self.__get_block_number(), end_block)
+            await self.__start_in_range(await self.get_node_block_number(), end_block)
         else:
-            self.__send_all_from_folder_not_send()
+            await self.__send_all_from_folder_not_send()
             await self.__run()

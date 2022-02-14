@@ -1,15 +1,21 @@
 from typing import Optional, Dict, List, Union
 from pydantic import BaseModel
 
-from config import ADMIN_FEE, logger, decimal
+from config import ADMIN_FEE, logger, decimal, ADMIN_ADDRESS
+
+
+class ResponseAddressWithAmount(BaseModel):
+    address: str
+    amount: str
 
 
 class BodyCreateTransaction(BaseModel):
     """Create a transaction TRX or Tokens TRC10, TRC20"""
     fromAddress: str
     outputs: List[Dict[str, str]]
-    adminFee: Optional[str] = None
     fee: Optional[int] = 21000
+    adminFee: Optional[str] = None
+    adminAddress: Optional[str] = None
 
     def __init__(self, **kwargs):
         super(BodyCreateTransaction, self).__init__(**kwargs)
@@ -30,6 +36,17 @@ class ResponseCreateTransaction(BaseModel):
     createTxHex: str
     fee: str
     maxFeeRate: str
+    time: Optional[int] = None
+    amount: str
+    senders: List[ResponseAddressWithAmount]
+    recipients: List[ResponseAddressWithAmount]
+
+    def __init__(self, **kwargs):
+        super(ResponseCreateTransaction, self).__init__(**kwargs)
+        for index, item in enumerate(self.senders):
+            self.senders[index].address = item.address.lower()
+        for index, item in enumerate(self.recipients):
+            self.recipients[index].address = item.address.lower()
 
 
 class ResponseCreateTokenTransaction(ResponseCreateTransaction):
@@ -37,6 +54,10 @@ class ResponseCreateTokenTransaction(ResponseCreateTransaction):
 
     def __init__(self, **kwargs):
         super(ResponseCreateTokenTransaction, self).__init__(**kwargs)
+        for index, item in enumerate(self.senders):
+            self.senders[index].address = item.address.lower()
+        for index, item in enumerate(self.recipients):
+            self.recipients[index].address = item.address.lower()
         logger.error(f'RESPONSE CREATE TX: {self.json()}')
 
 
@@ -68,15 +89,9 @@ class BodyGetOptimalGas(BaseModel):
         self.toAddress = self.toAddress.lower()
 
 
-class ResponseAddressWithAmount(BaseModel):
-    address: str
-    amount: str
-
-
 class ResponseSendTransaction(BaseModel):
     """Response to create transaction"""
     time: Optional[int] = None
-    datetime: Optional[str] = None
     transactionHash: str
     amount: str
     fee: str

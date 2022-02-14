@@ -1,16 +1,8 @@
 from typing import List
 from datetime import datetime
-from decimal import Decimal
-from config import decimal, ADMIN_ADDRESS
+from config import decimal, Decimal
 from src.node import btc
 from src.rpc.database import DB
-
-
-def get_admin_fee_without_blockchain_fee(admin_fee, fee):
-    diff = admin_fee - decimal.create_decimal(fee)
-    if diff > 0:
-        return diff
-    return decimal.create_decimal("0.00002")
 
 
 def sign_and_send_transaction(
@@ -55,53 +47,40 @@ def sign_and_send_transaction(
 
     try:
         tx = btc.rpc_host.get_transactions_by_id(send_trx_hash)
-        result_tx = formatted_tx(tx, max_fee_rate, admin_fee)
+        result_tx = formatted_tx(tx, max_fee_rate)
 
         node_fee = decimal.create_decimal(result_tx['fee'])
-        admin_fee = decimal.create_decimal(admin_fee)
 
         return {
             'time': int(round(datetime.now().timestamp())),
-            'transactionHash': tx['hash'],
-            'amount': "%.8f" % (value + node_fee),
             'fee': "%.8f" % node_fee,
+            'transactionHash': tx['hash'],
+            'amount': "%.8f" % value,
             'senders': [
                 {
                     'address': from_address,
-                    'amount': "%.8f" % (value + admin_fee)
+                    'amount': "%.8f" % value
                 }
             ],
             'recipients': [
                 {
                     'address': to_address,
-                    'amount': "%.8f" % value
-                },
-                {
-                    'address': ADMIN_ADDRESS,
-                    'amount': "%.8f" % (admin_fee - node_fee)
-                },
+                    'amount': "%.8f" % (value - node_fee)
+                }
             ],
         }
     except Exception as e:
         return {'error': f'Cant get transaction after signing: {e}'}
 
 
-def formatted_tx(tx, max_fee_rate, admin_fee):
+def formatted_tx(tx, max_fee_rate):
     senders, amount = btc.get_senders(tx['vin'])
     recipients, _ = btc.get_recipients(tx['vout'])
     fee = (
-            decimal.create_decimal(max_fee_rate)
-            * decimal.create_decimal(tx['size'])
-            / decimal.create_decimal(1000)
+        decimal.create_decimal(max_fee_rate)
+        * decimal.create_decimal(tx['size'])
+        / decimal.create_decimal(1000)
     )
-
-    admin_fee = decimal.create_decimal(admin_fee)
-
-    admin_fee_without_blockchain_fee = get_admin_fee_without_blockchain_fee(admin_fee, fee)
-    recipients.insert(0, {
-        'address': ADMIN_ADDRESS,
-        'amount': '%.8f' % admin_fee_without_blockchain_fee
-    })
 
     return {
         "time": None,

@@ -1,5 +1,3 @@
-import secrets
-import string
 from decimal import Decimal, localcontext
 from typing import Union
 from datetime import datetime
@@ -69,9 +67,3 @@ def to_sun(num: Union[int, float]) -> int:
 
 def convert_time(t: str) -> str:
     return datetime.fromtimestamp(int(str(t)[:10])).strftime('%d-%m-%Y %H:%M:%S')
-
-# <<<----------------------------------->>> Wallet utils <<<--------------------------------------------------------->>>
-
-def create_passphrase(num: int = 20) -> str:
-    """Creating a secret word for the wallet"""
-    return "".join(secrets.choice(string.ascii_letters + string.digits) for i in range(num))

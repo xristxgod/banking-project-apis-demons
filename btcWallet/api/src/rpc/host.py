@@ -21,7 +21,7 @@ class RPCHost:
 
     def __init__(self):
         self._session = requests.Session()
-        self._url = f"http://{self.__user}:{self.__password}@{self.__host}:{self.__port}/wallet/prod_wallet"
+        self._url = f"http://{self.__user}:{self.__password}@{self.__host}:{self.__port}/wallet/{self.__wallet}"
         self._headers = {"content-type": "application/json"}
         self._session.verify = False
 

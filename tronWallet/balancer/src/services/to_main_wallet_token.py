@@ -42,7 +42,6 @@ async def send_to_main_wallet_token(address: TronAccountAddress, token: TokenTRC
             await asyncio.sleep(10)
         if balance_trx - fee > minTokenCost:
             trx_tnx = True
-
         logger.error(f"--> {token.upper()} | Address: {address} | {address} -> {AdminAddress} | Amount: {balance_token} {token} | Fee: {fee}")
         txn = await create_transaction(
             token=token_network, from_address=address, to_address=AdminAddress, amount=balance_token
@@ -53,7 +52,6 @@ async def send_to_main_wallet_token(address: TronAccountAddress, token: TokenTRC
             logger.error(f"--> {token.upper()} | Address: {address} | Signing and sending a transaction")
             # Sign and send transaction
             send = await sign_send_transaction(createTxHex=txn["createTxHex"], private_key=private_key)
-            print(send)
             if not send:
                 logger.error(f"--> {token.upper()} | Address: {address} | The transaction was not sent. Written to a file!!!")
                 await is_error({"address": address, "token": token.upper()})
