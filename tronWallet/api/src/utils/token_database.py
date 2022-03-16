@@ -5,7 +5,8 @@ from asyncpg import Connection, connect, Record
 from aiofiles import open as async_open
 
 from src.utils.types import TokenTRC20
-from config import db_url, fileTokens, network, logger
+from src.utils.es_send import send_exception_to_kibana
+from config import db_url, fileTokens, network
 
 class TokenDB:
 
@@ -18,7 +19,7 @@ class TokenDB:
             result: List[Record] = await __connection.fetch("""SELECT *  FROM contract WHERE type='tron'""")
             return [x for x in result]
         except Exception as error:
-            logger.error(f"{error}")
+            await send_exception_to_kibana(error=error, msg="GET FROM DB ERROR")
             return []
         finally:
             if __connection is not None:
@@ -27,11 +28,14 @@ class TokenDB:
     @staticmethod
     async def __get_from_json_file(symbol: TokenTRC20):
         """Get information from a file"""
-        async with async_open(fileTokens, "r", encoding="utf-8") as file:
-            tokens = json.loads(await file.read())
-        for token in tokens:
-            if token["symbol"] == symbol:
-                return token
+        try:
+            async with async_open(fileTokens, "r", encoding="utf-8") as file:
+                tokens = json.loads(await file.read())
+            for token in tokens:
+                if token["symbol"] == symbol:
+                    return token
+        except Exception as error:
+            await send_exception_to_kibana(error=error, msg="GET FROM FILE ERROR")
 
     async def get_token(self, token: TokenTRC20) -> Dict:
         """
@@ -46,7 +50,7 @@ class TokenDB:
                     "name": token_in_system["name"],
                     "symbol": token_in_system["symbol"],
                     "address": token_in_system["address"] if network == "mainnet" else info["address"],
-                    "decimal": token_in_system["decimals"] if network == "mainnet" else info["decimal"],
+                    "decimal": token_in_system["decimals"] if network == "mainnet" else info["decimals"],
                     "bandwidth": info["bandwidth"],
                     "feeLimit": info["feeLimit"],
                     "isBalanceNotNullEnergy": info["isBalanceNotNullEnergy"],

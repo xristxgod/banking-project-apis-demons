@@ -1,6 +1,7 @@
 from src.utils.node import NodeTron
 from src.utils.types import TronAccountAddress, TokenTRC20
 from src.v1.schemas import BodyCreateWallet, ResponseCreateWallet, ResponseGetBalance
+from src.utils.utils import timer
 from config import decimals
 
 class Wallet(NodeTron):
@@ -8,6 +9,7 @@ class Wallet(NodeTron):
 
     # <<<---------------------------------------->>> TRX <<<--------------------------------------------------------->>>
 
+    @timer
     def create_wallet(self, body: BodyCreateWallet) -> ResponseCreateWallet:
         """Create a tron wallet"""
         __wallet = self.node.get_address_from_passphrase(passphrase=body.words)
@@ -18,6 +20,7 @@ class Wallet(NodeTron):
             address=__wallet["base58check_address"],
         )
 
+    @timer
     async def get_balance(self, address: TronAccountAddress) -> ResponseGetBalance:
         """Get TRX balance"""
         balance = await self.async_node.get_account_balance(addr=address)
@@ -25,6 +28,7 @@ class Wallet(NodeTron):
 
     # <<<---------------------------------------->>> Token <<<------------------------------------------------------->>>
 
+    @timer
     async def get_token_balance(self, address: TronAccountAddress, token: TokenTRC20) -> ResponseGetBalance:
         """
         Get TRC20 tokens balance

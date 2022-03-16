@@ -1,35 +1,36 @@
-import json
 import asyncio
-import requests
 from decimal import Decimal
 from typing import List, Dict
 
+import requests
+
+from src.utils.utils import timer
+from src.utils.token_database import token_db
 from src.utils.node import NodeTron
-from src.utils.types import TransactionHash, TronAccountAddress, ContractAddress
-from config import decimals, network
+from src.utils.types import TronAccountAddress, TokenTRC20, ContractAddress, TransactionHash
+from config import network, decimals
 
 class TransactionParser(NodeTron):
 
+    @timer
     async def get_transaction(self, transaction_hash: TransactionHash):
         return await self.__get_transactions(transactions=[await self.async_node.get_transaction(txn_id=transaction_hash)])
 
-    async def get_all_transactions(self, address: TronAccountAddress) -> json:
-        """Get all transactions by address"""
-        url = "" if network == "mainnet" else f"{network.lower()}."
-        url_trx_and_trc10 = f"https://api.{url}trongrid.io/v1/accounts/{address}/transactions"
-        headers = {
-            "Accept": "application/json",
-            "TRON-PRO-API-KEY": "a684fa6d-6893-4928-9f8e-8decd5f034f2"
-        }
-        transactions = requests.get(url_trx_and_trc10, headers=headers).json()["data"]
-        return await self.__get_transactions(transactions=transactions)
+    @timer
+    async def get_all_transactions(self, address: TronAccountAddress, token: TokenTRC20 = None):
+        headers = {"Accept": "application/json", "TRON-PRO-API-KEY": "a684fa6d-6893-4928-9f8e-8decd5f034f2"}
+        url = f"https://api.{'' if network == 'mainnet' else f'{network.lower()}.'}trongrid.io/v1/accounts/{address}/transactions"
+        url += f"/trc20?limit=200&contract_address={(await token_db.get_token(token=token))['address']}" if token is not None else "?limit=200"
+        transactions = requests.get(url, headers=headers).json()["data"]
+        return await self.__get_transactions(transactions=transactions, token=token)
 
-    async def __get_transactions(self, transactions: List) -> List:
+    async def __get_transactions(self, transactions: List, token: TokenTRC20 = None) -> List:
         """Get all transactions by address"""
         fund_trx_for_send = []
         list_transactions = await asyncio.gather(*[
             self.__processing_transactions(
-                transactions=transactions[right_border: (right_border + 1)]
+                transactions=transactions[right_border: (right_border + 1)],
+                token=token if token else None
             )
             for right_border in range(len(transactions))
         ])
@@ -37,23 +38,53 @@ class TransactionParser(NodeTron):
             fund_trx_for_send.extend(transactions)
         return fund_trx_for_send
 
-    async def __processing_transactions(self, transactions: dict) -> list:
+    async def __processing_transactions(self, transactions: Dict, token: TokenTRC20 = None) -> List:
         """
         Unpacking transactions and checking for the presence of required addresses in them
         :param transactions: Set of transactions
         """
         funded_trx_for_sending = []
         for txn in transactions:
-            txn_type = txn["raw_data"]["contract"][0]["type"]
-            funded_trx_for_sending.append(
-                await self.__packaging_for_dispatch(
-                    txn=txn,
-                    txn_type=txn_type,
-                )
-            )
+            if token:
+                funded_trx_for_sending.append(await self.__packaging_for_dispatch_token(txn=txn))
+            else:
+                txn_type = txn["raw_data"]["contract"][0]["type"]
+                funded_trx_for_sending.append(await self.__packaging_for_dispatch(txn=txn, txn_type=txn_type))
         return funded_trx_for_sending
 
-    async def __packaging_for_dispatch(self, txn: dict, txn_type: str) -> dict:
+    async def __packaging_for_dispatch_token(self, txn: Dict) -> Dict:
+        """
+        Packaging the necessary transaction to send
+        :param txn: Transaction
+        :param txn_type: Transaction type
+        """
+        tx_fee = await self.async_node.get_transaction_info(txn_id=txn["transaction_id"])
+        if "fee" in tx_fee:
+            fee = "%.8f" % decimals.create_decimal(self.fromSun(tx_fee["fee"]))
+        else:
+            fee = 0
+        amount = "%.8f" % decimals.create_decimal(int(txn["value"]) / (10 ** int(txn["token_info"]["decimals"])))
+        return {
+            "time": txn["block_timestamp"],
+            "transactionHash": txn["transaction_id"],
+            "fee": fee,
+            "amount": amount,
+            "senders": [
+                {
+                    "address": txn["from"],
+                    "amount": amount
+                }
+            ],
+            "recipients": [
+                {
+                    "address": txn["to"],
+                    "amount": amount
+                }
+            ],
+            "token": txn["token_info"]["symbol"]
+        }
+
+    async def __packaging_for_dispatch(self, txn: Dict, txn_type: str) -> Dict:
         """
         Packaging the necessary transaction to send
         :param txn: Transaction
@@ -61,19 +92,15 @@ class TransactionParser(NodeTron):
         """
         try:
             txn_values = txn["raw_data"]["contract"][0]['parameter']["value"]
-
-            fee = 0
-            if "fee_limit" in txn["raw_data"]:
-                try:
-                    fee_limit = await self.async_node.get_transaction_info(txn["txID"])
-                    if "fee" not in fee_limit:
-                        raise Exception
-                    fee = "%.8f" % decimals.create_decimal(self.fromSun(fee_limit["fee"]))
-                except Exception:
-                    fee = 0
+            try:
+                fee_limit = await self.async_node.get_transaction_info(txn["txID"])
+                if "fee" not in fee_limit:
+                    raise Exception
+                fee = "%.8f" % decimals.create_decimal(self.fromSun(fee_limit["fee"]))
+            except Exception:
+                fee = 0
             values = {
                 "time": txn["raw_data"]["timestamp"] if "timestamp" in txn["raw_data"] else "",
-                "datetime": self.convertTime(int(str(txn["raw_data"]["timestamp"])[:10])) if "timestamp" in txn["raw_data"] else "",
                 "transactionHash": txn["txID"],
                 "transactionType": txn_type,
                 "fee": fee,
@@ -148,7 +175,7 @@ class TransactionParser(NodeTron):
         except Exception as error:
             return {}
 
-    async def __smart_contract_transaction(self, data: str, contract_address: ContractAddress) -> dict:
+    async def __smart_contract_transaction(self, data: str, contract_address: ContractAddress) -> Dict:
         """
         Unpacking a smart contract
         :param data: Smart Contract Information
@@ -170,13 +197,11 @@ class TransactionParser(NodeTron):
 
 def get_txn(tnx: Dict, user: TronAccountAddress, admin_fee: int, tnx_type: str, reporter: TronAccountAddress) -> Dict:
     amount, tx_fee = decimals.create_decimal(tnx["amount"]), decimals.create_decimal(tnx["fee"])
-    tx_amount = amount + tx_fee if tnx_type == "TransferContract" else amount
     sender_amount = amount + admin_fee
-    admin_amount = admin_fee - tx_fee if tnx_type == "TransferContract" else admin_fee
     tx = {
         "time": tnx["time"],
         "transactionHash": tnx["transactionHash"],
-        "amount": "%.8f" % tx_amount,
+        "amount": "%.8f" % amount,
         "fee": tnx["fee"],
         "senders": [
             {
@@ -191,7 +216,7 @@ def get_txn(tnx: Dict, user: TronAccountAddress, admin_fee: int, tnx_type: str, 
             },
             {
                 "address": reporter,
-                "amount": "%.8f" % admin_amount
+                "amount": "%.8f" % admin_fee
             }
         ]
     }

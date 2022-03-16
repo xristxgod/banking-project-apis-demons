@@ -4,6 +4,7 @@ from typing import Optional
 import tronpy.exceptions
 
 from src.v1.schemas import ResponseCreateTransaction, BodyCreateTransaction
+from src.utils.utils import timer
 from src.utils.station import tron_station, get_energy
 from src.utils.node import NodeTron
 from src.utils.types import TokenTRC20, TronAccountAddress
@@ -15,6 +16,7 @@ class CreateTransaction(NodeTron):
 
     # <<<-------------------------------->>> Optimal Fee <<<--------------------------------------------------------->>>
 
+    @timer
     async def get_optimal_fee(self, from_address: TronAccountAddress, to_address: TronAccountAddress, token: Optional[TokenTRC20] = None) -> json:
         """Get optimal fee"""
         fee = 0
@@ -46,6 +48,7 @@ class CreateTransaction(NodeTron):
 
     # <<<-------------------------------->>> TRX <<<----------------------------------------------------------------->>>
 
+    @timer
     async def create_transaction(self, body: BodyCreateTransaction) -> ResponseCreateTransaction:
         """Create a transaction TRX"""
         to_address, to_amount = list(body.outputs[0].items())[0]
@@ -72,6 +75,7 @@ class CreateTransaction(NodeTron):
 
     # <<<-------------------------------->>> TRC 20 <<<-------------------------------------------------------------->>>
 
+    @timer
     async def create_trc20_transactions(self, body: BodyCreateTransaction, token: TokenTRC20) -> ResponseCreateTransaction:
         """Create a transaction TRC20"""
         to_address, to_amount = list(body.outputs[0].items())[0]

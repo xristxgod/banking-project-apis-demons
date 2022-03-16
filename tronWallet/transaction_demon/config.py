@@ -51,4 +51,10 @@ node = os.getenv("NodeURL")
 AdminAddress = os.getenv("AdminWallet")
 ReportingAddress = os.getenv("ReportingAddress")
 
+ElasticLogServer = os.getenv("ELASTIC_LOG_SERVER")
+ElasticLogin = os.getenv("ELASTIC_LOGIN")
+ElasticPassword = os.getenv("ELASTIC_PASSWORD")
+ElasticLogIndex = os.getenv('ELASTIC_LOG_INDEX')
+ElasticLogIndexEx = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-demon"
+
 logger = getLogger(__name__)

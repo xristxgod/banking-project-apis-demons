@@ -9,6 +9,7 @@ decimals = Context()
 decimals.prec = 18
 
 AdminAddress = os.getenv("AdminWallet")
+ReportingAddress = os.getenv("ReportingAddress")
 AdminPrivateKey = os.getenv("AdminPrivateKey")
 
 API_URL = os.getenv("ApiURL")
@@ -29,5 +30,11 @@ NOT_SEND = os.path.join(BASE_DIR, 'not_send')
 if 'not_send' not in os.listdir(BASE_DIR):  os.mkdir(NOT_SEND)
 
 get_network = lambda token: {"usdt": "tron_trc20_usdt", "usdc": "tron_trc20_usdc"}[token]
+
+ElasticLogServer = os.getenv("ELASTIC_LOG_SERVER")
+ElasticLogin = os.getenv("ELASTIC_LOGIN")
+ElasticPassword = os.getenv("ELASTIC_PASSWORD") if os.getenv("Network") == "mainnet" else 'no_pass'
+ElasticLogIndex = os.getenv('ELASTIC_LOG_INDEX')
+ElasticLogIndexEx = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-balancer"
 
 logger = logging.getLogger(__name__)

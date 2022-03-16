@@ -1,6 +1,7 @@
 from typing import Union
 
 from src.utils.types import TronAccountAddress
+from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
 from src.services.inc.get_balance import get_balance
 from src.services.inc.get_private_key import get_private_key
 from src.services.inc.send_transaction import sign_send_transaction, create_transaction
@@ -42,10 +43,12 @@ async def send_to_main_wallet_native(address: TronAccountAddress) -> Union[bool,
                 await is_error({"address": address, "token": "TRX"})
                 return None
             balance = await get_balance(address=address)
+            await send_msg_to_kibana(msg=f"TRX | Address: {address} | Balance: {balance} | The balance is empty")
             logger.error(f"--> TRX | Address: {address} | Balance: {balance} | The balance is empty!!!")
         else:
             logger.error(f"--> TRX | Address: {address} | The key to the address was not found. Written to a file!!!")
             await is_error({"address": address, "token": "TRX"})
     except Exception as error:
         logger.error(f"\n--> TRX | Error: {error}\n")
+        await send_exception_to_kibana(error=error, msg="ERROR: SEND TO MAIN WALLET NATIVE")
         await is_error({"address": address, "token": "TRX"})

@@ -2,7 +2,7 @@ from tronpy.tron import Tron, HTTPProvider
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 from src.utils.token_database import token_db
-from src.utils.utils import from_sun, to_sun, convert_time
+from src.utils.utils import from_sun, to_sun
 
 from config import network, node
 
@@ -16,9 +16,6 @@ class NodeTron:
     # Converts
     fromSun = staticmethod(from_sun)
     toSun = staticmethod(to_sun)
-
-    # Time convert
-    convertTime = staticmethod(convert_time)
 
     # Token db
     db = token_db

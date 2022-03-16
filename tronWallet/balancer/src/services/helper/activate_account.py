@@ -1,15 +1,19 @@
 from src.services.inc.send_transaction import create_transaction, sign_send_transaction
+from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
 from src.utils.types import TronAccountAddress
 from config import AdminAddress, AdminPrivateKey, logger, decimals
 
 async def activate_account(from_address: TronAccountAddress) -> bool:
     try:
-        amount = decimals.create_decimal("0.1")
+        amount = decimals.create_decimal("0.00001")
         logger.error(f"Create transfer: {AdminAddress} -> {from_address} for activate account | Amount: {amount}")
+        await send_msg_to_kibana(msg=f"Create transfer: {AdminAddress} -> {from_address} for activate account | Amount: {amount}")
         txn = await create_transaction(from_address=AdminAddress, to_address=from_address, amount=amount)
-        logger.error(f"Sign and Send: {AdminAddress} -> {from_address} | Amount: {amount}")
+        logger.error(f"Sign and Send: {AdminAddress} -> {from_address} for activate account | Amount: {amount}")
+        await send_msg_to_kibana(msg=f"Sign and Send: {AdminAddress} -> {from_address} for activate account | Amount: {amount}")
         await sign_send_transaction(createTxHex=txn["createTxHex"], private_key=AdminPrivateKey, )
         return True
     except Exception as error:
         logger.error(f"{error}")
+        await send_exception_to_kibana(error=error, msg="ERROR: ACTIVATE ACCOUNT")
         return False

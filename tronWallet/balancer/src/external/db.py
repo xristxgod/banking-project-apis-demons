@@ -1,7 +1,9 @@
 from typing import Union, List
 
 from asyncpg import connect
+
 from src.utils.types import TronAccountPrivateKey, TronAccountAddress
+from src.utils.es_send import send_exception_to_kibana
 from config import DB_URL, logger
 
 async def get_private_key(address: TronAccountAddress) -> Union[TronAccountPrivateKey, None]:
@@ -14,7 +16,8 @@ async def get_private_key(address: TronAccountAddress) -> Union[TronAccountPriva
         await connection.close()
         return row[0]
     except Exception as error:
-        logger.error(f"Error get private key: {error}")
+        logger.error(f"Error: get private key: {error}")
+        await send_exception_to_kibana(error=error, msg="ERROR: GET PRIVATE KEY FROM DB")
     return None
 
 async def get_wallets() -> Union[List[TronAccountAddress], None]:
@@ -25,6 +28,7 @@ async def get_wallets() -> Union[List[TronAccountAddress], None]:
         )
         await connection.close()
         return [x[0] for x in row]
-    except Exception as e:
-        logger.error(f'ERROR GET ADDRESSES: {e}')
+    except Exception as error:
+        logger.error(f'Error: get addresses: {error}')
+        await send_exception_to_kibana(error=error, msg="ERROR: GET WALLETS FROM DB")
         return None

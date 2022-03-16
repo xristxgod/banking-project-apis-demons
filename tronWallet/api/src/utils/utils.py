@@ -1,7 +1,13 @@
+import time
 from decimal import Decimal, localcontext
-from typing import Union
-from datetime import datetime
+from typing import Union, Callable
 
+import requests
+from tronpy.tron import Tron, HTTPProvider
+
+from config import network, NGINX_DOMAIN, logger
+
+TIMERS = 10
 SUN = Decimal("1000000")
 MIN_SUN = 0
 MAX_SUN = 2**256 - 1
@@ -63,7 +69,39 @@ def to_sun(num: Union[int, float]) -> int:
 
     return int(result)
 
-# <<<----------------------------------->>> Convert time to datetime <<<--------------------------------------------->>>
+# <<<----------------------------------->>> Project status utils <<<------------------------------------------------->>>
 
-def convert_time(t: str) -> str:
-    return datetime.fromtimestamp(int(str(t)[:10])).strftime('%d-%m-%Y %H:%M:%S')
+def is_block_ex(our_block: int, public_block: int, accept: int = 10) -> bool:
+    """Check if the block is not lagging behind."""
+    if our_block == public_block or our_block > public_block or our_block - public_block <= accept:
+        return True
+    else:
+        return False
+
+def get_public_node() -> Tron:
+    """Returns a working public node"""
+    for public_node in ["http://3.225.171.164:8090", "http://52.53.189.99:8090", "http://18.196.99.16:8090"]:
+        try:
+            __node = Tron(provider=HTTPProvider(public_node) if network == "mainnet" else None, network=network)
+            if int(__node.get_node_info()["activeConnectCount"]) == 0:
+                raise Exception
+            else:
+                return __node
+        except Exception as error:
+            continue
+    else:
+        raise Exception("Public node is bad")
+
+def get_last_block() -> int:
+    """Get the last block from the file"""
+    return int(requests.request("GET", f"{NGINX_DOMAIN}/get-last-block-file").text)
+
+# <<<----------------------------------->>> Decorator <<<------------------------------------------------------------>>>
+
+def timer(func: Callable):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        values = func(*args, **kwargs)
+        logger.error(f"RUNNING TIME: {time.time() - start}")
+        return values
+    return wrapper

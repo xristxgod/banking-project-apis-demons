@@ -63,8 +63,13 @@ async def get_transaction_by_tx_id(trxHash: TransactionHash, network: str):
 async def get_all_transactions_by_address(address: TronAccountAddress, network: str):
     try:
         logger.error(f"Calling '/{network}/get-all-transactions/{address}'")
-        result = await transaction_parser.get_all_transactions(address)
-        return JSONResponse(content=result)
+        if network.lower() in ["tron_trc20_usdt", "tron_trc20_usdc", "tron_trc20_trx", "trx", "tron"]:
+            result = await transaction_parser.get_all_transactions(
+                address=address, token=network[11:15] if network not in ["trx", "tron", "tron_trc20_trx"] else None
+            )
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Network "{network}" was not found')
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
 

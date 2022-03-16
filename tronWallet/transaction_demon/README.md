@@ -23,40 +23,37 @@ File `config.py`:
 
 Search for transactions by node.
 --------------
-Run script through IDE.
-
-```python
-
-from transaction_demon.src.demon import TransactionDemon
-from asyncio import run
-
-if __name__ == '__main__':
-    # Run script for permanent work
-    run(TransactionDemon().start())
-    # Run the script from number to number
-    start = 36552329
-    end = 36552335
-    run(TransactionDemon.start(
-        start_block=start,
-        end_block=end
-    ))
-```   
 Run script via console
 
->Run the script from number to number.
+> Run the script from number to number.
 >```shell
 > python search_in_history_script.py -s startBlockNumber -e endBlockNumber
 > python search_in_history_script.py --start startBlockNumber --end endBlockNumber
 
+> Run the script for the block list 
+> ```shell
+> python search_in_history_script.py -b 'blockNumber blockNumber blockNumber ...'
+> python search_in_history_script.py --blocks 'blockNumber blockNumber blockNumber ...'
 
->Also allowed.
+> Run the script (ONLY WITH '-b --blocks' OR '-s --start -e --end') with the wallet address or addresses
+> ```shell
+> python search_in_history_script.py -b 'blockNumber blockNumber blockNumber ...' -a 'walletAddress walletAddress'
+> python search_in_history_script.py -s startBlockNumber ...' --addresses 'walletAddress walletAddress'
+
+
+> Also allowed.
 > ```shell
 > python search_in_history_script.py -s startBlockNumber
 > python search_in_history_script.py --start startBlockNumber
 > 
 > python search_in_history_script.py -e endBlockNumber
 > python search_in_history_script.py --end endBlockNumber
-
+>
+> python search_in_history_script.py -b 'blockNumber'
+> python search_in_history_script.py --block 'blockNumber'
+> 
+> python search_in_history_script.py -e startBlockNumber -a 'walletAddress'
+> python search_in_history_script.py -end startBlockNumber --addresses 'walletAddress'
 
 ------------------
 
@@ -85,60 +82,6 @@ Format of JSON for RabbitMQ
     "block": 36370775
   },
   {
-    // The token TRC10 transaction
-    "address": "TQbxcxnxSdYdV14f5XCe2ggeYi8bhPs7qW",
-    "transactions": [
-      {
-        "time": 1639646604000,
-        "date": "16-12-2021 12:23:24",
-        "transactionHash": "1f83cf1fa055aecb7f81ed2b4f1916f54befa6de740cd6370bb9ee7dea5dec0a",
-        "transactionType": "TransferAssetContract",
-        "fee": 0,
-        "senders": [
-          {
-            "address": "TQbxcxnxSdYdV14f5XCe2ggeYi8bhPs7qW",
-            "amount": "1.888888"
-          }
-        ],
-        "recipients": [
-          {
-            "address": "TB8E4uPDd4fdjq8eoBfUsZZ4JCrbMM1KxL",
-            "amount": "1.888888"
-          }
-        ],
-        "amount": "1.888888",
-        "token": "AAANFT (AAANFT)"
-      }
-    ]
-  },
-  {
-    // The token TRC20 transaction
-    "address": "TKHypLsX2dEJ8NxtyKDxuQk5Sm25kiucvB",
-    "transactions": [
-      {
-        "time": 1639646604000,
-        "date": "16-12-2022 12:23:24",
-        "transactionHash": "00ee9a020d26091e23c3ebf38631992dff20e1a75e3e47105bf4bb12942f764f",
-        "transactionType": "TriggerSmartContract",
-        "fee": "20.86252",
-        "senders": [
-          {
-            "address": "TRRVT7ybC7QFLAzCJns6vKjRFp6kTxCf31",
-            "amount": "20.86252"
-          }
-        ],
-        "recipients": [
-          {
-            "address": "TRRVT7ybC7QFLAzCJns6vKjRFp6kTxCf31",
-            "amount": "20.86252"
-          }
-        ],
-        "amount": "1000",
-        "token": "Game Of Dragon (GOD)"
-      }
-    ]
-  },
-  {
     // The TRX transaction
     "address": "TYyrx59zDyUCwH4XHgPBdXtZzserMfQDxh",
     "transactions": [
@@ -146,7 +89,6 @@ Format of JSON for RabbitMQ
         "time": 1639646604000,
         "date": "16-12-2021 12:23:24",
         "transactionHash": "7adf0ab1f388eaad973e2db54c97b963fee0b96a46ebb898a993151963093763",
-        "transactionType": "TransferContract",
         "fee": 0,
         "senders": [
           {
@@ -161,87 +103,6 @@ Format of JSON for RabbitMQ
           }
         ],
         "amount": "0.000009"
-      }
-    ]
-  },
-  {
-    // The Vote transaction 
-    "address": "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R",
-    "transactions": [
-      {
-        "time": 1639646604000,
-        "date": "16-12-2021 12:23:24",
-        "transactionHash": "43d5296737904230be0d920a558ccb1fcda3dda447aaa374eb0643c6cafd81b2",
-        "transactionType": "VoteWitnessContract",
-        "fee": 0,
-        "senders": [
-          {
-            "address": "TM1zzNDZD2DPASbKcgdVoTYhfmYgtfwx9R"
-          }
-        ],
-        "recipients": [
-          {
-            "address": "TJvaAeFb8Lykt9RQcVyyTFN2iDvGMuyD4M",
-            "voteCount": 170000000
-          }
-        ]
-      }
-    ]
-  },
-  {
-    // The freeze balance transaction
-    "address": "TQT8oMviyRPrgAiD7WTU7ftnAdqQxVQV3a",
-    "transactions": [
-      {
-        "time": 1639646604000,
-        "date": "16-12-2021 12:23:24",
-        "transactionHash": "5fd2299adad50532cc1521704129b7db8345bf3ce453def279b924962b584bea",
-        "transactionType": "FreezeBalanceContract",
-        "fee": 0,
-        "senders": [
-          // The address that provides resources for freezing.
-          {
-            "address": "THf2UtjK2KrQ6SoqUYr4DQrMCPpxRZbgLY", 
-            "amount": "1.0"
-          }
-        ],
-        "recipients": [
-          // The user who receives `ENERGY` or` BANDWIDTH`. This may not always be the case, because senders can only freeze the balance for themselves.
-          {
-            "address": "TQT8oMviyRPrgAiD7WTU7ftnAdqQxVQV3a", 
-            "amount": "1.0"
-          }
-        ],
-        "resource": "ENERGY", // Resources that the user receives for freezing. `ENERGY` or` BANDWIDTH`
-        "amount": "1.0" // Frozen TRX
-      }
-    ]
-  },
-  {
-    // The unfreeze balance transaction
-    "address": "TTwYVfg5Qt2RoWFJybnvJMyod2ULUUGggx",
-    "transactions": [
-      {
-        "time": 1639646604000,
-        "date": "16-12-2021 12:23:24",
-        "transactionHash": "194dcecc3f304c787e7bd758701bb88ace70a8184449034b042abd625f560dbb",
-        "transactionType": "UnfreezeBalanceContract",
-        "fee": 0,
-        "senders": [
-          // The user who unfreezes the balance
-          {
-            "address": "TTwYVfg5Qt2RoWFJybnvJMyod2ULUUGggx", 
-            "amount": 0
-          } 
-        ],
-        "recipients": [
-          // User whose account is being unfrozen
-          {
-            "address": "TQT8oMviyRPrgAiD7WTU7ftnAdqQxVQV3a", 
-            "amount": 0
-          } 
-        ],
-        "resource": "ENERGY" // What gets for defrosting. `ENERGY` or` BANDWIDTH`
       }
     ]
   }
@@ -263,7 +124,6 @@ Format of JSON for RabbitMQ
         "time": 1641377280000,
         "datetime": "05-01-2022 13:08:00",
         "transactionHash": "621adc64a6b4ba6bde18a1774104bdb6449d01397c9f26f5e44fbc7c5557da9e",
-        "transactionType": "TriggerSmartContract",
         "fee": "4.44168",
         "senders": [
           {
@@ -300,7 +160,6 @@ Format of JSON for RabbitMQ
         "time": 1641377280000,
         "datetime": "07-01-2022 15:20:06",
         "transactionHash": "ca9d28d7f7ea901e6a80c48a669f7dea94f6ddf2676a286282b89bd63b561099",
-        "transactionType": "TriggerSmartContract",
         "fee": "4.05948",
         "senders": [
           {

@@ -5,7 +5,7 @@ from aio_pika import connect_robust, RobustConnection, Channel, Message
 from src.utils.is_error import is_error
 from config import rabbit_url, queue, logger, NOT_SEND
 
-def send_all_from_folder_not_send():
+async def send_all_from_folder_not_send():
     """Send those transits that were not sent due to any errors"""
     logger.error("--> Started looking for unsent transactions")
     files = os.listdir(NOT_SEND)
@@ -14,7 +14,7 @@ def send_all_from_folder_not_send():
             path = os.path.join(NOT_SEND, file_name)
             with open(path, 'r') as file:
                 values = file.read()
-            send_to_rabbit_mq(values=json.loads(values))
+            await send_to_rabbit_mq(values=json.loads(values))
             os.remove(path)
         except Exception as error:
             logger.error(f"Error: {error}")
