@@ -22,6 +22,6 @@ if "files" not in os.listdir(ROOT_DIR):
 logger = getLogger(__name__)
 
 
-ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '0xbB10Db443c7eE8c871b073326be9c156d0E1C963').lower()
-ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY', '0x8056ff9c55ce2cd624b9b531173c5c1583b3e78c777f2049c08ff61e49b2f3be')
+ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '').lower()
+ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY', '')
 ADMIN_FEE = decimal.create_decimal(os.getenv('ADMIN_FEE', '0.05'))

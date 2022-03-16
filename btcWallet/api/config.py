@@ -19,7 +19,7 @@ DB_URL = os.getenv("DataBaseURL")
 
 BIP32_ROOT_KEY = os.getenv(
     'BIP32_ROOT_KEY',
-    'xprv9s21ZrQH143K3JwWduXTx3cWfJTDYDyGf6DQRv3MfR6r9Uqv1u92N3U27TQPCm8NcnHG3PYsBbWvt9iHrEiNYUKRHf52jEL2sJQwn2KuUQf'
+    'xprv'
 )
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

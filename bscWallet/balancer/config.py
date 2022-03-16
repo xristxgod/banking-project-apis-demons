@@ -10,8 +10,8 @@ decimal.prec = 18
 logger = logging.getLogger(__name__)
 
 
-ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '0x6fAE511E40F582C50cD487a4999dc857a7bc3527')
-ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY', '41f588612616cf8fd7150c13e6564650f57dad5b98f67ce839e1299cffc0a69f')
+ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '')
+ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY', '')
 API_URL = os.getenv('API_URL', 'http://127.0.0.1:8000')
 DUST_MULTIPLICATOR = decimal.create_decimal(os.getenv('DUST_MULTIPLICATOR', '2.0'))
 DB_URL = os.getenv('DataBaseURL', 'postgresql://mango:mango@172.31.3.130:35432/mango_crypto_master')
