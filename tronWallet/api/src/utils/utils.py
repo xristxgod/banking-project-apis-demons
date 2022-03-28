@@ -71,9 +71,9 @@ def to_sun(num: Union[int, float]) -> int:
 
 # <<<----------------------------------->>> Project status utils <<<------------------------------------------------->>>
 
-def is_block_ex(our_block: int, public_block: int, accept: int = 10) -> bool:
+def is_block_ex(our_block: int, public_block: int, accept: int = 20) -> bool:
     """Check if the block is not lagging behind."""
-    if our_block == public_block or our_block > public_block or our_block - public_block <= accept:
+    if (our_block == public_block) or (public_block - our_block <= accept):
         return True
     else:
         return False
@@ -95,13 +95,3 @@ def get_public_node() -> Tron:
 def get_last_block() -> int:
     """Get the last block from the file"""
     return int(requests.request("GET", f"{NGINX_DOMAIN}/get-last-block-file").text)
-
-# <<<----------------------------------->>> Decorator <<<------------------------------------------------------------>>>
-
-def timer(func: Callable):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        values = func(*args, **kwargs)
-        logger.error(f"RUNNING TIME: {time.time() - start}")
-        return values
-    return wrapper

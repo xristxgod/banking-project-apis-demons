@@ -344,6 +344,11 @@ class TransactionDemon:
             await self.processing_block(block_number=int(block_number), addresses=addresses)
 
     async def start(self, start_block: int = None, end_block: int = None, list_addresses: List[TronAccountAddress] = None, list_blocks: List[int] = None):
+        logger.error((
+            "Start of the search: "
+            f"Start block: {start_block if start_block is not None else 'Not specified'} | "
+            f"End block: {end_block if end_block is not None else 'Not specified'} | "
+        ))
         if list_blocks:
             await self.start_in_list_block(list_blocks=list_blocks, list_addresses=list_addresses)
         elif start_block and end_block:
@@ -356,6 +361,7 @@ class TransactionDemon:
             await send_msg_to_kibana(msg=f"DEMON IS STARTING")
             await self.send_all_from_folder_not_send()
             await self.run()
+        logger.error("End of search")
 
     async def send_all_from_folder_not_send(self):
         """Send those transits that were not sent due to any errors"""

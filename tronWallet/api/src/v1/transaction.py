@@ -4,7 +4,6 @@ from typing import List, Dict
 
 import requests
 
-from src.utils.utils import timer
 from src.utils.token_database import token_db
 from src.utils.node import NodeTron
 from src.utils.types import TronAccountAddress, TokenTRC20, ContractAddress, TransactionHash
@@ -12,11 +11,9 @@ from config import network, decimals
 
 class TransactionParser(NodeTron):
 
-    @timer
     async def get_transaction(self, transaction_hash: TransactionHash):
         return await self.__get_transactions(transactions=[await self.async_node.get_transaction(txn_id=transaction_hash)])
 
-    @timer
     async def get_all_transactions(self, address: TronAccountAddress, token: TokenTRC20 = None):
         headers = {"Accept": "application/json", "TRON-PRO-API-KEY": "a684fa6d-6893-4928-9f8e-8decd5f034f2"}
         url = f"https://api.{'' if network == 'mainnet' else f'{network.lower()}.'}trongrid.io/v1/accounts/{address}/transactions"

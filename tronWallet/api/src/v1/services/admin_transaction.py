@@ -6,7 +6,6 @@ from tronpy.tron import Transaction, PrivateKey
 from src.v1.schemas import BodySignAndSendTransaction, ResponseCreateTransaction, BodyCreateTransaction
 from src.v1.transaction import get_txn, transaction_parser
 from src.v1.services.create_transaction import create_transaction
-from src.utils.utils import timer
 from src.utils.node import NodeTron
 from src.utils.types import TokenTRC20
 from config import AdminPrivateKey, AdminWallet, decimals, ReportingAddress
@@ -15,7 +14,6 @@ class AdminTransaction(NodeTron):
 
     # <<<-------------------------------->>> Create admin transaction <<<-------------------------------------------->>>
 
-    @timer
     async def create_admin_transaction(self, body: BodyCreateTransaction) -> ResponseCreateTransaction:
         """Create a transaction TRX"""
         to_address, to_amount = list(body.outputs[0].items())[0]
@@ -48,7 +46,6 @@ class AdminTransaction(NodeTron):
             maxFeeRate="%.8f" % (decimals.create_decimal(resources["fee"]) * 2) if float(resources["fee"]) > 0 else 0
         )
 
-    @timer
     async def create_trc20_admin_transactions(self, body: BodyCreateTransaction, token: TokenTRC20) -> ResponseCreateTransaction:
         """Create a transaction TRC20"""
         to_address, to_amount = list(body.outputs[0].items())[0]
@@ -90,7 +87,6 @@ class AdminTransaction(NodeTron):
 
     # <<<-------------------------------->>> Sign and send admin transaction <<<------------------------------------->>>
 
-    @timer
     async def sign_send_admin_transaction(self, body: BodySignAndSendTransaction) -> json:
         admin_private_key = PrivateKey(private_key_bytes=bytes.fromhex(AdminPrivateKey))
         user_address = PrivateKey(

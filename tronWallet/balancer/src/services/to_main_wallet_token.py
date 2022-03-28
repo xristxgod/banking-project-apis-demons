@@ -36,9 +36,7 @@ async def send_to_main_wallet_token(address: TronAccountAddress, token: TokenTRC
             await send_msg_to_kibana(msg=f"{token.upper()} | Address: {address} | Not enough TRX balance to transfer. TRX transfer to pay commission")
             # Send a transaction to the address with the funds for the commission.
             fee_status = await get_trx_for_fee(to_address=address, fee=fee)
-            now_balance_trx = await get_balance(address=address)
-            # if not fee_status:
-            if not fee_status or now_balance_trx - fee >= 0:
+            if not fee_status:
                 logger.error(f"--> {token.upper()} | Address: {address} | The transfer of funds for the commission has not been made. Written to a file!!!")
                 await is_error({"address": address, "token": token})
                 return None

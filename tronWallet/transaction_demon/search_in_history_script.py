@@ -1,6 +1,7 @@
 import sys
 import argparse
-from run_demon import TransactionDemon, logger
+from run_demon import TransactionDemon, logger, AddressesDemon
+
 from asyncio import run
 
 from config import network
@@ -15,9 +16,13 @@ def create_parser():
 
 async def async_run(**kwargs):
     logger.error(f"Creating demon instance. Network: {network}")
-    demon = TransactionDemon()
     logger.error(f"Start search in history")
-    is_success = await demon.start(**kwargs)
+    if "list_addresses" in kwargs and kwargs["list_addresses"] is not None:
+        demon = AddressesDemon()
+        is_success = await demon.start(**kwargs)
+    else:
+        demon = TransactionDemon()
+        is_success = await demon.start(**kwargs)
     logger.info(f"Script ran success: {is_success}")
 
 if __name__ == '__main__':

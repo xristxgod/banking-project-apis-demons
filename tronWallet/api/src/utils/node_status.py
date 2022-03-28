@@ -9,24 +9,48 @@ __node = Tron(provider=HTTPProvider(node) if network == "mainnet" else None, net
 
 # <<<------------------------------------>>> Node Status <<<--------------------------------------------------------->>>
 
+def __get_node_info(our_node):
+    if int(our_node.get_node_info()["activeConnectCount"]) == 0:
+        # If there are no active connections to the node, then the node is dead!
+        raise Exception("Problems with the node. There are no active connections")
+
+def __get_is_block_ex(our_node, public_node):
+    our_block = our_node.get_latest_block_number()
+    public_block = public_node.get_latest_block_number()
+    if not is_block_ex(
+            our_block=our_block,
+            public_block=public_block
+    ):
+        # If the blocks are moving with a large gap, then something is wrong with the node
+        raise Exception("The blocks in the node are moving too slowly")
+
+def __get_is_acc_admin(our_node):
+    if not our_node.get_account(AdminWallet):
+        # If you call out the method through the node, then something is also wrong
+        raise Exception("The node is not working correctly")
+
 def node_status() -> bool:
     """They will check whether the node is working or not. Lagging behind or not."""
     # Project (private) node
     our_node = __node
     # Public node
     public_node = get_public_node()
-    if int(our_node.get_node_info()["activeConnectCount"]) == 0:
-        # If there are no active connections to the node, then the node is dead!
-        raise Exception("Problems with the node. There are no active connections")
-    if not is_block_ex(
-            our_block=our_node.get_latest_block_number(),
-            public_block=public_node.get_latest_block_number()
-    ):
-        # If the blocks are moving with a large gap, then something is wrong with the node
-        raise Exception("The blocks in the node are moving too slowly")
-    if not our_node.get_account(AdminWallet):
-        # If you call out the method through the node, then something is also wrong
-        raise Exception("The node is not working correctly")
+    try:
+        __get_node_info(our_node=our_node)
+    except Exception as error:
+        time.sleep(2)
+        __get_node_info(our_node=our_node)
+    try:
+        __get_is_block_ex(our_node=our_node, public_node=public_node)
+    except Exception as error:
+        time.sleep(2)
+        __get_is_block_ex(our_node=our_node, public_node=public_node)
+
+    try:
+        __get_is_acc_admin(our_node=our_node)
+    except Exception as error:
+        time.sleep(2)
+        __get_is_acc_admin(our_node=our_node)
     # Otherwise, everything is OK!
     return True
 
@@ -48,7 +72,7 @@ def demon_status() -> bool:
     # Get the last block from the node
     our_block: int = __node.get_latest_block_number()
     # If the blocks are equal, or the gap is not critical, then everything is OK.
-    if (demon_block == our_block or our_block - demon_block <= 20) and node_status():
+    if (our_block == demon_block) or (our_block - demon_block <= 25):
         return True
     # Otherwise, something is wrong.
     return False
