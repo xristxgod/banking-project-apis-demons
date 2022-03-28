@@ -3,11 +3,12 @@ import web3.exceptions
 from fastapi import HTTPException
 from starlette import status
 from datetime import datetime
-from config import logger, Decimal, ADMIN_ADDRESS, ADMIN_FEE, decimal
+from config import Decimal, ADMIN_ADDRESS, ADMIN_FEE, decimal
 from src.utils.node import node_singleton
 from src.v1.schemas import BodyCreateTransaction, ResponseCreateTransaction, ResponseSendTransaction, \
     BodySendTransaction, ResponseAddressWithAmount
 from .decode_raw_tx import decode_raw_tx, DecodedTx
+from ...utils.es_send import send_exception_to_kibana, send_msg_to_kibana
 
 
 class TransactionBSC:
@@ -32,7 +33,7 @@ class TransactionBSC:
             to_address = self.node_bridge.node.toChecksumAddress(to_address)
             nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
         except Exception as error:
-            logger.error(f"THE TRANSACTION WAS NOT CREATED | ERROR: {error}")
+            await send_exception_to_kibana(error, 'THE TRANSACTION WAS NOT CREATED')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
         try:
             create_transaction = {
@@ -63,7 +64,7 @@ class TransactionBSC:
                 maxFeeRate=create_transaction['gasPrice'],
                 createTxHex=tx_hex,
                 time=int(round(datetime.now().timestamp())),
-                amount="%.18f" % (value + node_fee),
+                amount="%.18f" % value,
                 senders=[
                     ResponseAddressWithAmount(
                         address=sender,
@@ -77,12 +78,12 @@ class TransactionBSC:
                     ),
                     ResponseAddressWithAmount(
                         address=admin_address,
-                        amount="%.18f" % (admin_fee - node_fee)
+                        amount="%.18f" % admin_fee
                     )
                 ]
             )
         except Exception as error:
-            logger.error(f"THE TRANSACTION WAS NOT CREATED | ERROR: {error}")
+            await send_exception_to_kibana(error, 'THE TRANSACTION WAS NOT CREATED')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def sign_send_transaction(self, body: BodySendTransaction, is_sender_from_body: bool = False) -> json:
@@ -105,7 +106,11 @@ class TransactionBSC:
             transaction_hash = await self.node_bridge.async_node.eth.send_raw_transaction(
                 transaction=self.node_bridge.async_node.toHex(signed_transaction.rawTransaction)
             )
-            logger.error(f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}")
+
+            await send_msg_to_kibana(
+                msg=f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}"
+            )
+
             tx: DecodedTx = decode_raw_tx(signed_transaction.rawTransaction.hex())
 
             value = decimal.create_decimal(tx.value) / (10 ** 18)
@@ -115,7 +120,7 @@ class TransactionBSC:
             return ResponseSendTransaction(
                 time=int(round(datetime.now().timestamp())),
                 transactionHash=tx.hash_tx,
-                amount="%.18f" % (value + node_fee),
+                amount="%.18f" % value,
                 fee="%.8f" % node_fee,
                 senders=[
                     ResponseAddressWithAmount(
@@ -130,12 +135,12 @@ class TransactionBSC:
                     ),
                     ResponseAddressWithAmount(
                         address=admin_address,
-                        amount="%.18f" % (admin_fee - node_fee)
+                        amount="%.18f" % admin_fee
                     ),
                 ],
             )
         except Exception as error:
-            logger.error(f"THE TRANSACTION WAS NOT SENT: {error}")
+            await send_exception_to_kibana(error, 'THE TRANSACTION WAS NOT SENT')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def get_optimal_gas(self, from_address: str, to_address: str, amount) -> json:
@@ -151,6 +156,7 @@ class TransactionBSC:
             from_: str = self.node_bridge.async_node.toChecksumAddress(from_address)
             to_: str = self.node_bridge.async_node.toChecksumAddress(to_address)
         except web3.exceptions.InvalidAddress as error:
+            await send_exception_to_kibana(error, 'Get Optimal Gas')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
         amount = "%d" % self.node_bridge.async_node.toWei(amount, "gwei")
@@ -160,7 +166,6 @@ class TransactionBSC:
             "value": amount
         }
         estimate_gas: int = self.node_bridge.node.eth.estimateGas(trx)
-        logger.error(f"GET OPTIMAL GAS: {estimate_gas} | {from_} -- {amount} -> {to_}")
         gas_price: int = await self.node_bridge.gas_price
 
         return {
@@ -177,7 +182,7 @@ class TransactionBSC:
         try:
             trx = dict(await self.node_bridge.async_node.eth.get_transaction(transaction_hash=transaction_hash))
         except Exception as error:
-            logger.error(f"UNABLE TO DECRYPT TRANSACTION | ERROR: {error}")
+            await send_exception_to_kibana(error, 'UNABLE TO DECRYPT TRANSACTION')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
         transaction = {
@@ -188,7 +193,7 @@ class TransactionBSC:
             "to": trx["to"],
             "amount": str(self.node_bridge.async_node.fromWei(trx["value"], "ether")),
             "gas": trx["gas"],
-            "gasPrice": trx["gasPrice"]
+            "gasPrice": trx["gasPrice"],
         }
 
         if len(trx["input"]) > 10:

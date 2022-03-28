@@ -1,7 +1,7 @@
 from typing import Optional, Dict, List, Union
 from pydantic import BaseModel
 
-from config import ADMIN_FEE, logger, decimal, ADMIN_ADDRESS
+from config import ADMIN_FEE
 
 
 class ResponseAddressWithAmount(BaseModel):
@@ -58,7 +58,6 @@ class ResponseCreateTokenTransaction(ResponseCreateTransaction):
             self.senders[index].address = item.address.lower()
         for index, item in enumerate(self.recipients):
             self.recipients[index].address = item.address.lower()
-        logger.error(f'RESPONSE CREATE TX: {self.json()}')
 
 
 class BodySendTransaction(BaseModel):

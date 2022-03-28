@@ -1,7 +1,7 @@
 import os
 from json import dumps
 import pika as rabbit
-from config import logger, SEND_TO_MAIN_WALLET_LIMIT
+from config import SEND_TO_MAIN_WALLET_LIMIT
 
 
 class RabbitMQ:
@@ -24,7 +24,6 @@ class RabbitMQ:
             body=message,
             properties=rabbit.BasicProperties(delivery_mode=2)
         )
-        logger.error(f'NEW TX: {message}')
         channel.close()
         connection.close()
 
@@ -44,7 +43,6 @@ class RabbitMQ:
 
     @staticmethod
     def __send_to_internal_rabbit(value, queue):
-        logger.error(f'SEND TO {queue}: {value}')
         param = rabbit.URLParameters(url=os.getenv('INTERNAL_RABBIT_URL', "amqp://root:password@127.0.0.1:5672/"))
         connection = rabbit.BlockingConnection(param)
         channel = connection.channel()
@@ -57,4 +55,3 @@ class RabbitMQ:
         )
         channel.close()
         connection.close()
-        logger.error(f'SENDED TO {queue}: {value}')

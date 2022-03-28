@@ -4,11 +4,11 @@ from fastapi import HTTPException
 from mnemonic import Mnemonic
 from starlette import status
 
+from src.utils.es_send import send_exception_to_kibana
 from src.utils.node import node_singleton
 from src.utils.utils import PublicKey
 from decimal import Decimal
 import web3.exceptions
-from config import logger
 from src.v1.schemas import ResponseCreateWallet, GetBalance
 
 
@@ -27,7 +27,6 @@ class WalletBSC:
         try:
             self.node_bridge.node.eth.account.enable_unaudited_hdwallet_features()
             __wallet = self.node_bridge.node.eth.account.from_mnemonic(mnemonic=words)
-            logger.error(f"USER CREATE WALLET")
             return ResponseCreateWallet(
                 mnemonicWords=words,
                 privateKey=self.node_bridge.async_node.toHex(__wallet.key),
@@ -35,7 +34,7 @@ class WalletBSC:
                 address=__wallet.address.lower(),
             )
         except Exception as error:
-            logger.error(f"ERROR IN WALLET CREATION | ERROR: STEP 24 {error}")
+            await send_exception_to_kibana(error, 'ERROR IN WALLET CREATION')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def get_balance(self, address: str) -> GetBalance:
@@ -46,16 +45,16 @@ class WalletBSC:
         try:
             address = self.node_bridge.async_node.toChecksumAddress(address)
         except web3.exceptions.InvalidAddress as error:
+            await send_exception_to_kibana(error, 'ERROR GET BALANCE')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
         try:
             balance: Decimal = self.node_bridge.async_node.fromWei(
-                await self.node_bridge.async_node.eth.get_balance(address),
+                self.node_bridge.node.eth.get_balance(address),
                 "ether"
             )
-            logger.error(f"USER '{address}' BALANCE: {balance}")
             return GetBalance(balance=str(balance))
         except Exception as error:
-            logger.error(f"BALANCE RECEIPT ERROR | USER: '{address}' | ERROR: {error}")
+            await send_exception_to_kibana(error, 'ERROR BALANCE RECEIPT')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
 

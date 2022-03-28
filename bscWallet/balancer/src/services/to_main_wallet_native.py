@@ -1,7 +1,8 @@
 from typing import Optional
 
-from config import ADMIN_ADDRESS, decimal, Decimal, DUST_MULTIPLICATOR, logger
+from config import ADMIN_ADDRESS, decimal, Decimal, DUST_MULTIPLICATOR
 from src.external.client import post_request
+from src.external.es_send import send_msg_to_kibana
 from src.services.get_balance import get_balance
 from src.services.get_private_key import get_private_key
 from src.services.send_transaction import create_transaction, sign_send_transaction
@@ -35,7 +36,7 @@ async def send_to_main_wallet_native(address: str, limit: Optional[Decimal] = No
     created_tx = await create_transaction(
         from_address=address,
         to_address=ADMIN_ADDRESS,
-        amount=balance - gas_native
+        amount=balance - gas_native - decimal.create_decimal('0.00000001')
     )
     private_key = await get_private_key(address=address)
     if private_key is not None:
@@ -43,4 +44,4 @@ async def send_to_main_wallet_native(address: str, limit: Optional[Decimal] = No
             payload=created_tx['createTxHex'],
             private_key=private_key
         )
-        logger.error(f'SENDED TO MAIN WALLET (BSC) {signed}')
+        await send_msg_to_kibana(msg=f'SENDED TO MAIN WALLET (BSC) {signed}')

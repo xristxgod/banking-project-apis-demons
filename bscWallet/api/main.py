@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 
-from config import logger
+from src.utils.es_send import send_exception_to_kibana
+from src.utils.node_status import is_native
+from src.v1.services.is_balancer_alive import is_balancer_alive
+from src.v1.services.is_demon_alive import is_demon_alive
 from src.v1.services.wallet_eth import wallet_bsc
-
 from src.v1.routers import router_v2
 
 
@@ -17,27 +19,51 @@ app.include_router(router_v2)
 
 
 @app.get("/", tags=['Utils'])
+@app.get("/is-node-alive", tags=['Utils'])
 async def is_connected():
     """Check connection status"""
-    logger.error(f"Calling '/is-connected'")
     status = await wallet_bsc.node_bridge.is_connect()
     if status:
-        return {"message": "Connection established"}
-    return {"message": "No connection"}
+        return {"message": True}
+    return {"message": False}
+
+
+@app.get("/is-demon-alive", tags=['Utils'])
+async def is_demon_alive_route():
+    return {'message': await is_demon_alive()}
+
+
+@app.get("/is-balancer-alive", tags=['Utils'])
+async def is_balancer_alive_route():
+    return {'message': await is_balancer_alive()}
+
+
+@app.get(
+    "/is-native-currency",
+    description="Find out if there is enough native currency on the balance sheet",
+    tags=["Utils"]
+)
+async def is_there_native_currency_on_central_wallet():
+    """Find out if there is enough native currency on the balance sheet"""
+    try:
+        return {"message": await is_native()}
+    except Exception as error:
+        await send_exception_to_kibana(
+            error, msg="ERROR: THERE IS NO NATIONAL CURRENCY ON THE BALANCE OF THE CENTRAL WALLET"
+        )
+        return {"message": False}
 
 
 @app.get("/get-gas-price", tags=['Utils'])
 async def get_gas_price():
     gas_price = await wallet_bsc.node_bridge.gas_price
     if gas_price:
-        logger.error(f"Calling '/get-gas-price' | {gas_price}")
         return {"gasPrice": str(gas_price)}
     return {"message": "No connection"}
 
 
 @app.get("/docs-json", tags=['Utils'])
 async def index():
-    logger.error(f"Calling '/docs'")
     return {
         "Check connection status": [
             "GET", "/"

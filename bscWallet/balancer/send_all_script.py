@@ -10,7 +10,7 @@ from src.services.to_main_wallet_token import send_to_main_wallet_token
 def create_parser():
     """:return: Getting script params"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--address", default=None)
+    parser.add_argument("-a", "--addresses", default=None)
     parser.add_argument("-t", "--token", default=None)
     parser.add_argument("-l", "--limit", default=None)
     return parser

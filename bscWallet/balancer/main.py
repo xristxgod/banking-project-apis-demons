@@ -1,12 +1,9 @@
 import asyncio
-
-from config import logger
 from src.init_sending_to_main_wallet import init_sending_to_main_wallet
 from src.recive_fee_and_send_token import receive_fee_and_send_token
 
 
 async def main(loop):
-    logger.error('WAIT INIT')
     await asyncio.sleep(10)
     await asyncio.gather(*[
         init_sending_to_main_wallet(loop),

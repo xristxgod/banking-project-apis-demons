@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
-from config import logger, ADMIN_PRIVATE_KEY
+from config import ADMIN_PRIVATE_KEY
+from src.utils.es_send import send_msg_to_kibana
 from src.v1.schemas import BodyCreateTransaction, ResponseCreateTransaction, BodySendTransaction, \
     ResponseSendTransaction, BodyGetTx, BodyGetOptimalGas
 from src.v1.services.trx_eth import transaction_bsc
@@ -31,8 +32,6 @@ async def create_transactions(coin: str, body: BodyCreateTransaction):
 
 async def __create_transaction(coin: str, body: BodyCreateTransaction):
     try:
-        logger.error(f"Calling '/{coin}/create-transaction'")
-        logger.error(f"REQUEST: {body.json()}")
         if Coins.is_native(coin):
             return await transaction_bsc.create_transaction(body=body, is_admin=True)
         elif Coins.is_token(coin):
@@ -53,8 +52,6 @@ async def __create_transaction(coin: str, body: BodyCreateTransaction):
 )
 async def create_transactions(coin: str, body: BodyCreateTransaction):
     try:
-        logger.error(f"Calling '/v2/{coin}/create-transaction-for-internal-services'")
-        logger.error(f"REQUEST: {body.json()}")
         if Coins.is_native(coin):
             return await transaction_bsc.create_transaction(body=body)
         elif Coins.is_token(coin):
@@ -88,17 +85,14 @@ async def send_transaction(coin: str, body: BodySendTransaction):
 
 async def __send_transaction(coin: str, body: BodySendTransaction):
     """Create, sign and send token transaction"""
-    logger.error(f"Calling '/{coin}/sign-send-transaction'")
-    logger.error(f"REQUEST: {body.json()}")
     body.privateKeys = [ADMIN_PRIVATE_KEY]
-    logger.error(f"<= SET privateKeys = [ADMIN_PRIVATE_KEY]: {body.json()}")
     if Coins.is_native(coin):
         tx = await transaction_bsc.sign_send_transaction(body=body, is_sender_from_body=True)
     elif Coins.is_token(coin):
         tx = await transaction_token.sign_send_transaction(body=body, is_sender_from_body=True)
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Coin "{coin}" was not found')
-    logger.error(f'SENDED TX: {tx.json()}')
+    await send_msg_to_kibana(msg=f'SENDED TX: {tx.json()}')
     return tx
 
 
@@ -109,8 +103,6 @@ async def __send_transaction(coin: str, body: BodySendTransaction):
 )
 async def send_transaction(coin: str, body: BodySendTransaction):
     """Create, sign and send token transaction"""
-    logger.error(f"Calling '/{coin}/sign-send-transaction'")
-    logger.error(f"REQUEST: {body.json()}")
     if Coins.is_native(coin):
         return await transaction_bsc.sign_send_transaction(body=body)
     elif Coins.is_token(coin):
@@ -125,8 +117,6 @@ async def send_transaction(coin: str, body: BodySendTransaction):
 )
 async def get_transaction(body: BodyGetTx):
     """Get transaction"""
-    logger.error(f"Calling '/get-transaction'")
-    logger.error(f"REQUEST: {body.json()}")
     return await transaction_bsc.get_transaction(
         transaction_hash=body.trxHash
     )
@@ -138,8 +128,6 @@ async def get_transaction(body: BodyGetTx):
 )
 async def get_optimal_gas(coin: str, body: BodyGetOptimalGas):
     """Get optimal gas for transaction"""
-    logger.error(f"Calling '/get-optimal-gas'")
-    logger.error(f"REQUEST: {body.json()}")
     if Coins.is_native(coin):
         return await transaction_bsc.get_optimal_gas(
             from_address=body.fromAddress,

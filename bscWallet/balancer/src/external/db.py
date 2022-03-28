@@ -1,6 +1,7 @@
 from asyncpg import connect, Connection
 
-from config import DB_URL, logger
+from config import DB_URL
+from src.external.es_send import send_exception_to_kibana
 
 
 class DB:
@@ -15,8 +16,7 @@ class DB:
             await conn.close()
             return row[0]
         except Exception as e:
-            logger.error(f'ERROR GET PK: {e}')
-        # return '16e55515317cb556e19b674f3e053d5528960a7920155518623467a8188b0d65'
+            await send_exception_to_kibana(e, 'ERROR GET PRIVATE KEY')
         return None
 
     @staticmethod
@@ -29,6 +29,6 @@ class DB:
             await conn.close()
             return [x[0] for x in row]
         except Exception as e:
-            logger.error(f'ERROR GET ADDRESSES: {e}')
+            await send_exception_to_kibana(e, 'ERROR GET ADDRESS')
         return None
 

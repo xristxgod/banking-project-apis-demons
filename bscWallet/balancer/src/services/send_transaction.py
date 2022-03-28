@@ -12,7 +12,7 @@ async def create_transaction(
         data={
             'fromAddress': from_address,
             'outputs': [{to_address: "%.8f" % amount}],
-            'adminFee': '0.0'
+            'adminFee': '0.0',
         }
     )
 

@@ -2,7 +2,7 @@ import json
 from fastapi import HTTPException
 from starlette import status
 from datetime import datetime
-from config import logger, decimal, ADMIN_FEE, ADMIN_ADDRESS
+from config import decimal, ADMIN_FEE, ADMIN_ADDRESS
 from src.utils.node import node_singleton
 from src.utils.tokens_database import TokenDB
 from src.v1.schemas import (
@@ -10,6 +10,7 @@ from src.v1.schemas import (
     ResponseCreateTokenTransaction, ResponseSendTransaction, BodySendTransaction, ResponseAddressWithAmount
 )
 from .decode_raw_tx import decode_raw_tx, DecodedTx
+from ...utils.es_send import send_exception_to_kibana, send_msg_to_kibana
 
 
 class TransactionToken:
@@ -29,7 +30,7 @@ class TransactionToken:
             to_address = self.node_bridge.node.toChecksumAddress(to_address)
             nonce = self.node_bridge.node.eth.get_transaction_count(from_address)
         except Exception as error:
-            logger.error(f'CREATE TX ERROR: {error}')
+            await send_exception_to_kibana(error, 'CREATE TX ERROR')
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f'CREATE TX ERROR: {error}. get_transaction_count'
@@ -77,7 +78,7 @@ class TransactionToken:
                     maxFeeRate=str(price),
                     token=symbol,
                     time=int(round(datetime.now().timestamp())),
-                    amount="%.18f" % (value + node_fee),
+                    amount="%.18f" % value,
                     senders=[
                         ResponseAddressWithAmount(
                             address=body.fromAddress if is_admin else from_address,
@@ -91,12 +92,12 @@ class TransactionToken:
                         ),
                         ResponseAddressWithAmount(
                             address=admin_address,
-                            amount="%.18f" % (admin_fee - node_fee)
+                            amount="%.18f" % admin_fee
                         )
                     ]
                 )
             except Exception as error:
-                logger.error(f"THE TRANSACTION TOKEN WAS NOT CREATED | ERROR: {error}")
+                await send_exception_to_kibana(error, 'THE TRANSACTION TOKEN WAS NOT CREATED')
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def __get_smart_contract_info(self, input_: str, contract_address: str) -> dict:
@@ -128,7 +129,7 @@ class TransactionToken:
                 "amount": format_str % (decimal.create_decimal(int("0x" + amount, 0)) / 10 ** contract['decimals'])
             }
         except Exception as e:
-            logger.error(f'ERROR GET CONTRACT: {e}. CONTRACT ADDRESS: {contract_address} | {self.__contracts}')
+            await send_exception_to_kibana(e, 'ERROR GET CONTRACT')
             return None
 
     async def processing_smart_contract(self, tx: DecodedTx):
@@ -164,11 +165,11 @@ class TransactionToken:
             signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
                 payload, private_key=body.privateKeys[0]
             )
-            logger.error("THE TRANSACTION TOKEN WAS SIGNED")
             send_transaction = await self.node_bridge.async_node.eth.send_raw_transaction(signed_transaction.rawTransaction)
-            logger.error(
-                f"THE TRANSACTION TOKEN WAS CREATED, SIGNED AND SENT "
-                f"| TX: {self.node_bridge.async_node.toHex(send_transaction)}"
+
+            await send_msg_to_kibana(
+                msg=f"THE TRANSACTION TOKEN WAS CREATED, SIGNED AND SENT "
+                    f"| TX: {self.node_bridge.async_node.toHex(send_transaction)}"
             )
 
             tx = decode_raw_tx(signed_transaction.rawTransaction.hex())
@@ -182,7 +183,7 @@ class TransactionToken:
                 time=int(round(datetime.now().timestamp())),
                 transactionHash=tx.hash_tx,
                 fee="%.8f" % node_fee,
-                amount="%.8f" % (value + node_fee),
+                amount="%.8f" % value,
                 senders=[
                     ResponseAddressWithAmount(
                         address=from_address if is_sender_from_body and from_address is not None else tx.from_,
@@ -196,12 +197,12 @@ class TransactionToken:
                     ),
                     ResponseAddressWithAmount(
                         address=admin_address,
-                        amount="%.8f" % (admin_fee - node_fee)
+                        amount="%.8f" % admin_fee
                     )
                 ]
             )
         except Exception as error:
-            logger.error(f"THE TRANSACTION TOKEN WAS NOT SENDER | ERROR: {error}")
+            await send_exception_to_kibana(error, 'THE TRANSACTION TOKEN WAS NOT SENDER')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
     async def get_optimal_gas(self, from_address: str, to_address: str, amount, token: str) -> json:
@@ -210,6 +211,7 @@ class TransactionToken:
             to_address = self.node_bridge.async_node.toChecksumAddress(to_address)
             nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
         except Exception as error:
+            await send_exception_to_kibana(error, 'Get Optimal Gas for token')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
         symbol = token.upper()
@@ -236,7 +238,7 @@ class TransactionToken:
                     "gasPrice": price
                 }
             except Exception as error:
-                logger.error(f"THE TRANSACTION TOKEN WAS NOT CREATED | ERROR: {error}")
+                await send_exception_to_kibana(error, 'THE TRANSACTION TOKEN WAS NOT CREATED')
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 

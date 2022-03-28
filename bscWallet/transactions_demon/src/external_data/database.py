@@ -10,6 +10,13 @@ load_dotenv()
 class DB:
     """Class for receiving data for processing"""
     @staticmethod
+    async def get_addresses_raw():
+        connection: asyncpg.Connection = await asyncpg.connect(DB_URL)
+        data = [x[0].lower() for x in await connection.fetch("""SELECT wallet FROM bnb_wallet""")]
+        await connection.close()
+        return data
+
+    @staticmethod
     async def get_addresses():
         connection: asyncpg.Connection = await asyncpg.connect(DB_URL)
         data = [int(x[0], 0) for x in await connection.fetch("""SELECT wallet FROM bnb_wallet""")]

@@ -1,22 +1,20 @@
 from json import loads
 from aio_pika import connect_robust, IncomingMessage, RobustConnection
 from asyncio import sleep as async_sleep
-from config import logger, INTERNAL_RABBIT_URL
-from src.services.to_main_wallet_native import send_to_main_wallet_native
-from src.services.to_main_wallet_token import send_to_main_wallet_token
+from config import INTERNAL_RABBIT_URL
+from src.external.es_send import send_msg_to_kibana, send_exception_to_kibana
+from src.observer import observer
+from worker.celery_app import celery_app
 
 
 async def __processing_message(message: IncomingMessage):
     async with message.process():
         msg: dict = loads(message.body)
-        logger.error(f'GET INIT MSG: {msg}')
         address = msg['address']
         token = msg['token']
-
-        if token in ['bnb', None]:
-            await send_to_main_wallet_native(address)
-        else:
-            await send_to_main_wallet_token(address, token)
+        can_go, wait_time = await observer.can_go(address)
+        extra = {'countdown': wait_time} if not can_go and wait_time > 5 else {}
+        celery_app.send_task(f'worker.celery_worker.send_transaction', args=[address, token], **extra)
 
 
 async def init_sending_to_main_wallet(loop):
@@ -27,7 +25,7 @@ async def init_sending_to_main_wallet(loop):
                 try:
                     connection: RobustConnection = await connect_robust(INTERNAL_RABBIT_URL, loop=loop)
                 finally:
-                    logger.error(f'WAIT CONNECT TO RABBITMQ - SendToMainWalletQueue')
+                    await send_msg_to_kibana(msg=f'WAIT CONNECT TO RABBITMQ - SendToMainWalletQueue')
                 await async_sleep(2)
 
             async with connection:
@@ -38,4 +36,4 @@ async def init_sending_to_main_wallet(loop):
                     async for message in queue_iter:
                         await __processing_message(message)
         except Exception as e:
-            logger.error(f"ERROR INIT_SENDING_TO_MAIN_WALLET: {e}")
+            await send_exception_to_kibana(e, "ERROR INIT_SENDING_TO_MAIN_WALLET")

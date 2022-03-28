@@ -49,3 +49,7 @@ class PublicKey:
 
 def convert_time(t: int) -> str:
     return datetime.fromtimestamp(int(t)).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def is_block_ex(our_block: int, public_block: int) -> bool:
+    return (public_block - our_block) < 10

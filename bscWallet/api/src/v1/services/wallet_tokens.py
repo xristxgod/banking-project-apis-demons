@@ -1,11 +1,11 @@
 from fastapi import HTTPException
 from starlette import status
 
+from src.utils.es_send import send_error_to_kibana, send_exception_to_kibana
 from src.utils.node import node_singleton
 import json
 from decimal import Decimal
 import web3.exceptions
-from config import logger
 
 
 class WalletToken:
@@ -22,6 +22,7 @@ class WalletToken:
         try:
             address = self.node_bridge.async_node.toChecksumAddress(address)
         except web3.exceptions.InvalidAddress as error:
+            await send_exception_to_kibana(error, 'ERROR GET BALANCE (INVALID ADDRESS)')
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
 
         contract = await self.node_bridge.get_contract(symbol=symbol.upper())
@@ -30,19 +31,18 @@ class WalletToken:
                 balance_token = int(contract.functions.balanceOf(address).call())
                 decimals = int(contract.functions.decimals().call())
             except web3.exceptions.ABIFunctionNotFound as error:
-                logger.error(f"STEP 19 ERROR: {error}")
+                await send_exception_to_kibana(error, 'ERROR GET BALANCE (ABI')
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error))
             if float(balance_token) > 0:
                 balance = round(Decimal(balance_token / 10**decimals), 9)
             else:
                 balance = 0
-            logger.error(f"USER '{address}' TOKEN '{symbol.upper()}' BALANCE: {balance}")
             return {
                 "balance": str(balance),
                 "token": str(symbol.upper()),
             }
         else:
-            logger.error(f"TOKEN IS NOT IN THE SYSTEM")
+            await send_error_to_kibana(msg='TOKEN IS NOT IN THE SYSTEM', code=-1)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="This token is not in the system. "
