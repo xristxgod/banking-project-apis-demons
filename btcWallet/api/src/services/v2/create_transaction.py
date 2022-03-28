@@ -2,8 +2,9 @@ from json import dumps
 from typing import List
 from decimal import Decimal
 from datetime import datetime
-from config import ADMIN_ADDRESS, decimal, logger
+from config import ADMIN_ADDRESS, decimal
 from src.node import btc
+from src.rpc.es_send import send_exception_to_kibana
 from src.services.v2.sign_send_transaction import formatted_tx, get_fee_for_transaction
 
 
@@ -43,7 +44,7 @@ def create_transaction(outputs: List[dict], admin_fee, from_address: str):
 
             'time': int(round(datetime.now().timestamp())),
             'transactionHash': tx['hash'],
-            'amount': "%.8f" % (value + node_fee),
+            'amount': "%.8f" % value,
             'senders': [
                 {
                     'address': from_address,
@@ -57,9 +58,10 @@ def create_transaction(outputs: List[dict], admin_fee, from_address: str):
                 },
                 {
                     'address': ADMIN_ADDRESS,
-                    'amount': "%.8f" % (admin_fee - node_fee)
+                    'amount': "%.8f" % admin_fee
                 },
             ],
         }
     except Exception as e:
+        send_exception_to_kibana(e, 'ERROR CREATE TRANSACTION')
         return {'error': str(e)}

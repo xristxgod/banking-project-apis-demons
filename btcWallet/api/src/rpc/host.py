@@ -1,9 +1,7 @@
 import requests
 from os import getenv
-
-from hdwallet import BIP44HDWallet
-
 from config import decimal, Decimal, logger
+from .es_send import send_exception_to_kibana
 from .method import RPCMethod
 from ..exceptions import BitcoinNodeException
 
@@ -147,6 +145,7 @@ class RPCHost:
             self.importpubkey(public_key, "mango-bank", False)
             return True
         except Exception as e:
+            send_exception_to_kibana(e, 'IMPORT WALLET ERROR')
             logger.error(f'IMPORT WALLET ERROR: {e}')
             return False
 
@@ -155,4 +154,3 @@ class RPCHost:
             return self.gettxout(tx_id, v_out)
         except Exception as e:
             raise e
-            # return None

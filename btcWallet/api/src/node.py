@@ -2,12 +2,13 @@ import os
 import json
 import requests
 from dotenv import load_dotenv
-
-from config import decimal, Decimal, logger
+from config import decimal, Decimal
 from bit import PrivateKey, PrivateKeyTestnet
 from mnemonic import Mnemonic
 from hdwallet.cryptocurrencies import BitcoinMainnet, BitcoinTestnet
 from hdwallet.hdwallet import BIP44HDWallet
+
+from .rpc.es_send import send_exception_to_kibana
 from .rpc.host import RPCHost
 from .utils import get_bip_key, convert_time
 from .exceptions import BitcoinNodeException
@@ -88,7 +89,7 @@ class NodeBTC:
     def get_balance(self, private_key: str) -> dict:
         """Get balance by private_key"""
         wallet = PrivateKey(wif=private_key)
-        self.__rpc_host.import_wallet(wallet)
+        # self.__rpc_host.import_wallet(wallet)
         satoshi = wallet.get_balance()
         return {'balance': '%.8f' % (decimal.create_decimal(int(satoshi)) / (10**8))}
 
@@ -220,8 +221,6 @@ class NodeBTC:
         addresses_from, amount_from = self.get_senders(trx["vin"])
         addresses_to, amount_to = self.get_recipients(trx["vout"])
         fee = amount_from - amount_to
-
-        logger.error(f'GET TX FOR ADDRESS: {trx["txid"]} : {amount_from}')
         return {
             "time": trx["blocktime"],
             "datetime": convert_time(trx["blocktime"]),
@@ -252,11 +251,8 @@ class NodeBTC:
         trx_for_address = []
         for trx_id in trx_all:
             trx = self.get_tx_by_id(trx_id)
-            # Exclude not
             if trx is None:
                 continue
-
-            logger.error(f'GET TX FOR ADDRESS: {trx["transactionHash"]} : {trx["amount"]}')
             trx_for_address.append(trx)
         return trx_for_address
 
@@ -294,7 +290,7 @@ class NodeBTC:
                     "amountBTC": "%.8f" % current_amount,
                 })
             except Exception as e:
-                logger.error(f'GET SENDERS: {e}')
+                send_exception_to_kibana(e, 'ERROR GET SENDERS')
                 continue
         return full, amount
 
@@ -313,7 +309,7 @@ class NodeBTC:
                     "n": v["n"]
                 })
             except Exception as e:
-                logger.error(f'GET RECIPIENTS: {e}')
+                send_exception_to_kibana(e, 'GET RECIPIENTS')
                 continue
         return full, amount
 

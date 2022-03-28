@@ -4,6 +4,7 @@ from src.node import btc
 from hdwallet.cryptocurrencies import BitcoinMainnet, BitcoinTestnet
 from hdwallet.hdwallet import BIP44HDWallet
 from config import SUB_WALLET_INDEX_FILE, logger, BIP32_ROOT_KEY
+from src.rpc.es_send import send_exception_to_kibana
 
 
 def get_index() -> int:
@@ -42,5 +43,5 @@ def create_sub_wallet():
         wallet.clean_derivation()
         return new_wallet
     except Exception as e:
-        logger.error(f'ERROR CREATE HD: {e}')
+        send_exception_to_kibana(e, 'ERROR CREATE HD')
         return {"error": str(e)}

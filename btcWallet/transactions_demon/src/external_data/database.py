@@ -1,5 +1,6 @@
 import psycopg2
 from config import DB_URL
+from src.external_data.es_send import send_exception_to_kibana
 
 
 class DB:
@@ -27,6 +28,7 @@ class DB:
             )
             return cursor.fetchone()
         except Exception as error:
+            send_exception_to_kibana(error, 'ERROR GET TX BY HASH FROM DB')
             raise error
         finally:
             if connection is not None:
@@ -45,6 +47,7 @@ class DB:
             )
             return [row[0] for row in cursor.fetchall()]
         except Exception as error:
+            send_exception_to_kibana(error, 'ERROR GET ALL TX BY HASHES FROM DB')
             raise error
         finally:
             if connection is not None:

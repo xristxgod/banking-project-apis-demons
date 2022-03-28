@@ -4,6 +4,7 @@ from decimal import Decimal
 from config import decimal, ADMIN_ADDRESS
 from src.node import btc
 from src.rpc.database import DB
+from src.rpc.es_send import send_exception_to_kibana
 
 
 def get_admin_fee_without_blockchain_fee(admin_fee, fee):
@@ -51,6 +52,7 @@ def sign_and_send_transaction(
             max_fee_rate=max_fee_rate
         )
     except Exception as e:
+        send_exception_to_kibana(e, f"Can't send transaction. SIGNED: {sign_tx_hax}")
         return {"error": f"Can't send transaction: {e}. SIGNED: {sign_tx_hax}"}
 
     try:
@@ -63,7 +65,7 @@ def sign_and_send_transaction(
         return {
             'time': int(round(datetime.now().timestamp())),
             'transactionHash': tx['hash'],
-            'amount': "%.8f" % (value + node_fee),
+            'amount': "%.8f" % value,
             'fee': "%.8f" % node_fee,
             'senders': [
                 {
@@ -78,11 +80,12 @@ def sign_and_send_transaction(
                 },
                 {
                     'address': ADMIN_ADDRESS,
-                    'amount': "%.8f" % (admin_fee - node_fee)
+                    'amount': "%.8f" % admin_fee
                 },
             ],
         }
     except Exception as e:
+        send_exception_to_kibana(e, 'Cant get transaction after signing')
         return {'error': f'Cant get transaction after signing: {e}'}
 
 

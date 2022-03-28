@@ -49,7 +49,6 @@ def create_transaction(
         if not isinstance(admin_fee, Decimal):
             admin_fee = decimal.create_decimal(admin_fee)
         outputs.insert(0, {admin_wallet: "%.8f" % admin_fee})
-        logger.error(f'AMOUNTS: {admin_fee} | {amount}')
 
     transactions_from = list(sorted(
         transactions_from,

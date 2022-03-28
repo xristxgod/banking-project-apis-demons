@@ -1,13 +1,15 @@
 import time
 import json
+from copy import deepcopy
 import os
 import uuid
 from time import time as t
 import datetime as dt
-
+from uuid import uuid4
 from bit.network.services import NetworkAPI
-from config import ERROR, NOT_SEND, LAST_BLOCK, logger, decimal, Decimal
+from config import ERROR, NOT_SEND, LAST_BLOCK, logger, decimal, Decimal, WALLET_FEE_DEFAULT, ADMIN_ADDRESS
 from .external_data.database import DB
+from .external_data.es_send import send_exception_to_kibana, send_msg_to_kibana
 from .external_data.rabbit_mq import RabbitMQ
 from .utils import convert_time, get_transaction_in_db
 from typing import Optional, List
@@ -30,9 +32,6 @@ class TransactionsDemon(FindTransactionsConfig):
             user=self.user, password=self.password,
             host=self.host, port=self.port,
         )
-        # self.__addresses = [{"network": "btc", "block": 0}]
-        # self.__time: int = 0
-        # self.__datetime: str = ''
 
     def _get_block(self) -> int:
         """ Returns the last available block """
@@ -73,7 +72,6 @@ class TransactionsDemon(FindTransactionsConfig):
 
         block_hash = self.__node.getblockhash(block)
         block_obj = self.__node.getblock(block_hash)
-        # self.__time, self.__datetime = block_obj["time"], convert_time(block_obj["time"])
         return block_obj["tx"], block, block_obj["time"], convert_time(block_obj["time"])
 
     def _script(
@@ -90,14 +88,14 @@ class TransactionsDemon(FindTransactionsConfig):
 
         packages_by_addresses = []
 
-        for tx_id in transactions:
-            tx_id = self.__node.getrawtransaction(tx_id, True)
-            senders = self.__get_senders(tx_id["vin"])
+        for tx in transactions:
+            tx = self.__node.getrawtransaction(tx, True)
+            senders = self.__get_senders(tx["vin"])
             addresses_from: list = senders[0]
             amount_from: float = senders[1]
             for_pack_senders: list = senders[2]
 
-            recipient = self.__get_recipients(tx_id["vout"])
+            recipient = self.__get_recipients(tx["vout"])
             addresses_to: list = recipient[0]
             amount_to: float = recipient[1]
             for_pack_recipient: list = recipient[2]
@@ -110,11 +108,13 @@ class TransactionsDemon(FindTransactionsConfig):
                 address = addresses_from
             elif any([x in addresses for x in addresses_to]):
                 address = addresses_to
+            elif any([x == ADMIN_ADDRESS for x in addresses_from]):
+                address = [ADMIN_ADDRESS]
             if address is not None:
                 packages_by_addresses.extend(
                     self.__packaging_for_dispatch(
                         address=address,
-                        tx_id=tx_id["txid"],
+                        tx_id=tx["txid"],
                         from_=for_pack_senders,
                         to_=for_pack_recipient,
                         amount="%.8f" % decimal.create_decimal(repr(amount_from)),
@@ -178,7 +178,6 @@ class TransactionsDemon(FindTransactionsConfig):
             "senders": from_,
             "recipients": to_
         }
-        logger.error(f'JSON: {values}')
         return self.__add_into_addresses(
             address=address, transaction=values,
         )
@@ -194,19 +193,36 @@ class TransactionsDemon(FindTransactionsConfig):
             packages_by_addresses.append({"address": address, "transactions": [transaction]})
         return packages_by_addresses
 
+    # def __edit_dummy_tx_with_fee_after_sending(self, package: List[dict]):
+    #     dummy = [
+    #         {"network": 'btc', "block": package[0]['block']},
+    #         deepcopy(package[1])
+    #     ]
+    #     dummy[1]['transactions'][0]['transactionHash'] = str(uuid4())
+    #     dummy[1]['transactions'][0]['amount'] = dummy[1]['transactions'][0]['fee']
+    #     dummy[1]['transactions'][0]['fee'] = '0.00000000'
+    #     dummy[1]['transactions'][0]['recipients'] = []
+    #     dummy[1]['transactions'][0]['senders'] = [{
+    #         'address': WALLET_FEE_DEFAULT,
+    #         'amount': dummy[1]['transactions'][0]['amount']
+    #     }]
+    #     send_msg_to_kibana(msg=f'DUMMY TX WITH FEE AFTER SENDING: {dummy}')
+    #     self.rabbit.send_message(json.dumps(dummy))
+
     def __send_to_rabbit_mq(self, package: list, all_transactions_hash_in_db) -> None:
         """ Send collected data to queue """
         try:
             for index in range(len(package[1]['transactions'])):
                 if package[1]["transactions"][index]["transactionHash"] in all_transactions_hash_in_db:
-                    txn = get_transaction_in_db(
+                    package[1]['transactions'][index] = get_transaction_in_db(
                         transaction_hash=package[1]['transactions'][index]["transactionHash"],
                         transaction=package[1]['transactions'][index]
                     )
-                    package[1]['transactions'][index] = txn
+                    # self.__edit_dummy_tx_with_fee_after_sending(package)
             self.rabbit.send_message(json.dumps(package))
+            send_msg_to_kibana(msg=f'NEW TX: {package}')
         except Exception as e:
-            logger.error(f'SENDING TO MQ ERROR: {e}')
+            send_exception_to_kibana(e, 'SENDING TO MQ ERROR')
             with open(ERROR, 'a', encoding='utf-8') as file:
                 # If an error occurred on the RabbitMQ side, write about it.
                 file.write(f"Error: {package} | RabbitMQ not responding {e} \n")
@@ -260,5 +276,6 @@ class TransactionsDemon(FindTransactionsConfig):
         elif not start_block and end_block:
             self.__start_in_range(self._get_block(), end_block)
         else:
+            send_msg_to_kibana(f'DEMON IS STARTING')
             self.__send_all_from_folder_not_send()
             self.__run()

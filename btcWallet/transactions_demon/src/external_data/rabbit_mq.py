@@ -1,6 +1,6 @@
 import os
 import pika as rabbit
-from config import logger
+from src.external_data.es_send import send_exception_to_kibana
 
 
 class RabbitMQ:
@@ -9,7 +9,6 @@ class RabbitMQ:
     def send_message(self, values: list) -> None:
         """ Send message to RabbitMQ """
         message = "{}".format(values)
-        logger.error(f'NEW TX: {message}')
         connection = None
         try:
             if os.getenv("isRabbitLocal") == "True":
@@ -26,6 +25,7 @@ class RabbitMQ:
                 properties=rabbit.BasicProperties(delivery_mode=2)
             )
         except Exception as e:
+            send_exception_to_kibana(e, 'ERROR SEND MSG TO RABBIT')
             raise e
         finally:
             if connection is not None:

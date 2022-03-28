@@ -1,13 +1,36 @@
 from flask import Flask, jsonify, request
 from src.node import btc
 from src import services
-from config import logger, decimal
-
 from src.routers.v2 import v2_router
 from src.routers.v3 import v3_router
-
+from src.rpc.es_send import send_exception_to_kibana
+from src.services.v3.is_demon_alive import is_demon_alive
+from src.services.v3.is_node_alive import is_node_alive
 
 app = Flask(__name__)
+
+
+@app.route('/', methods=['GET'])
+def is_connected():
+    return jsonify({'message': True})
+
+
+@app.route('/is-demon-alive', methods=['GET'])
+def is_demon_alive_route():
+    try:
+        return jsonify({'message': is_demon_alive()})
+    except Exception as e:
+        send_exception_to_kibana(e, 'IS NODE DEAD')
+        return jsonify({'message': False})
+
+
+@app.route('/is-node-alive', methods=['GET'])
+def is_connected_to_node():
+    try:
+        return jsonify({'message': is_node_alive()})
+    except Exception as e:
+        send_exception_to_kibana(e, 'IS NODE DEAD')
+        return jsonify({'message': False})
 
 
 @app.route('/documentation', methods=['POST', 'GET'])
@@ -101,8 +124,6 @@ def create_transaction_service():
         if "adminFee" not in request.json:
             return jsonify({'error': 'The argument "adminFee" was not found'})
 
-        logger.error(f"REQUEST: {request.json}")
-
         a = services.create_transaction(
             from_address=request.json['fromAddress'],
             outputs=request.json['outputs'],
@@ -110,8 +131,6 @@ def create_transaction_service():
             admin_wallet=request.json['adminAddress'],
             admin_fee=request.json['adminFee']
         )
-
-        logger.error(f'RETURN: {a}')
         return jsonify(a)
     else:
         return jsonify({'error': 'Use a "POST" request'})
@@ -127,15 +146,11 @@ def create_transaction():
             return jsonify({'error': 'The argument "outputs" was not found'})
         if "privateKey" not in request.json:
             return jsonify({'error': 'The argument "privateKey" was not found'})
-
-        logger.error(f"REQUEST: {request.json}")
-
         a = services.create_transaction(
             from_address=request.json['fromAddress'],
             outputs=request.json['outputs'],
             private_key=request.json['privateKey'],
         )
-        logger.error(f'RETURN: {a}')
         return jsonify(a)
     else:
         return jsonify({'error': 'Use a "POST" request'})
@@ -151,15 +166,11 @@ def sign_and_send_transaction():
             return jsonify({'error': 'The argument "createTxHex" was not found'})
         if "maxFeeRate" not in request.json:
             return jsonify({'error': 'The argument "maxFeeRate" was not found'})
-
-        logger.error(f"REQUEST: {request.json}")
-
         tx = btc.sign_and_send_transaction(
             private_keys=request.json["privateKeys"],
             create_tx_hex=request.json["createTxHex"],
             max_fee_rate=request.json["maxFeeRate"]
         )
-        logger.error(f"SENDED: {tx}")
         return jsonify(tx)
     else:
         return jsonify({'error': 'Use a "POST" request'})

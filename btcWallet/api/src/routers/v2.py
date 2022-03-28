@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify
 from json import loads
+
+from ..rpc.es_send import send_msg_to_kibana
 from ..services.v2.create_wallet import create_sub_wallet
 from ..services.v2.create_transaction import create_transaction
 from ..services.v2.import_wallet import import_wallet
 from ..services.v2.sign_send_transaction import sign_and_send_transaction
 from ..services.v2.get_balance import get_balance
-from config import logger, ADMIN_FEE, ADMIN_ADDRESS
+from config import ADMIN_FEE, ADMIN_ADDRESS
 from ..utils import get_status
 
 
@@ -49,14 +51,13 @@ def create_transaction_route():
     if request.method == 'POST':
         if "outputs" not in request.json:
             return jsonify({'error': 'The argument "outputs" was not found'})
-        logger.error(f"REQUEST: {request.json}")
 
         returned = create_transaction(
             outputs=request.json['outputs'],
             from_address=request.json['fromAddress'] if 'fromAddress' in request.json else ADMIN_ADDRESS,
             admin_fee=request.json['adminFee'] if 'adminFee' in request.json else ADMIN_FEE
         )
-        logger.error(f'RETURN: {returned}')
+        send_msg_to_kibana(msg=f'CREATED TRANSACTION: {returned}')
         return jsonify(returned), get_status(returned)
     else:
         return jsonify({'error': 'Use a "POST" request'})
@@ -71,7 +72,6 @@ def sign_and_send_transaction_route():
         if "maxFeeRate" not in request.json:
             return jsonify({'error': 'The argument "maxFeeRate" was not found'})
 
-        logger.error(f"REQUEST: {request.json}")
         payload = loads(request.json['createTxHex'])
         if "outputs" not in payload:
             return jsonify({
@@ -85,7 +85,7 @@ def sign_and_send_transaction_route():
             admin_fee=payload['adminFee'] if 'adminFee' in payload else ADMIN_FEE,
             outputs=payload['outputs']
         )
-        logger.error(f"SENDED: {tx}")
+        send_msg_to_kibana(msg=f'SENT TRANSACTION: {tx}')
         return jsonify(tx), get_status(tx)
     else:
         return jsonify({'error': 'Use a "POST" request'})
