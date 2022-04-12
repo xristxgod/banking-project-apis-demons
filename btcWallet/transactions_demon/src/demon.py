@@ -28,14 +28,14 @@ class FindTransactionsConfig:
 class TransactionsDemon(FindTransactionsConfig):
     def __init__(self):
         # Connect to Bitcoin Core Node
-        self.__node = NetworkAPI.connect_to_node(
+        self._node = NetworkAPI.connect_to_node(
             user=self.user, password=self.password,
             host=self.host, port=self.port,
         )
 
     def _get_block(self) -> int:
         """ Returns the last available block """
-        return int(self.__node.getblockcount())
+        return int(self._node.getblockcount())
 
     def _get_transactions(self, block=None):
         """ Returns a block with transactions """
@@ -70,8 +70,8 @@ class TransactionsDemon(FindTransactionsConfig):
                     time.sleep(10)
                     last_block = self._get_block()
 
-        block_hash = self.__node.getblockhash(block)
-        block_obj = self.__node.getblock(block_hash)
+        block_hash = self._node.getblockhash(block)
+        block_obj = self._node.getblock(block_hash)
         return block_obj["tx"], block, block_obj["time"], convert_time(block_obj["time"])
 
     def _script(
@@ -89,7 +89,7 @@ class TransactionsDemon(FindTransactionsConfig):
         packages_by_addresses = []
 
         for tx in transactions:
-            tx = self.__node.getrawtransaction(tx, True)
+            tx = self._node.getrawtransaction(tx, True)
             senders = self.__get_senders(tx["vin"])
             addresses_from: list = senders[0]
             amount_from: float = senders[1]
@@ -136,7 +136,7 @@ class TransactionsDemon(FindTransactionsConfig):
         addresses, amount, full = [], 0, []
         for v in vin:
             try:
-                inp = self.__node.getrawtransaction(v["txid"], True)
+                inp = self._node.getrawtransaction(v["txid"], True)
                 values = inp["vout"][int(v["vout"])]
                 addresses.extend(values["scriptPubKey"]["addresses"])
                 amount += values["value"]

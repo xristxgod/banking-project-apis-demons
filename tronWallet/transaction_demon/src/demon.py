@@ -327,36 +327,30 @@ class TransactionDemon:
                     await send_msg_to_kibana(msg=f'BLOCK {start} ERROR. RUN BLOCK AGAIN', code=-1)
                     continue
 
-    async def start_in_range(self, start_block: int, end_block: int, list_addresses: List[TronAccountAddress] = None):
+    async def start_in_range(self, start_block: int, end_block: int):
         for block_number in range(start_block, end_block):
-            if list_addresses is None:
-                addresses = await get_addresses()
-            else:
-                addresses = list_addresses
+            addresses = await get_addresses()
             await self.processing_block(block_number=block_number, addresses=addresses)
 
-    async def start_in_list_block(self, list_blocks: List[int], list_addresses: List[TronAccountAddress] = None):
+    async def start_in_list_block(self, list_blocks: List[int]):
         for block_number in list_blocks:
-            if list_addresses is None:
-                addresses = await get_addresses()
-            else:
-                addresses = list_addresses
+            addresses = await get_addresses()
             await self.processing_block(block_number=int(block_number), addresses=addresses)
 
-    async def start(self, start_block: int = None, end_block: int = None, list_addresses: List[TronAccountAddress] = None, list_blocks: List[int] = None):
+    async def start(self, start_block: int = None, end_block: int = None, list_blocks: List[int] = None):
         logger.error((
             "Start of the search: "
             f"Start block: {start_block if start_block is not None else 'Not specified'} | "
             f"End block: {end_block if end_block is not None else 'Not specified'} | "
         ))
         if list_blocks:
-            await self.start_in_list_block(list_blocks=list_blocks, list_addresses=list_addresses)
+            await self.start_in_list_block(list_blocks=list_blocks)
         elif start_block and end_block:
-            await self.start_in_range(start_block, end_block, list_addresses=list_addresses)
+            await self.start_in_range(start_block, end_block)
         elif start_block and not end_block:
-            await self.start_in_range(start_block, await self.get_node_block_number() + 1, list_addresses=list_addresses)
+            await self.start_in_range(start_block, await self.get_node_block_number() + 1)
         elif not start_block and end_block:
-            await self.start_in_range(await self.get_node_block_number(), end_block, list_addresses=list_addresses)
+            await self.start_in_range(await self.get_node_block_number(), end_block)
         else:
             await send_msg_to_kibana(msg=f"DEMON IS STARTING")
             await self.send_all_from_folder_not_send()

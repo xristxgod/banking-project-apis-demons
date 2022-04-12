@@ -26,6 +26,9 @@ class RPCHost:
     def __getattr__(self, rpc_method):
         return RPCMethod(rpc_method, self)
 
+    def send(self, *args):
+        return RPCMethod('send', self)(*args)
+
     def get_all_transactions(self, address):
         """Get all transactions by address"""
 

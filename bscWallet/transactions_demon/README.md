@@ -18,24 +18,6 @@ File `findTransactionsBTCSettings.py`:
 >1. `ERROR` - A file that will be created by itself when an error occurs, errors will be written to it. Default: error.txt
 >2. `PILLOW` - Created automatically, records the last block that was checked but not sent to the queue. Default: rescue_pillow.json
 
-Search for transactions by node.
---------------
-After all the above actions have been performed, you can run the script.
-    
-    from findTransactionsETH import FindTransactions as find
-    
-    def main():
-        find().start()
-    
-    if __name__ == "__main__":
-        main()
-------------------
-    # If everything was specified correctly
-    >>> Getting started: 2021-11-22 17:52:12 | Block: 13665123
-    >>> End block: 13665123. Time taken: 0:00:12 sec
-    >>> Getting started: 2021-11-22 17:52:24 | Block: 13665124
-    >>> End block: 13665124. Time taken: 0:01:00 sec
-    ...
 
 Search for transactions in the transferred range of blocks. From and to
 --------------
@@ -44,27 +26,30 @@ You can also transfer an array of addresses if you do not need addresses in the 
 `start` must be less than `end`.
 `end` should not exceed the height of the `blocks`.
 Required arguments: `start: int`, `end: int`.
------
-    
-    from findTransactionsETH import FindTransactions as find
-    
-    def main(**kwargs):
-        find().start(**kwargs)
-    
-    if __name__ == "__main__":
-        `kw = {
-            "start": 13665125, 
-            "end": 13665130,
-        }`
-        main()
-------------------
-    # If everything was specified correctly
-    >>> Start
-    >>> Getting started: 2021-11-22 17:53:24 | Block: 13665125
-    >>> End block: 13665125. Time taken: 0:00:24 sec
-    >>> Getting started: 2021-11-22 17:53:49 | Block: 13665126
-    >>> End block: 13665126. Time taken: 0:00:02 sec
-    ...
+
+
+```-s 1234``` or ```--start 1234``` - left block number in range
+
+```-e 4444``` or ```--end 4444``` - last block number in range
+
+```-a address_1,address_2``` or ```--addresses address_1,address_2``` - addresses for search
+
+### But you can use next special word:
+
+```-a all``` or ```--addresses all``` - you can get all addresses from database
+
+
+```shell
+
+python search_in_history_script.py -s startBlockNumber
+python search_in_history_script.py --start startBlockNumber
+
+python search_in_history_script.py -e endBlockNumber
+python search_in_history_script.py --end endBlockNumber
+ 
+python search_in_history_script.py -e startBlockNumber -a walletAddress
+python search_in_history_script.py -end startBlockNumber --addresses walletAddress
+```
 
 Json response
 ----------

@@ -10,8 +10,8 @@ decimal.prec = 8
 load_dotenv()
 
 DB_URL = os.getenv("DataBaseURL")
-WALLET_FEE_DEFAULT = os.getenv('WALLET_FEE_DEFAULT', '0xbB10Db443c7eE8c871b073326be9c156d0E1C963')
-ADMIN_ADDRESS = os.getenv('ADMIN_WALLET', '188c31hPxLcZekAG9JXZX97mDtshaqYC3z')
+WALLET_FEE_DEFAULT = os.getenv('WALLET_FEE_DEFAULT')
+ADMIN_ADDRESS = os.getenv('ADMIN_WALLET')
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.join(ROOT_DIR, 'files')
@@ -45,8 +45,8 @@ if 'last_block.txt' not in os.listdir(BASE_DIR):
 logger = getLogger(__name__)
 
 
-ELASTIC_LOG_SERVER = os.getenv('ELASTIC_LOG_SERVER', "https://elasticsearch.staging.mango:9200")
-ELASTIC_LOGIN = os.getenv('ELASTIC_LOGIN', "elastic")
-ELASTIC_PASSWORD = os.getenv('ELASTIC_PASSWORD', "ru.s0iex3shae%23chiapae8chiiP5ie")
-ELASTIC_LOG_INDEX = f"{os.getenv('ELASTIC_LOG_INDEX', 'banking-crypto')}-btc-demon"
-ELASTIC_MSG_INDEX = os.getenv('ELASTIC_MSG_INDEX', 'nodes-btc-messages')
+ELASTIC_LOG_SERVER = os.getenv('ELASTIC_LOG_SERVER')
+ELASTIC_LOGIN = os.getenv('ELASTIC_LOGIN')
+ELASTIC_PASSWORD = os.getenv('ELASTIC_PASSWORD')
+ELASTIC_LOG_INDEX = f"{os.getenv('ELASTIC_LOG_INDEX')}-btc-demon"
+ELASTIC_MSG_INDEX = os.getenv('ELASTIC_MSG_INDEX')

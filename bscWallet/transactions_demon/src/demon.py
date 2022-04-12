@@ -90,7 +90,7 @@ class TransactionsDemon:
             await send_exception_to_kibana(e, f'ERROR GET CONTRACT: {e}. CONTRACT ADDRESS: {contract_address}')
             return None
 
-    async def __processing_smart_contract(self, tx, tx_addresses):
+    async def processing_smart_contract(self, tx, tx_addresses):
         if len(tx["input"]) > 64:
             input_ = tx["input"]
             contract_address = tx["to"]
@@ -131,7 +131,7 @@ class TransactionsDemon:
                 tx_to = tx['to'].lower()
                 tx_addresses.append(self._node.toChecksumAddress(tx_to))
 
-            contract_values = await self.__processing_smart_contract(tx, tx_addresses)
+            contract_values = await self.processing_smart_contract(tx, tx_addresses)
             address = None
 
             for tx_address in tx_addresses:

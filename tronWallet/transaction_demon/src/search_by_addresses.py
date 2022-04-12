@@ -16,17 +16,12 @@ def _get_key():
 
 class AddressesDemon(TransactionDemon):
 
-    async def get_tx_by_addresses(self, addresses: List[TronAccountAddress]) -> List[int]:
-        lists_blocks = await asyncio.gather(*[
-            AddressesDemon.get_all_transactions_block_by_address(
-                address=address
-            )
-            for address in addresses
-        ])
-        block_numbers = []
-        for block in lists_blocks:
-            block_numbers.extend(block)
-        return list(set(block_numbers))
+    @staticmethod
+    def get_all_blocks_by_list_addresses(list_addresses: List[TronAccountAddress]) -> List[int]:
+        blocks = []
+        for address in list_addresses:
+            blocks.extend(AddressesDemon.get_all_transactions_block_by_address(address=address))
+        return sorted(blocks)
 
     @staticmethod
     def get_all_transactions_block_by_address(address: TronAccountAddress) -> List[int]:
@@ -55,10 +50,16 @@ class AddressesDemon(TransactionDemon):
         else:
             addresses: List = list_addresses
         logger.error(f"List of addresses: {addresses}")
-        list_block = await self.get_tx_by_addresses(addresses=addresses)
-        if not start_block and not end_block:
+        list_block = AddressesDemon.get_all_blocks_by_list_addresses(list_addresses=list_addresses)
+        if not start_block and not end_block and list_blocks is None:
             logger.error("Search through all blocks")
-            await self.start_to_list(list_block=list_block, list_addresses=addresses)
+            await self.start_to_list(
+                list_block=list_block,
+                list_addresses=addresses
+            )
+        if not start_block and not end_block and list_blocks is not None:
+            logger.error("Search through all blocks")
+            await self.start_to_list(list_block=list_blocks, list_addresses=addresses)
         elif not start_block and end_block:
             logger.error(f"Search from 1 block to {end_block} block")
             await self.start_to_list(

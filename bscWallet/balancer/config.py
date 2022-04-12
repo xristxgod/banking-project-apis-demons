@@ -10,22 +10,22 @@ decimal.prec = 18
 logger = logging.getLogger(__name__)
 
 
-ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS', '0x6fAE511E40F582C50cD487a4999dc857a7bc3527')
-ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY', '41f588612616cf8fd7150c13e6564650f57dad5b98f67ce839e1299cffc0a69f')
-API_URL = os.getenv('API_URL', 'http://127.0.0.1:8000')
+ADMIN_ADDRESS = os.getenv('ADMIN_ADDRESS')
+ADMIN_PRIVATE_KEY = os.getenv('ADMIN_PRIVATE_KEY')
+API_URL = os.getenv('API_URL')
 DUST_MULTIPLICATOR = decimal.create_decimal(os.getenv('DUST_MULTIPLICATOR', '2.0'))
-DB_URL = os.getenv('DataBaseURL', 'postgresql://mango:mango@172.31.3.130:35432/mango_crypto_master')
+DB_URL = os.getenv('DataBaseURL')
 
 MIN_TOKEN_COST = decimal.create_decimal(os.getenv('MIN_TOKEN_COST', '2.0'))
-INTERNAL_RABBIT_URL = os.getenv('INTERNAL_RABBIT_URL', "amqp://root:password@127.0.0.1:5672/")
+INTERNAL_RABBIT_URL = os.getenv('INTERNAL_RABBIT_URL')
 
 NATIVE_LIMIT = decimal.create_decimal(os.getenv('NATIVE_LIMIT', '0.001'))
 
-ELASTIC_LOG_SERVER = os.getenv('ELASTIC_LOG_SERVER', "https://elasticsearch.staging.mango:9200")
-ELASTIC_LOGIN = os.getenv('ELASTIC_LOGIN', "elastic")
-ELASTIC_PASSWORD = os.getenv('ELASTIC_PASSWORD', "ru.s0iex3shae%23chiapae8chiiP5ie")
-ELASTIC_LOG_INDEX = f"{os.getenv('ELASTIC_LOG_INDEX', 'banking-crypto')}-bsc-balancer"
-ELASTIC_MSG_INDEX = os.getenv('ELASTIC_MSG_INDEX', 'nodes-2-bsc-messages')
+ELASTIC_LOG_SERVER = os.getenv('ELASTIC_LOG_SERVER')
+ELASTIC_LOGIN = os.getenv('ELASTIC_LOGIN')
+ELASTIC_PASSWORD = os.getenv('ELASTIC_PASSWORD')
+ELASTIC_LOG_INDEX = f"{os.getenv('ELASTIC_LOG_INDEX')}-bsc-balancer"
+ELASTIC_MSG_INDEX = os.getenv('ELASTIC_MSG_INDEX')
 
 
 class Tokens:
