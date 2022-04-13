@@ -1,22 +1,15 @@
-"""
-This test verifies the correctness of the script and its method.
-# Check everything
-python -m unittest test_demon_script.TestDemonScript
-# Check the receipt of the last block number from the node.
-python -m unittest test_demon_script.TestDemonScript.test_get_node_block_number
-# Check to get the last block number from the file "last_block.txt".
-python -m unittest test_demon_script.TestDemonScript.test_get_last_block_number
-# Check the correctness of unpacking "data" during the token transaction
-python -m unittest test_demon_script.TestDemonScript.test_smart_contract_transaction
-# Check the correctness of the unpacking and packaging of the transaction.
-python -m unittest test_demon_script.TestDemonScript.test_processing_transaction
-"""
-import unittest
+from unittest import IsolatedAsyncioTestCase
+from unittest.mock import Mock, patch
+
+from hexbytes import HexBytes
 
 from src.demon import TransactionsDemon
 
 
-class TestDemonScript(unittest.IsolatedAsyncioTestCase):
+contract_address = '0xBBc709564f70Fba250860f06E8b059eA54EEBa7A'.lower()
+
+
+class TestDemonScript(IsolatedAsyncioTestCase):
 
     tx = {
         'blockHash': '0xda77e606b9c4576da10cf4248f2116210821de54f99d81a2195d686d9434b2a2',
@@ -24,10 +17,10 @@ class TestDemonScript(unittest.IsolatedAsyncioTestCase):
         'from': '0x328130164d0f2b9d7a52edc73b3632e713ff0ec6',
         'gas': 25000000,
         'gasPrice': 20000000000,
-        'hash': '0x5e8c8637c8a1422efac3b654d52c7f75bae5510011578f121b9260fbd76d60d7',
+        'hash': HexBytes.fromhex('976e41f8fa1dbad394166c70b578cfda4c74bab0210118a8abec96a7d5ee680a'),
         'input': '0xa9059cbb0000000000000000000000002ff6b5533241b093c43c5dfee086309713c1fa8400000000000000000000000000000000000000000000000f1f10190765375000',
         'nonce': 228062,
-        'to': '0x55d398326f99059ff775485246999027b3197955',
+        'to': contract_address,
         'transactionIndex': 0,
         'value': 0,
         'type': '0x0',
@@ -39,45 +32,61 @@ class TestDemonScript(unittest.IsolatedAsyncioTestCase):
     timestamp = 1646815824000
     all_transactions_hash_in_db = []
 
-    async def test_get_node_block_number(self):
+    @patch('src.external_data.database.DB.get_tokens')
+    async def test_get_node_block_number(self, get_tokens: Mock):
+        get_tokens.return_value = []
         demon = TransactionsDemon()
         number = await demon.get_node_block_number()
-        self.assertNotEqual(number, 0)
-        self.assertEqual(type(number), int)
+        assert number != 0
+        assert isinstance(number, int)
 
-    async def test_get_last_block_number(self):
+    @patch('src.external_data.database.DB.get_tokens')
+    async def test_get_last_block_number(self, get_tokens: Mock):
+        get_tokens.return_value = []
         demon = TransactionsDemon()
         number = await demon.get_node_block_number()
-        self.assertNotEqual(number, 0)
-        self.assertEqual(type(number), int)
+        assert number != 0
+        assert isinstance(number, int)
 
-    async def test_smart_contract_transaction(self):
+    @patch('src.external_data.database.DB.get_tokens')
+    async def test_smart_contract_transaction(self, get_tokens: Mock):
+        get_tokens.return_value = [
+            (1, 'Tether USD', 'USDT', contract_address, 18, 'bsc', 'bsc_erc20_usdt')
+        ]
         demon = TransactionsDemon()
         contract_info = await demon.processing_smart_contract(
             {
                 'input': '0xa9059cbb0000000000000000000000002ff6b5533241b093c43c5dfee086309713c1fa8400000000000000000000000000000000000000000000000f1f10190765375000',
-                'to': '0x55d398326f99059ff775485246999027b3197955'
+                'to': contract_address
             },
             tx_addresses=[]
         )
-        self.assertEqual(type(contract_info), dict)
-        self.assertEqual(contract_info["to_address"], "0x2ff6b5533241b093c43c5dfee086309713c1fa84")
-        self.assertEqual(contract_info["token"], "USDT")
-        self.assertEqual(contract_info["amount"], "278.93947764")
 
-    async def test_processing_transaction(self):
+        assert isinstance(contract_info, dict)
+        assert contract_info["recipients"][0]['address'] == "0x2ff6b5533241b093c43c5dfee086309713c1fa84"
+        assert contract_info["token"] == "USDT"
+        assert contract_info["amount"] == "278.939477640000000000"
+
+    @patch('src.external_data.database.DB.get_tokens')
+    @patch('src.external_data.es_send.__send_msg_to_kibana')
+    async def test_processing_transaction(self, __send_msg_to_kibana: Mock, get_tokens: Mock):
+        get_tokens.return_value = [
+            (1, 'Tether USD', 'USDT', contract_address, 18, 'bsc', 'bsc_erc20_usdt')
+        ]
         demon = TransactionsDemon()
         transaction = await demon._processing_transaction(
-            TestDemonScript.tx, TestDemonScript.addresses,
+            TestDemonScript.tx, [int(x, 0) for x in TestDemonScript.addresses],
             TestDemonScript.timestamp, TestDemonScript.all_transactions_hash_in_db
         )
-        self.assertEqual(transaction["address"], TestDemonScript.addresses[0])
-        self.assertEqual(len(transaction), 2)
-        self.assertEqual(transaction["transactions"][0]["time"], TestDemonScript.timestamp)
-        self.assertEqual(transaction["transactions"][0]["transactionHash"], "0x5e8c8637c8a1422efac3b654d52c7f75bae5510011578f121b9260fbd76d60d7")
-        self.assertEqual(transaction["transactions"][0]["amount"], "278.93947764")
-        self.assertEqual(len(transaction["transactions"][0]["senders"]), 1)
-        self.assertEqual(transaction["transactions"][0]["senders"][0], {'address': '0x328130164d0f2b9d7a52edc73b3632e713ff0ec6', 'amount': '278.93947764'})
-        self.assertEqual(len(transaction["transactions"][0]["recipients"]), 1)
-        self.assertEqual(transaction["transactions"][0]["recipients"][0], {'address': '0x2ff6b5533241b093c43c5dfee086309713c1fa84', 'amount': '278.93947764'})
-        self.assertEqual(transaction["transactions"][0]["token"], "USDT")
+
+        assert transaction["address"] == TestDemonScript.addresses[0]
+        assert len(transaction) == 2
+        assert transaction["transactions"][0]["time"] == TestDemonScript.timestamp
+        assert transaction["transactions"][0]["transactionHash"] == "0x976e41f8fa1dbad394166c70b578cfda4c74bab0210118a8abec96a7d5ee680a"
+        assert transaction["transactions"][0]["amount"] == "278.939477640000000000"
+
+        assert len(transaction["transactions"][0]["senders"]) == 1
+        assert transaction["transactions"][0]["senders"][0] == {'address': '0x328130164d0f2b9d7a52edc73b3632e713ff0ec6', 'amount': '278.939477640000000000'}
+        assert len(transaction["transactions"][0]["recipients"]) == 1
+        assert transaction["transactions"][0]["recipients"][0] == {'address': '0x2ff6b5533241b093c43c5dfee086309713c1fa84', 'amount': '278.939477640000000000'}
+        assert transaction["transactions"][0]["token"] == "USDT"
