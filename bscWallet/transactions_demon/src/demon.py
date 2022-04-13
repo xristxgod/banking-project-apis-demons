@@ -103,10 +103,15 @@ class TransactionsDemon:
             to_address = f'0x{input_[-104:-64]}'.lower()
 
             contract = self._contracts[contract_address]
-            format_str = f"%.{contract['decimals']}f"
 
             tx_addresses.append(to_address)
-            format_amount = format_str % (decimal.create_decimal(int("0x" + amount, 0)) / 10 ** contract['decimals'])
+            str_value = str(int("0x" + amount, 0))
+            dec = contract['decimals']
+            if len(str_value) < dec + 1:
+                str_value = ('0' * (dec + 1 - len(str_value))) + str_value
+
+            format_amount = str_value[0:-dec] + '.' + str_value[-dec:]
+
             return {
                 "token": contract['token'],
                 "name": contract['name'],
@@ -137,7 +142,7 @@ class TransactionsDemon:
             for tx_address in tx_addresses:
                 try:
                     if int(tx_address, 0) in addresses:
-                        address = tx_address
+                        address = tx_address.lower()
                         break
                 except:
                     continue
