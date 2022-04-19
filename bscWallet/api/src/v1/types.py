@@ -7,6 +7,7 @@ class Coins:
     token_LINK = 'link'
     token_DNC = 'dnc'
     token_RZM = 'rzm'
+    token_ICG = 'icg'
 
     @staticmethod
     def is_native(coin: str):
