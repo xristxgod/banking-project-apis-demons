@@ -327,9 +327,12 @@ class TransactionDemon:
                     await send_msg_to_kibana(msg=f'BLOCK {start} ERROR. RUN BLOCK AGAIN', code=-1)
                     continue
 
-    async def start_in_range(self, start_block: int, end_block: int):
+    async def start_in_range(self, start_block: int, end_block: int, list_addresses=None):
         for block_number in range(start_block, end_block):
-            addresses = await get_addresses()
+            if list_addresses is not None:
+                addresses = list_addresses
+            else:
+                addresses = await get_addresses()
             await self.processing_block(block_number=block_number, addresses=addresses)
 
     async def start_in_list_block(self, list_blocks: List[int]):
@@ -337,7 +340,8 @@ class TransactionDemon:
             addresses = await get_addresses()
             await self.processing_block(block_number=int(block_number), addresses=addresses)
 
-    async def start(self, start_block: int = None, end_block: int = None, list_blocks: List[int] = None, list_addresses: List[TronAccountAddress] = None):
+    async def start(self, start_block: int = None, end_block: int = None, list_blocks: List[int] = None,
+                    list_addresses: List[TronAccountAddress] = None):
         logger.error((
             "Start of the search: "
             f"Start block: {start_block if start_block is not None else 'Not specified'} | "
