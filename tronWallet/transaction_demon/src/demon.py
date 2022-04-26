@@ -9,6 +9,7 @@ from datetime import timedelta, datetime
 
 import aiofiles
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
+from tronpy.tron import Tron, HTTPProvider
 
 from src.external_data.database import get_addresses, get_all_transactions_hash
 from src.external_data.es_send import send_exception_to_kibana, send_msg_to_kibana
@@ -83,7 +84,13 @@ class TransactionDemon:
         try:
             logger.error(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | PROCESSING BLOCK: {block_number}")
             # Get transactions from the block.
-            block = await self.node.get_block(id_or_num=int(block_number))
+            try:
+                block = await self.node.get_block(id_or_num=int(block_number))
+            except Exception as error:
+                try:
+                    block = Tron().get_block(id_or_num=int(block_number))
+                except Exception as error:
+                    block = await self.node.get_block(id_or_num=int(block_number + 1))
             if "transactions" in block.keys() and isinstance(block["transactions"], list):
                 count_trx = len(block["transactions"])
             else:
@@ -340,8 +347,7 @@ class TransactionDemon:
             addresses = await get_addresses()
             await self.processing_block(block_number=int(block_number), addresses=addresses)
 
-    async def start(self, start_block: int = None, end_block: int = None, list_blocks: List[int] = None,
-                    list_addresses: List[TronAccountAddress] = None):
+    async def start(self, start_block: int = None, end_block: int = None, list_blocks: List[int] = None, list_addresses: List[TronAccountAddress] = None):
         logger.error((
             "Start of the search: "
             f"Start block: {start_block if start_block is not None else 'Not specified'} | "
