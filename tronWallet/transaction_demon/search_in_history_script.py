@@ -1,6 +1,6 @@
 import sys
 import argparse
-from run_demon import TransactionDemon, logger, AddressesDemon
+from run_demon import TransactionDemon, logger, AddressesDemon, AdminAddresses
 
 from asyncio import run
 
@@ -18,6 +18,9 @@ async def async_run(**kwargs):
     logger.error(f"Creating demon instance. Network: {network}")
     logger.error(f"Start search in history")
     if "list_addresses" in kwargs and kwargs["list_addresses"] is not None:
+        for address in kwargs.get("list_addresses"):
+            if address in AdminAddresses:
+                logger.error(f"This wallet: '{address}' will not be tracked")
         try:
             demon = AddressesDemon()
             is_success = await demon.start(**kwargs)
