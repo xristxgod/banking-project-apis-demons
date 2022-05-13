@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from tronpy.tron import Tron, HTTPProvider
+
 from src.utils.node_status import native_balance_status, balancer_status, demon_status, node_status
 from src.utils.es_send import send_exception_to_kibana
-from config import network
+from config import network, node
 
 router = APIRouter()
 
@@ -27,11 +29,24 @@ async def is_node_connected():
     """Find out the status of the Tron node"""
     try:
         if network == "mainnet":
-            return JSONResponse(content={"message": node_status()})
+            status = node_status()
+            if not status:
+                raise Exception
+            return JSONResponse(content={"message": status})
         return JSONResponse(content={"message": True})
     except Exception as error:
         await send_exception_to_kibana(error=error, msg="ERROR: THE TRON NODE IS NOT ALIVE")
-        return JSONResponse(content={"message": False})
+        try:
+            p = Tron().get_latest_block_number()
+            o = Tron(HTTPProvider(endpoint_uri="http://tron-mainnet.mangobank.elcorp.io:8090")).get_latest_block_number()
+            return JSONResponse(content={
+                "message": False,
+                "our_block": o,
+                "public_block": p,
+                "gap": p - o
+            })
+        except Exception as error:
+            return JSONResponse(content={"message": False})
 
 # <<<------------------------------------>>> Admin Balance Status <<<------------------------------------------------>>>
 
@@ -55,10 +70,23 @@ async def is_there_native_currency_on_central_wallet():
 )
 async def is_demon_alive():
     try:
-        return JSONResponse(content={"message": demon_status()})
+        status = demon_status()
+        if not status:
+            raise Exception
+        return JSONResponse(content={"message": status})
     except Exception as error:
         await send_exception_to_kibana(error=error, msg="ERROR: THE TRON DEMON IS NOT ALIVE")
-        return JSONResponse(content={"message": False})
+        try:
+            p = Tron().get_latest_block_number()
+            o = Tron(HTTPProvider(endpoint_uri="http://tron-mainnet.mangobank.elcorp.io:8090")).get_latest_block_number()
+            return JSONResponse(content={
+                "message": False,
+                "our_block": o,
+                "public_block": p,
+                "gap": p - o
+            })
+        except Exception as error:
+            return JSONResponse(content={"message": False})
 
 # <<<------------------------------------>>> Balancer Status <<<----------------------------------------------------->>>
 
