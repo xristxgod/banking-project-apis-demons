@@ -9,7 +9,6 @@ from datetime import timedelta, datetime
 
 import aiofiles
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
-from tronpy.tron import Tron, HTTPProvider
 
 from src.external_data.database import get_addresses, get_all_transactions_hash
 from src.external_data.es_send import send_exception_to_kibana, send_msg_to_kibana
@@ -36,10 +35,18 @@ class TransactionDemon:
             provider=self.__provider if self.__network == "mainnet" else None,
             network=self.__network
         )
+        self.public_node = AsyncTron(
+            provider=AsyncHTTPProvider(api_key="16c3b7ca-d498-4314-aa1d-a224135faa26") if self.__network == "mainnet" else None,
+            network=self.__network
+        )
 
     async def get_node_block_number(self) -> int:
         """Get the number of the private block in the node"""
-        return int(await self.node.get_latest_block_number())
+        try:
+            return int(await self.node.get_latest_block_number())
+        except Exception as error:
+            logger.error(f"ERROR: {error}")
+            return int(await self.public_node.get_latest_block_number())
 
     async def get_last_block_number(self):
         """Get the block number recorded in the "last_block.txt" file"""
@@ -87,10 +94,8 @@ class TransactionDemon:
             try:
                 block = await self.node.get_block(id_or_num=int(block_number))
             except Exception as error:
-                try:
-                    block = Tron().get_block(id_or_num=int(block_number))
-                except Exception as error:
-                    block = await self.node.get_block(id_or_num=int(block_number + 1))
+                logger.error(f"ERROR: {error}")
+                block = await self.public_node.get_block(id_or_num=int(block_number))
             if "transactions" in block.keys() and isinstance(block["transactions"], list):
                 count_trx = len(block["transactions"])
             else:
@@ -185,7 +190,11 @@ class TransactionDemon:
                 else:
                     amount = 0
                 # We get a more detailed transaction.
-                tx_fee = await self.node.get_transaction_info(tx_hash)
+                try:
+                    tx_fee = await self.node.get_transaction_info(tx_hash)
+                except Exception as error:
+                    logger.error(f"ERROR: {error}")
+                    tx_fee = await self.public_node.get_transaction_info(tx_hash)
                 if "fee" not in tx_fee:
                     fee = "0"
                 else:
