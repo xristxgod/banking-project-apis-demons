@@ -37,6 +37,7 @@ class Tokens:
     TOKEN_COST_DNC = decimal.create_decimal(os.getenv('TOKEN_COST_DNC', '0.35'))
     TOKEN_COST_RZM = decimal.create_decimal(os.getenv('TOKEN_COST_RZM', '0.53'))
     TOKEN_COST_ICG = decimal.create_decimal(os.getenv('TOKEN_COST_ICG', '0.001'))
+    TOKEN_COST_PONT = decimal.create_decimal(os.getenv('TOKEN_COST_PONT', '0.35'))
 
     async def get_tokens(self) -> List[str]:
         return [attr.replace('TOKEN_COST_', '') for attr in dir(self) if attr.startswith('TOKEN_COST_')]
