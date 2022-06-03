@@ -8,6 +8,7 @@ from src.utils.node import node_singleton
 from src.v1.schemas import BodyCreateTransaction, ResponseCreateTransaction, ResponseSendTransaction, \
     BodySendTransaction, ResponseAddressWithAmount
 from .decode_raw_tx import decode_raw_tx, DecodedTx
+from .nonce_locker import nonce_iterator_lock, nonce_locker
 from ...utils.es_send import send_exception_to_kibana, send_msg_to_kibana
 
 
@@ -88,30 +89,39 @@ class TransactionBSC:
 
     async def sign_send_transaction(self, body: BodySendTransaction, is_sender_from_body: bool = False) -> json:
         try:
-            payload = json.loads(body.createTxHex)
-            admin_fee = payload.pop('adminFee', None)
-            from_address = payload.pop('fromAddress', None)
-            admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
-            transfer = {
-                "nonce": payload['nonce'],
-                "to": payload['to'],
-                "value": payload['value'],
-                "gasPrice": payload['gasPrice'],
-                "gas": payload['gas'],
-                "data": b"",
-            }
-            signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
-                transfer, private_key=body.privateKeys[0]
-            )
-            transaction_hash = await self.node_bridge.async_node.eth.send_raw_transaction(
-                transaction=self.node_bridge.async_node.toHex(signed_transaction.rawTransaction)
-            )
+            async with nonce_iterator_lock:
+                payload = json.loads(body.createTxHex)
+                admin_fee = payload.pop('adminFee', None)
+                from_address = payload.pop('fromAddress', None)
+                admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
 
-            await send_msg_to_kibana(
-                msg=f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}"
-            )
+                nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
+                if nonce_locker.nonce is None or nonce_locker.nonce < nonce:
+                    nonce_locker.nonce = nonce + 1
+                else:
+                    nonce = nonce_locker.nonce
+                    nonce_locker.nonce += 1
 
-            tx: DecodedTx = decode_raw_tx(signed_transaction.rawTransaction.hex())
+                transfer = {
+                    "nonce": nonce,
+                    "to": payload['to'],
+                    "value": payload['value'],
+                    "gasPrice": payload['gasPrice'],
+                    "gas": payload['gas'],
+                    "data": b"",
+                }
+                signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
+                    transfer, private_key=body.privateKeys[0]
+                )
+                transaction_hash = await self.node_bridge.async_node.eth.send_raw_transaction(
+                    transaction=self.node_bridge.async_node.toHex(signed_transaction.rawTransaction)
+                )
+
+                await send_msg_to_kibana(
+                    msg=f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}"
+                )
+
+                tx: DecodedTx = decode_raw_tx(signed_transaction.rawTransaction.hex())
 
             value = decimal.create_decimal(tx.value) / (10 ** 18)
             node_fee = decimal.create_decimal(tx.gas) / (10 ** 8)
