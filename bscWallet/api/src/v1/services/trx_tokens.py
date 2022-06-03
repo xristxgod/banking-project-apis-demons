@@ -10,6 +10,7 @@ from src.v1.schemas import (
     ResponseCreateTokenTransaction, ResponseSendTransaction, BodySendTransaction, ResponseAddressWithAmount
 )
 from .decode_raw_tx import decode_raw_tx, DecodedTx
+from .nonce_locker import nonce_locker, nonce_iterator_lock
 from ...utils.es_send import send_exception_to_kibana, send_msg_to_kibana
 
 
@@ -158,14 +159,26 @@ class TransactionToken:
         :return: Transaction hash
         """
         try:
-            payload: dict = json.loads(body.createTxHex)
-            admin_fee = payload.pop('adminFee', None)
-            from_address = payload.pop('fromAddress', None)
-            admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
-            signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
-                payload, private_key=body.privateKeys[0]
-            )
-            send_transaction = await self.node_bridge.async_node.eth.send_raw_transaction(signed_transaction.rawTransaction)
+            async with nonce_iterator_lock:
+                payload = json.loads(body.createTxHex)
+                admin_fee = payload.pop('adminFee', None)
+                from_address = payload.pop('fromAddress', None)
+                admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
+
+                nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
+                if nonce_locker.nonce is not None and nonce_locker.nonce > nonce:
+                    nonce = nonce_locker.nonce
+
+                payload["nonce"] = nonce
+
+                signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
+                    payload, private_key=body.privateKeys[0]
+                )
+                send_transaction = await self.node_bridge.async_node.eth.send_raw_transaction(
+                    signed_transaction.rawTransaction
+                )
+
+                nonce_locker.nonce = nonce + 1
 
             await send_msg_to_kibana(
                 msg=f"THE TRANSACTION TOKEN WAS CREATED, SIGNED AND SENT "
