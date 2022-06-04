@@ -95,12 +95,11 @@ class TransactionBSC:
                 from_address = payload.pop('fromAddress', None)
                 admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
 
-                nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
-                if nonce_locker.nonce is None or nonce_locker.nonce < nonce:
-                    nonce_locker.nonce = nonce + 1
-                else:
+                nonce = await self.node_bridge.async_node.eth.get_transaction_count(
+                    self.node_bridge.node.toChecksumAddress(ADMIN_ADDRESS)
+                )
+                if nonce_locker.nonce is not None and nonce_locker.nonce > nonce:
                     nonce = nonce_locker.nonce
-                    nonce_locker.nonce += 1
 
                 transfer = {
                     "nonce": nonce,
@@ -120,6 +119,8 @@ class TransactionBSC:
                 await send_msg_to_kibana(
                     msg=f"THE TRANSACTION HAS BEEN SENT | TX: {self.node_bridge.async_node.toHex(transaction_hash)}"
                 )
+
+                nonce_locker.nonce = nonce + 1
 
                 tx: DecodedTx = decode_raw_tx(signed_transaction.rawTransaction.hex())
 
