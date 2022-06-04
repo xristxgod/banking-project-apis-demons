@@ -2,7 +2,7 @@ import json
 from fastapi import HTTPException
 from starlette import status
 from datetime import datetime
-from config import decimal, ADMIN_FEE, ADMIN_ADDRESS
+from config import decimal, ADMIN_FEE, ADMIN_ADDRESS, logger
 from src.utils.node import node_singleton
 from src.utils.tokens_database import TokenDB
 from src.v1.schemas import (
@@ -165,10 +165,12 @@ class TransactionToken:
                 from_address = payload.pop('fromAddress', None)
                 admin_address = payload.pop('adminAddress', ADMIN_ADDRESS)
 
-                nonce = await self.node_bridge.async_node.eth.get_transaction_count(from_address)
+                nonce = await self.node_bridge.async_node.eth.get_transaction_count(
+                    self.node_bridge.node.toChecksumAddress(ADMIN_ADDRESS)
+                )
                 if nonce_locker.nonce is not None and nonce_locker.nonce > nonce:
                     nonce = nonce_locker.nonce
-
+                logger.error(f"++++++++++ NONCE: {nonce}")
                 payload["nonce"] = nonce
 
                 signed_transaction = self.node_bridge.node.eth.account.sign_transaction(
