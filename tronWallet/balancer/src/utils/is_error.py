@@ -6,6 +6,7 @@ import uuid
 import pika as rabbit
 from config import NOT_SEND, rabbit_url, queue
 
+
 async def is_error(value: Dict):
     new_not_send_file = os.path.join(NOT_SEND, f'{uuid.uuid4()}.json')
     async with async_open(new_not_send_file, 'w') as file:
@@ -13,6 +14,7 @@ async def is_error(value: Dict):
         await file.write(str(value))
     if isinstance(value, dict) and "address" in dict.keys():
         send_again(value=value)
+
 
 def send_again(value: Dict):
     message = "{}".format(json.dumps(value))

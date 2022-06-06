@@ -10,6 +10,7 @@ from src.utils.types import TokenTRC20, TronAccountAddress
 
 from config import decimals
 
+
 class CreateTransaction(NodeTron):
     """This class creates TRX & TRC20 & Freeze & Unfreeze transactions"""
 
@@ -101,5 +102,6 @@ class CreateTransaction(NodeTron):
             # The maximum allowable commission per transaction
             maxFeeRate=token_dict["feeLimit"]
         )
+
 
 create_transaction = CreateTransaction()

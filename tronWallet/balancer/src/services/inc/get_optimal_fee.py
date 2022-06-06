@@ -6,6 +6,7 @@ from src.services.helper.activate_account import activate_account
 from src.utils.types import TronAccountAddress
 from config import decimals
 
+
 async def get_optimal_fee(from_address: TronAccountAddress, to_address: TronAccountAddress, token_network: str = "tron") -> Decimal:
     values: Dict = await get_request(f"/{token_network}/get-optimal-fee/{from_address}&{to_address}")
     if "error" in values and values["error"] == "account not found on-chain":

@@ -8,9 +8,12 @@ from src.v1.services.sign_send_transaction import sign_and_send_transaction as s
 from src.utils.types import TronAccountAddress, TransactionHash, Coins
 from config import logger
 
+
 router = APIRouter()
 
+
 # <<<----------------------------------->>> Fee <<<------------------------------------------------------------------>>>
+
 
 @router.get(
     "/tron/get-optimal-fee/{fromAddress}&{toAddress}", description="Get a fixed transaction fee USDT",
@@ -23,6 +26,7 @@ async def get_trx_fee(fromAddress: TronAccountAddress, toAddress: TronAccountAdd
         return JSONResponse(content=result)
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
+
 
 @router.get(
     "/tron_trc20_{coin}/get-optimal-fee/{fromAddress}&{toAddress}", description="Get a fixed transaction fee USDT",
@@ -42,7 +46,9 @@ async def get_trc20_fee(fromAddress: TronAccountAddress, toAddress: TronAccountA
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
 
+
 # <<<----------------------------------->>> Transactions info <<<---------------------------------------------------->>>
+
 
 @router.get(
     "/{network}/get-transaction/{trxHash}", description="Get transaction by transaction hash",
@@ -55,6 +61,7 @@ async def get_transaction_by_tx_id(trxHash: TransactionHash, network: str):
         return JSONResponse(content=result)
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
+
 
 @router.get(
     "/{network}/get-all-transactions/{address}", description="Get transaction by transaction hash",
@@ -73,7 +80,9 @@ async def get_all_transactions_by_address(address: TronAccountAddress, network: 
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
 
+
 # <<<----------------------------------->>> Create transaction <<<--------------------------------------------------->>>
+
 
 @router.post(
     "/tron/create-transaction-for-internal-services", response_model=ResponseCreateTransaction,
@@ -105,7 +114,9 @@ async def create_trc20_transaction(body: BodyCreateTransaction, coin: str):
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
 
+
 # <<<----------------------------------->>> Sing and Send transactions <<<------------------------------------------->>>
+
 
 @router.post(
     "/{network}/sign-send-transaction-for-internal-services", description="Sign and Send a transaction",

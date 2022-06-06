@@ -16,11 +16,13 @@ import unittest
 from . import _get_response
 from config import API_URL, AdminWallet, ReportingAddress, AdminFee, AdminPrivateKey, AdminFeeToken
 
+
 # Enter the sender's address and private key. Otherwise, the Admin address and private key will be used.
 test_from_address = None
 test_from_private_key = None
 # Enter the recipient's address and private key. Otherwise, the recipients will be "TRzfVw3rgezwYCfeSxJPr9qdG6pMGegTNY".
 test_to_address = None
+
 
 class ApiTestBalancerTransaction(unittest.TestCase):
 

@@ -19,6 +19,7 @@ import psycopg2.extras
 from src.utils import from_sun, to_base58check_address, convert_time, get_asset_trc20, get_transaction_for_fee
 from config import USDT, USDC, ReportingAddress, decimals
 
+
 class TestProjectMethods(unittest.IsolatedAsyncioTestCase):
 
     async def test_from_sun(self):

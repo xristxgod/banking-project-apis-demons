@@ -7,12 +7,14 @@ from src.utils import TronAccountAddress
 from src.demon import TransactionDemon
 from config import network, logger
 
+
 def _get_key():
     return [
         "8d375175-fa31-490d-a224-63a056adb60b",
         "16c3b7ca-d498-4314-aa1d-a224135faa26",
         "a684fa6d-6893-4928-9f8e-8decd5f034f2"
     ][random.randint(0, 2)]
+
 
 class AddressesDemon(TransactionDemon):
 

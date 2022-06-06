@@ -14,6 +14,7 @@ import random
 
 from src.external_data.database import get_addresses, get_all_transactions_hash, get_contracts, get_transaction_hash
 
+
 class TestDemon(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_addresses(self):

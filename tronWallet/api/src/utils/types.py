@@ -20,6 +20,7 @@ Amount = Union[str, int, float]
 # The amount in Token TRC20
 AmountTRC20 = Union[Amount]
 
+
 class Coins:
     TRX = "trx"
     token_USDT = 'usdt'

@@ -7,6 +7,7 @@ import psycopg2.errorcodes
 
 from config import DataBaseUrl
 
+
 async def get_addresses() -> List:
     """Get all addresses into table"""
     connection: asyncpg.Connection = await asyncpg.connect(DataBaseUrl)
@@ -14,12 +15,14 @@ async def get_addresses() -> List:
     await connection.close()
     return data
 
+
 async def get_all_transactions_hash() -> List:
     """Get all transactions not processed."""
     connection: asyncpg.Connection = await asyncpg.connect(DataBaseUrl)
     data = [address[0] for address in await connection.fetch("""SELECT transaction_id from tron_transaction WHERE status=0""")]
     await connection.close()
     return data
+
 
 def get_contracts() -> Dict:
     """Get information from a file"""
@@ -34,6 +37,7 @@ def get_contracts() -> Dict:
     finally:
         if __connection is not None:
             __connection.close()
+
 
 def get_transaction_hash(transaction_hash: str) -> Dict:
     """Get a hash transaction."""

@@ -29,10 +29,12 @@ import unittest
 from . import _get_response
 from config import API_URL, AdminWallet, ReportingAddress, AdminFee, network
 
+
 if network == "mainnet":
     tx_hash = "e0f10d7fa5e51505c2b9cee233656eea208af3d42f9b0bbb630e87abf50abfb2"
 elif network == "shasta":
     tx_hash = "c7c75bbbf906c87bcf4bdac1b07ec291c9ec792dfc0d09ce8d5e439b31007ad1"
+
 
 class ApiTest(unittest.TestCase):
     __API_URL = API_URL

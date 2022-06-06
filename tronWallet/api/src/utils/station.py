@@ -4,6 +4,7 @@ from src.utils.node import NodeTron
 from src.utils.types import TronAccountAddress, Amount
 from config import decimals
 
+
 async def get_energy(address: str, energy: int) -> int:
     """If the user has enough energy."""
     total_energy = (await tron_station.get_account_energy(address=address))["totalEnergy"]
@@ -13,6 +14,7 @@ async def get_energy(address: str, energy: int) -> int:
         return 0
     else:
         return energy - int(total_energy)
+
 
 class TronStation(NodeTron):
 
@@ -67,5 +69,6 @@ class TronStation(NodeTron):
             "energyUsed": energy_used,
             "totalEnergy": total_energy
         }
+
 
 tron_station = TronStation()

@@ -1,18 +1,23 @@
 import pika
+import time
 from tronpy.tron import Tron, HTTPProvider
 
 from src.utils.utils import is_block_ex, get_public_node, get_last_block
 from src.v1.wallet import wallet
 from config import AdminWallet, min_balance, MAX_BALANCER_MESSAGE, BALANCER_QUEUE, RABBITMQ_URL, node, network
 
+
 __node = Tron(provider=HTTPProvider(node) if network == "mainnet" else None, network=network)
 
+
 # <<<------------------------------------>>> Node Status <<<--------------------------------------------------------->>>
+
 
 def __get_node_info(our_node):
     if int(our_node.get_node_info()["activeConnectCount"]) == 0:
         # If there are no active connections to the node, then the node is dead!
         raise Exception("Problems with the node. There are no active connections")
+
 
 def __get_is_block_ex(our_node, public_node):
     our_block = our_node.get_latest_block_number()
@@ -24,10 +29,12 @@ def __get_is_block_ex(our_node, public_node):
         # If the blocks are moving with a large gap, then something is wrong with the node
         raise Exception("The blocks in the node are moving too slowly")
 
+
 def __get_is_acc_admin(our_node):
     if not our_node.get_account(AdminWallet):
         # If you call out the method through the node, then something is also wrong
         raise Exception("The node is not working correctly")
+
 
 def node_status() -> bool:
     """They will check whether the node is working or not. Lagging behind or not."""
@@ -54,7 +61,9 @@ def node_status() -> bool:
     # Otherwise, everything is OK!
     return True
 
+
 # <<<------------------------------------>>> Admin Balance Status <<<------------------------------------------------>>>
+
 
 async def native_balance_status() -> bool:
     """Checks if there is a balance on the central wallet"""
@@ -63,7 +72,9 @@ async def native_balance_status() -> bool:
         return False
     return True
 
+
 # <<<------------------------------------>>> Demon Status <<<------------------------------------------------------->>>
+
 
 def demon_status() -> bool:
     """Check the status of the daemon"""
@@ -77,7 +88,9 @@ def demon_status() -> bool:
     # Otherwise, something is wrong.
     return False
 
+
 # <<<------------------------------------>>> Balancer Status <<<----------------------------------------------------->>>
+
 
 def balancer_status() -> bool:
     try:

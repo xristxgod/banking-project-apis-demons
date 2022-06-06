@@ -16,6 +16,7 @@ import unittest
 from src.demon import TransactionDemon
 from config import USDT, USDC
 
+
 class TestDemonScript(unittest.IsolatedAsyncioTestCase):
 
     tx = {

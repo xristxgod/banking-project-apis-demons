@@ -6,6 +6,7 @@ from src.utils.utils import from_sun, to_sun
 
 from config import network, node
 
+
 class NodeTron:
     # Provider config
     __provider = HTTPProvider(node)

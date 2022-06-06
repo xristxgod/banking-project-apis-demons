@@ -33,7 +33,7 @@ get_network = lambda token: {"usdt": "tron_trc20_usdt", "usdc": "tron_trc20_usdc
 
 ElasticLogServer = os.getenv("ELASTIC_LOG_SERVER")
 ElasticLogin = os.getenv("ELASTIC_LOGIN")
-ElasticPassword = os.getenv("ELASTIC_PASSWORD") if os.getenv("Network") == "mainnet" else 'no_pass'
+ElasticPassword = os.getenv("ELASTIC_PASSWORD")
 ElasticLogIndex = os.getenv('ELASTIC_LOG_INDEX')
 ElasticLogIndexEx = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-balancer"
 

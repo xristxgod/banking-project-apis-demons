@@ -4,6 +4,7 @@ import pika as rabbit
 
 from config import RabbitMQURL, Queue, QueueBalancer
 
+
 def send_message(values: json) -> None:
     """Send transactions to RabbitMQ"""
     message = "{}".format(values)
@@ -25,6 +26,7 @@ def send_message(values: json) -> None:
     finally:
         if __connection is not None:
             __connection.close()
+
 
 def send_to_balancer(values: json) -> None:
     message = "{}".format(values)

@@ -16,6 +16,7 @@ from config import (
     logger, NOT_SEND, ERROR, NOT_SEND_TO_TRANSACTION
 )
 
+
 # Public address of the Tron wallet (Base58 address) | Example: `TJmV58h1StTogUuVUoogtPoE5i3YPCS7yb`
 TronAccountAddress = str
 # Address of the smart contract (tokens) (Base58 address) | Example: `THb4CqiFdwNHsWsQCs4JhzwjMWys4aqCbF` - ETH Token
@@ -24,6 +25,7 @@ ContractAddress = str
 SUN = Decimal("1000000")
 MIN_SUN = 0
 MAX_SUN = 2**256 - 1
+
 
 def from_sun(num: Union[int, float]) -> Union[int, Decimal]:
     """
@@ -44,12 +46,14 @@ def from_sun(num: Union[int, float]) -> Union[int, Decimal]:
 
     return result
 
+
 def convert_time(t: int) -> str:
     """
     Convert from timestamp to date and time
     :param t: Timestamp data
     """
     return datetime.fromtimestamp(int(t)).strftime('%d-%m-%Y %H:%M:%S')
+
 
 def to_base58check_address(raw_addr: Union[str, bytes]) -> str:
     """Convert hex address or base58check address to base58check address(and verify it)."""
@@ -76,6 +80,7 @@ def to_base58check_address(raw_addr: Union[str, bytes]) -> str:
         return to_base58check_address(raw_addr.decode())
     raise Exception(repr(raw_addr))
 
+
 async def get_asset_trc20(address: ContractAddress) -> Dict:
     """
     Get a full description of the token at its address.
@@ -90,6 +95,7 @@ async def get_asset_trc20(address: ContractAddress) -> Dict:
     for token in tokens:
         if address in [token["name"], token["symbol"], token["address"]]:
             return token
+
 
 def get_transaction_for_fee(transaction) -> Dict:
     """
@@ -109,6 +115,7 @@ def get_transaction_for_fee(transaction) -> Dict:
         "senders": [{"address": ReportingAddress, "amount": "%.8f" % from_amount}]
     }
 
+
 def get_transaction_in_db(transaction_hash: str, transaction: Dict) -> Dict:
     transaction_in_db = get_transaction_hash(transaction_hash=transaction_hash)
     if transaction_in_db is None:
@@ -116,6 +123,7 @@ def get_transaction_in_db(transaction_hash: str, transaction: Dict) -> Dict:
     transaction["senders"] = transaction_in_db["from_wallets"]
     transaction["recipients"] = transaction_in_db["to_wallets"]
     return transaction
+
 
 async def send_to_rabbit_mq(values: json) -> None:
     """
@@ -134,6 +142,7 @@ async def send_to_rabbit_mq(values: json) -> None:
         async with async_open(new_not_send_file, 'w') as file:
             # Write all the verified data to a json file, and do not praise the work
             await file.write(str(values))
+
 
 async def send_to_rabbit_mq_balancer(values: json) -> None:
     """

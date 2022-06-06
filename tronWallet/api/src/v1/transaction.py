@@ -1,13 +1,86 @@
 import asyncio
 from decimal import Decimal
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import requests
+from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 from src.utils.token_database import token_db
 from src.utils.node import NodeTron
 from src.utils.types import TronAccountAddress, TokenTRC20, ContractAddress, TransactionHash
 from config import network, decimals
+
+
+async def get_contract(addr: str) -> Tuple[str, int]:
+    token_info = await token_db.get_token(addr) if network.lower() == "mainnet" else await token_db.get_test_token(addr)
+    return token_info.get("symbol"), token_info.get("decimal")
+
+
+async def get_from_and_to(tx_id: str) -> Tuple:
+    client = None
+    try:
+        client = AsyncTron(
+            provider=AsyncHTTPProvider(api_key="a684fa6d-6893-4928-9f8e-8decd5f034f2") if network == "mainnet" else None,
+            network=network
+        )
+        transaction = await client.get_transaction(txn_id=tx_id)
+        raw_data = transaction.get("raw_data")
+        contract = raw_data.get("contract")
+        parameter = contract[0].get("parameter") if isinstance(contract, list) and len(contract) > 0 else None
+        if parameter is None:
+            return None, None
+        value = parameter.get("value")
+        from_address = value.get("owner_address") if "owner_address" in value.keys() else None
+        if isinstance(value.get("data"), str) \
+                and contract[0].get("type") == "TriggerSmartContract" \
+                and len(value.get("data")) > 72:
+            to_address = client.to_base58check_address("41" + value.get("data")[32:72])
+        else:
+            to_address = value.get("to_address")
+        from_address = client.to_base58check_address(from_address) if from_address is not None else None
+        to_address = client.to_base58check_address(to_address) if to_address is not None else None
+        return from_address, to_address
+    finally:
+        if client is not None:
+            await client.close()
+
+
+async def get_helper_data(tx_id: str) -> Tuple:
+    """Smart contract helper"""
+    client = None
+    try:
+        client = AsyncTron(
+            provider=AsyncHTTPProvider(
+                api_key="a684fa6d-6893-4928-9f8e-8decd5f034f2") if network == "mainnet" else None,
+            network=network
+        )
+        transaction = await client.get_transaction(txn_id=tx_id)
+        raw_data = transaction.get("raw_data")
+        contract = raw_data.get("contract")
+        parameter = contract[0].get("parameter") if isinstance(contract, list) and len(contract) > 0 else None
+        if parameter is None:
+            return None, None, None
+        value = parameter.get("value")
+        if isinstance(value.get("data"), str) \
+                and contract[0].get("type") == "TriggerSmartContract" \
+                and len(value.get("data")) > 72:
+            data_value = value.get("data")
+            to_address = client.to_base58check_address("41" + data_value[32:72])
+            contract_address = value.get("contract_address")
+            if contract_address is None:
+                return None, None, None
+            symbol, decimals_num = await get_contract(contract_address)
+            amount_decimal = int("0x" + data_value[72:], 0)
+            amount = amount_decimal / 10 ** decimals_num
+            return decimals.create_decimal(amount), to_address, symbol
+        else:
+            return None, None, None
+
+
+    finally:
+        if client is not None:
+            await client.close()
+
 
 class TransactionParser(NodeTron):
 
@@ -59,8 +132,12 @@ class TransactionParser(NodeTron):
         if "fee" in tx_fee:
             fee = "%.8f" % decimals.create_decimal(self.fromSun(tx_fee["fee"]))
         else:
-            fee = 0
+            fee = "%.8f" % decimals.create_decimal(0)
         amount = "%.8f" % decimals.create_decimal(int(txn["value"]) / (10 ** int(txn["token_info"]["decimals"])))
+        if txn["from"] is None or txn["to"] is None:
+            from_, to_ = await get_from_and_to(tx_id=txn["transaction_id"])
+        else:
+            from_, to_ = txn["from"], txn["to"]
         return {
             "time": txn["block_timestamp"],
             "transactionHash": txn["transaction_id"],
@@ -68,13 +145,13 @@ class TransactionParser(NodeTron):
             "amount": amount,
             "senders": [
                 {
-                    "address": txn["from"],
+                    "address": from_,
                     "amount": amount
                 }
             ],
             "recipients": [
                 {
-                    "address": txn["to"],
+                    "address": to_,
                     "amount": amount
                 }
             ],
@@ -95,7 +172,7 @@ class TransactionParser(NodeTron):
                     raise Exception
                 fee = "%.8f" % decimals.create_decimal(self.fromSun(fee_limit["fee"]))
             except Exception:
-                fee = 0
+                fee = "%.8f" % decimals.create_decimal(0)
             values = {
                 "time": txn["raw_data"]["timestamp"] if "timestamp" in txn["raw_data"] else "",
                 "transactionHash": txn["txID"],
@@ -126,7 +203,18 @@ class TransactionParser(NodeTron):
                     data=txn_values["data"], contract_address=txn_values["contract_address"]
                 )
                 if "data" in smart_contract:
-                    values["data"] = smart_contract["data"]
+                    try:
+                        smart_contract = await get_helper_data(txn["txID"])
+                        amount, to_address, token = smart_contract
+                        values["senders"][0]["amount"] = "%.8f" % amount
+                        values["recipients"] = [{
+                            "address": to_address,
+                            "amount": "%.8f" % amount
+                        }]
+                        values["token"] = token
+                        values["amount"] = "%.8f" % amount
+                    except Exception:
+                        values["data"] = smart_contract["data"]
                 else:
                     amount = smart_contract["amount"]
                     values["senders"][0]["amount"] = amount
@@ -136,38 +224,6 @@ class TransactionParser(NodeTron):
                     }]
                     values["token"] = smart_contract["token"]
                     values["amount"] = amount
-            # Freeze or Unfreeze balance
-            elif txn_type in ["FreezeBalanceContract", "UnfreezeBalanceContract"]:
-                if "resource" in txn_values:
-                    values["resource"] = txn_values["resource"]
-                else:
-                    values["resource"] = "BANDWIDTH"
-
-                if "receiver_address" in txn_values:
-                    values["recipients"] = [{
-                        "address": self.node.to_base58check_address(txn_values["receiver_address"]),
-                        "amount": 0
-                    }]
-                else:
-                    values["recipients"] = [{
-                        "address": values["senders"][0]["address"],
-                        "amount": 0
-                    }]
-
-                if "frozen_balance" in txn_values:
-                    amount = str(self.fromSun(txn_values["frozen_balance"]))
-                    values["amount"] = amount
-                    values["senders"][0]["amount"] = amount
-                    values["recipients"][0]["address"] = amount
-            # Vote
-            elif txn_type == "VoteWitnessContract":
-                try:
-                    values["recipients"] = [{
-                        "address": txn_values["votes"][0]["vote_address"],
-                        "voteCount": txn_values["votes"][0]["vote_count"]
-                    }]
-                except Exception as error:
-                    pass
             return values
         except Exception as error:
             return {}
@@ -192,14 +248,15 @@ class TransactionParser(NodeTron):
         except Exception as error:
             return {"data": str(data)}
 
+
 def get_txn(tnx: Dict, user: TronAccountAddress, admin_fee: int, tnx_type: str, reporter: TronAccountAddress) -> Dict:
-    amount, tx_fee = decimals.create_decimal(tnx["amount"]), decimals.create_decimal(tnx["fee"])
+    amount = decimals.create_decimal(tnx["amount"])
     sender_amount = amount + admin_fee
     tx = {
-        "time": tnx["time"],
-        "transactionHash": tnx["transactionHash"],
+        "time": tnx.get("time"),
+        "transactionHash": tnx.get("transactionHash"),
         "amount": "%.8f" % amount,
-        "fee": tnx["fee"],
+        "fee": "%.8f" % decimals.create_decimal(tnx["fee"]),
         "senders": [
             {
                 "address": user,
@@ -220,5 +277,6 @@ def get_txn(tnx: Dict, user: TronAccountAddress, admin_fee: int, tnx_type: str, 
     if tnx_type == "TriggerSmartContract":
         tx["token"] = tnx["token"]
     return tx
+
 
 transaction_parser = TransactionParser()

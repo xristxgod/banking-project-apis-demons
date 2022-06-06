@@ -6,6 +6,7 @@ from src.v1.schemas import BodySignAndSendTransaction
 from src.v1.transaction import transaction_parser
 from src.utils.node import NodeTron
 
+
 async def sign_and_send_transaction(body: BodySignAndSendTransaction) -> json:
     """Sign and Send a transaction"""
     # Verification of the private key

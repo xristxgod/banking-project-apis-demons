@@ -2,7 +2,9 @@ from fastapi import APIRouter
 
 from src.v1.endpoints import router_wallet, router_transaction, admin_router_transaction, router_status
 
+
 router = APIRouter()
+
 
 # Include router Wallet
 router.include_router(router_wallet.router)

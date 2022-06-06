@@ -18,6 +18,7 @@ from config import API_URL, ReportingAddress, AdminFee, AdminFeeToken
 # Enter the recipient's address and private key. Otherwise, the recipients will be "TRzfVw3rgezwYCfeSxJPr9qdG6pMGegTNY".
 test_to_address = None
 
+
 class ApiTestAdminTransaction(unittest.TestCase):
     __API_URL = API_URL
 

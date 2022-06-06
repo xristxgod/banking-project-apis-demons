@@ -1,10 +1,11 @@
 import sys
 import argparse
-from run_demon import TransactionDemon, logger, AddressesDemon, AdminAddresses
+from run_demon import TransactionDemon, logger, AddressesDemon
 
 from asyncio import run
 
 from config import network
+
 
 def create_parser():
     parser = argparse.ArgumentParser()
@@ -14,13 +15,11 @@ def create_parser():
     parser.add_argument("-a", "--addresses", default=None)
     return parser
 
+
 async def async_run(**kwargs):
     logger.error(f"Creating demon instance. Network: {network}")
     logger.error(f"Start search in history")
     if "list_addresses" in kwargs and kwargs["list_addresses"] is not None:
-        for address in kwargs.get("list_addresses"):
-            if address in AdminAddresses:
-                logger.error(f"This wallet: '{address}' will not be tracked")
         try:
             demon = AddressesDemon()
             is_success = await demon.start(**kwargs)
@@ -35,6 +34,7 @@ async def async_run(**kwargs):
         except Exception:
             is_success = True
     logger.info(f"Script ran success: {is_success}")
+
 
 if __name__ == '__main__':
     namespace = create_parser().parse_args(sys.argv[1:])

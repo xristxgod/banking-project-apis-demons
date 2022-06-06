@@ -3,6 +3,7 @@ from src.utils.types import TronAccountAddress, TokenTRC20
 from src.v1.schemas import BodyCreateWallet, ResponseCreateWallet, ResponseGetBalance
 from config import decimals
 
+
 class Wallet(NodeTron):
     """This class creates and use a Tron account"""
 
@@ -41,5 +42,6 @@ class Wallet(NodeTron):
             balance="%.8f" % balance if float(balance) > 0 else balance,
             token=token_dict["symbol"]
         )
+
 
 wallet = Wallet()

@@ -4,7 +4,6 @@ from typing import Dict
 from aio_pika import connect_robust, IncomingMessage, RobustConnection, Channel
 from asyncio import sleep as async_sleep
 
-from src.send_all_from_folder_not_send import send_all_from_folder_not_send
 from src.utils.types import TronAccountAddress, TokenTRC20
 from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
 from src.services.to_main_wallet_native import send_to_main_wallet_native
@@ -12,6 +11,7 @@ from src.services.to_main_wallet_token import send_to_main_wallet_token
 from config import logger, rabbit_url, queue, ReportingAddress, AdminAddress
 
 adminAddresses = [AdminAddress, ReportingAddress]
+
 
 async def send_to_main_wallet(address: TronAccountAddress, token: TokenTRC20):
     if address in adminAddresses:
@@ -24,6 +24,7 @@ async def send_to_main_wallet(address: TronAccountAddress, token: TokenTRC20):
         logger.error(f"--> {token.upper()} | Address: {address} | Received from RabbitMQ")
         await send_msg_to_kibana(msg=f"{token.upper()} | Address: {address} | Preparing to empty the balance")
         await send_to_main_wallet_token(address=address, token=token)
+
 
 async def __processing_message(message: IncomingMessage):
     """
@@ -43,6 +44,7 @@ async def __processing_message(message: IncomingMessage):
                 address: TronAccountAddress = m["address"]
                 token: TokenTRC20 = m["token"] if "token" in m else None
                 await send_to_main_wallet(address=address, token=token)
+
 
 async def sending_to_main_wallet(loop):
     while True:
@@ -65,5 +67,4 @@ async def sending_to_main_wallet(loop):
                         await __processing_message(message=message)
         except Exception as error:
             logger.error(f"--> Error | SENDING_TO_MAIN_WALLET: {error}")
-            await send_exception_to_kibana(error=error, msg="ERROR: SENDING_TO_MAIN_WALLET")
-        # await send_all_from_folder_not_send()
+            await send_exception_to_kibana(error, "ERROR: SENDING_TO_MAIN_WALLET")

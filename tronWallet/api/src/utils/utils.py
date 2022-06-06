@@ -1,18 +1,20 @@
-import time
 from decimal import Decimal, localcontext
-from typing import Union, Callable
+from typing import Union
 
 import requests
 from tronpy.tron import Tron, HTTPProvider
 
-from config import network, NGINX_DOMAIN, logger
+from config import network, NGINX_DOMAIN
+
 
 TIMERS = 10
 SUN = Decimal("1000000")
 MIN_SUN = 0
 MAX_SUN = 2**256 - 1
 
+
 # <<<----------------------------------->>> Convert TRX to SUN to TRX <<<-------------------------------------------->>>
+
 
 def from_sun(num: Union[int, float]) -> Union[int, Decimal]:
     """
@@ -32,6 +34,7 @@ def from_sun(num: Union[int, float]) -> Union[int, Decimal]:
         result = d_num / unit_value
 
     return result
+
 
 def to_sun(num: Union[int, float]) -> int:
     """
@@ -69,7 +72,9 @@ def to_sun(num: Union[int, float]) -> int:
 
     return int(result)
 
+
 # <<<----------------------------------->>> Project status utils <<<------------------------------------------------->>>
+
 
 def is_block_ex(our_block: int, public_block: int, accept: int = 20) -> bool:
     """Check if the block is not lagging behind."""
@@ -77,6 +82,7 @@ def is_block_ex(our_block: int, public_block: int, accept: int = 20) -> bool:
         return True
     else:
         return False
+
 
 def get_public_node() -> Tron:
     """Returns a working public node"""
@@ -91,6 +97,7 @@ def get_public_node() -> Tron:
             continue
     else:
         raise Exception("Public node is bad")
+
 
 def get_last_block() -> int:
     """Get the last block from the file"""

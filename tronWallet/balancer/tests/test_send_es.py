@@ -14,10 +14,10 @@ from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
 class TestSendToKibana(unittest.IsolatedAsyncioTestCase):
 
     async def test_send_to_kibana_msg(self):
-        self.assertTrue(await send_msg_to_kibana(msg="Test Message"))
+        self.assertTrue(await send_msg_to_kibana("Test Message"))
 
     async def test_send_to_kibana_ex(self):
         try:
-            raise Exception("Test Exception")
+            raise Exception()
         except Exception as error:
-            self.assertTrue(await send_exception_to_kibana(error=error, msg="Test Exception"))
+            self.assertTrue(await send_exception_to_kibana(error, "Test Exception"))

@@ -11,6 +11,7 @@ from src.utils.is_error import is_error
 from src.services.to_main_wallet_native import send_to_main_wallet_native
 from config import AdminAddress, get_network, tokens, logger, minTokenCost
 
+
 async def send_to_main_wallet_token(address: TronAccountAddress, token: TokenTRC20):
     """
     Send funds from the user's wallet to the admin wallet. Exclusive tokens!!!
@@ -69,5 +70,5 @@ async def send_to_main_wallet_token(address: TronAccountAddress, token: TokenTRC
             await is_error({"address": address, "token": token})
     except Exception as error:
         logger.error(f"Error: {error}")
-        await send_exception_to_kibana(error=error, msg="ERROR: SEND TO MAIN WALLET TOKEN")
+        await send_exception_to_kibana(error, "ERROR: SEND TO MAIN WALLET TOKEN")
         await is_error({"address": address, "token": token})

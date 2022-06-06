@@ -3,6 +3,7 @@ from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
 from src.utils.types import TronAccountAddress
 from config import AdminAddress, AdminPrivateKey, logger, decimals
 
+
 async def activate_account(from_address: TronAccountAddress) -> bool:
     try:
         amount = decimals.create_decimal("0.00001")
@@ -15,5 +16,5 @@ async def activate_account(from_address: TronAccountAddress) -> bool:
         return True
     except Exception as error:
         logger.error(f"{error}")
-        await send_exception_to_kibana(error=error, msg="ERROR: ACTIVATE ACCOUNT")
+        await send_exception_to_kibana(error, "ERROR: ACTIVATE ACCOUNT")
         return False

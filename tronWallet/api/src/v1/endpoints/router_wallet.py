@@ -8,9 +8,12 @@ from src.v1.schemas import ResponseCreateWallet, BodyCreateWallet, ResponseGetBa
 from src.utils.types import TronAccountAddress, Coins
 from config import logger
 
+
 router = APIRouter()
 
+
 # <<<------------------------------------>>> Wallet <<<-------------------------------------------------------------->>>
+
 
 @router.post(
     "/{network}/create-wallet", response_model=ResponseCreateWallet,
@@ -23,7 +26,10 @@ async def create_wallet(body: BodyCreateWallet, network: Optional[str] = "tron")
     except Exception as error:
         return {"error": str(error)}
 
+
 # <<<------------------------------------>>> Balance <<<------------------------------------------------------------->>>
+
+
 @router.get(
     "/tron/get-balance/{address}", description="Show only TRC20 USDT balance on wallet address",
     response_model=ResponseGetBalance, tags=["Wallet"]
@@ -34,6 +40,7 @@ async def get_balance(address: TronAccountAddress):
         return await wallet.get_balance(address=address)
     except Exception as error:
         return JSONResponse(content={"error": str(error)})
+
 
 @router.get(
     "/tron_trc20_{coin}/get-balance/{address}", description="Show only TRC20 USDT balance on wallet address",

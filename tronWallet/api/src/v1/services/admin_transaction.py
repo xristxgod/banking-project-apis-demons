@@ -10,6 +10,7 @@ from src.utils.node import NodeTron
 from src.utils.types import TokenTRC20
 from config import AdminPrivateKey, AdminWallet, decimals, ReportingAddress
 
+
 class AdminTransaction(NodeTron):
 
     # <<<-------------------------------->>> Create admin transaction <<<-------------------------------------------->>>
@@ -110,5 +111,6 @@ class AdminTransaction(NodeTron):
             admin_fee=admin_fee,
             reporter=reporting_address
         )
-        
+
+
 admin_transaction = AdminTransaction()

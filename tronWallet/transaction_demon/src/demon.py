@@ -21,7 +21,9 @@ from config import (
     logger, decimals, node, network, ERROR, NOT_SEND, NOT_SEND_TO_TRANSACTION
 )
 
+
 AdminAddresses = [AdminAddress, ReportingAddress]
+
 
 class TransactionDemon:
     # Provider config
@@ -278,7 +280,7 @@ class TransactionDemon:
                     # And also send it separately
                     await self.send_dummy_tx_with_fee_after_sending(package_for_sending)
                 await send_to_rabbit_mq(values=json.dumps(package_for_sending))
-                await send_msg_to_kibana(msg=f'SENDING FROM MAIN WALLET: {package_for_sending}')
+                await send_msg_to_kibana(f'SENDING FROM MAIN WALLET: {package_for_sending}')
             elif recipient not in AdminAddresses:
                 """
                 If the recipient is not an admin wallet, then this transaction is from someone
@@ -287,7 +289,7 @@ class TransactionDemon:
                 await send_to_rabbit_mq(values=json.dumps(package_for_sending))
                 # We will send the transaction data to the balancer for debiting funds.
                 await send_to_rabbit_mq_balancer(values=json.dumps([{"address": recipient, "token": token.upper()}]))
-                await send_msg_to_kibana(msg=f'RECEIVE NEW TX: {package_for_sending}')
+                await send_msg_to_kibana(f'RECEIVE NEW TX: {package_for_sending}')
         except Exception as error:
             await send_exception_to_kibana(error, f'SENDING TO MQ ERROR: {package_for_sending}')
             async with aiofiles.open(ERROR, 'a', encoding='utf-8') as file:
@@ -340,7 +342,7 @@ class TransactionDemon:
                     start += pack_size
                     await self.save_block_number(block_number=start)
                 else:
-                    await send_msg_to_kibana(msg=f'BLOCK {start} ERROR. RUN BLOCK AGAIN', code=-1)
+                    await send_msg_to_kibana(f'BLOCK {start} ERROR. RUN BLOCK AGAIN')
                     continue
 
     async def start_in_range(self, start_block: int, end_block: int, list_addresses=None):
@@ -371,7 +373,7 @@ class TransactionDemon:
         elif not start_block and end_block:
             await self.start_in_range(await self.get_node_block_number(), end_block)
         else:
-            await send_msg_to_kibana(msg=f"DEMON IS STARTING")
+            await send_msg_to_kibana(f"DEMON IS STARTING")
             await self.send_all_from_folder_not_send()
             await self.run()
         logger.error("End of search")

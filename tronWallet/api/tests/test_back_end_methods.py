@@ -24,6 +24,7 @@ from src.utils.node_status import node_status, native_balance_status, demon_stat
 
 from config import AdminWallet
 
+
 class TestProjectMethods(unittest.IsolatedAsyncioTestCase):
 
     tokens = ["USDT", "USDC"]

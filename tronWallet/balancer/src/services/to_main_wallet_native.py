@@ -9,6 +9,7 @@ from src.services.inc.get_optimal_fee import get_optimal_fee
 from src.utils.is_error import is_error
 from config import AdminAddress, minTokenCost, logger
 
+
 async def send_to_main_wallet_native(address: TronAccountAddress) -> Union[bool, None]:
     """
     Send funds from the user's wallet to the administrator's wallet. Exclusively TRX!
@@ -50,5 +51,5 @@ async def send_to_main_wallet_native(address: TronAccountAddress) -> Union[bool,
             await is_error({"address": address, "token": "TRX"})
     except Exception as error:
         logger.error(f"\n--> TRX | Error: {error}\n")
-        await send_exception_to_kibana(error=error, msg="ERROR: SEND TO MAIN WALLET NATIVE")
+        await send_exception_to_kibana(error, msg="ERROR: SEND TO MAIN WALLET NATIVE")
         await is_error({"address": address, "token": "TRX"})

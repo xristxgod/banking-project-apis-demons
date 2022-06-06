@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 from src.utils.types import TronAccountPrivateKey, TronAccountPublicKey, TronAccountAddress, Amount, TokenTRC20
 from config import AdminFee, decimals, ReportingAddress
 
+
 # <<<----------------------------------->>> Body <<<----------------------------------------------------------------->>>
+
 
 class BodyCreateWallet(BaseModel):
     """Body for create wallet"""
@@ -18,6 +20,7 @@ class BodyCreateWallet(BaseModel):
         super(BodyCreateWallet, self).__init__(**kwargs)
         if self.words is None or self.words == "string":
             self.words = "".join(secrets.choice(string.ascii_letters + string.digits) for i in range(20))
+
 
 class BodyCreateTransaction(BaseModel):
     """Create a transaction TRX or Tokens TRC20"""
@@ -35,6 +38,7 @@ class BodyCreateTransaction(BaseModel):
         if isinstance(self.outputs, str):
             self.outputs = json.loads(self.outputs)
 
+
 class BodySignAndSendTransaction(BaseModel):
     """Sign and send transaction"""
     createTxHex: str = Field(description="The hex of the unsigned transaction")
@@ -46,7 +50,9 @@ class BodySignAndSendTransaction(BaseModel):
         if isinstance(self.privateKeys, str):
             self.privateKeys = json.loads(self.privateKeys)
 
+
 # <<<----------------------------------->>> Response <<<------------------------------------------------------------->>>
+
 
 class ResponseCreateWallet(BaseModel):
     """Response for create wallet"""
@@ -54,6 +60,7 @@ class ResponseCreateWallet(BaseModel):
     privateKey: TronAccountPrivateKey = Field(description="Private key for account")
     publicKey: TronAccountPublicKey = Field(description="Public key for account")
     address: TronAccountAddress = Field(description="Wallet address")
+
 
 class ResponseGetBalance(BaseModel):
     """Response for get balance"""
@@ -64,6 +71,7 @@ class ResponseGetBalance(BaseModel):
         super(ResponseGetBalance, self).__init__(**kwargs)
         if self.token is None:
             del self.token
+
 
 class ResponseCreateTransaction(BaseModel):
     """Response to create transaction"""

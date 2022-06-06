@@ -4,6 +4,7 @@ from decimal import Decimal
 from src.utils.types import TronAccountAddress, TronAccountPrivateKey
 from src.external.client import post_request
 
+
 async def create_transaction(
         from_address: TronAccountAddress, to_address: TronAccountAddress,
         amount: Decimal, token: Optional[str] = "tron"
@@ -13,6 +14,7 @@ async def create_transaction(
         fromAddress=from_address,
         outputs=[{to_address: "%.6f" % amount}]
     )
+
 
 async def sign_send_transaction(
         createTxHex: str, private_key: TronAccountPrivateKey
