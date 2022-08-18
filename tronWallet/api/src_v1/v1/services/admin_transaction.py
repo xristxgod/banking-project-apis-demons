@@ -3,11 +3,11 @@ from typing import Dict
 
 from tronpy.tron import Transaction, PrivateKey
 
-from src.v1.schemas import BodySignAndSendTransaction, ResponseCreateTransaction, BodyCreateTransaction
-from src.v1.transaction import get_txn, transaction_parser
-from src.v1.services.create_transaction import create_transaction
-from src.utils.node import NodeTron
-from src.utils.types import TokenTRC20
+from src_v1.v1.schemas import BodySignAndSendTransaction, ResponseCreateTransaction, BodyCreateTransaction
+from src_v1.v1.transaction import get_txn, transaction_parser
+from src_v1.v1.services.create_transaction import create_transaction
+from src_v1.utils.node import NodeTron
+from src_v1.utils.types import TokenTRC20
 from config import AdminPrivateKey, AdminWallet, decimals, ReportingAddress
 
 

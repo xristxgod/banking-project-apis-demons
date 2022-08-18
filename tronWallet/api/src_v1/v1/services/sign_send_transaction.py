@@ -2,9 +2,9 @@ import json
 
 from tronpy.tron import Transaction, PrivateKey
 
-from src.v1.schemas import BodySignAndSendTransaction
-from src.v1.transaction import transaction_parser
-from src.utils.node import NodeTron
+from src_v1.v1.schemas import BodySignAndSendTransaction
+from src_v1.v1.transaction import transaction_parser
+from src_v1.utils.node import NodeTron
 
 
 async def sign_and_send_transaction(body: BodySignAndSendTransaction) -> json:

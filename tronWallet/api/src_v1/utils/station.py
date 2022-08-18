@@ -1,7 +1,7 @@
 from typing import Union, Dict
 
-from src.utils.node import NodeTron
-from src.utils.types import TronAccountAddress, Amount
+from src_v1.utils.node import NodeTron
+from src_v1.utils.types import TronAccountAddress, Amount
 from config import decimals
 
 

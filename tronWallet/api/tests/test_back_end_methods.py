@@ -17,10 +17,10 @@ python -m unittest test_back_end_methods.TestProjectMethods.test_from_sun
 import unittest
 import decimal
 
-from src.utils.station import tron_station
-from src.utils.token_database import token_db
-from src.utils.utils import from_sun, to_sun
-from src.utils.node_status import node_status, native_balance_status, demon_status, balancer_status
+from src_v1.utils.station import tron_station
+from src_v1.utils.token_database import token_db
+from src_v1.utils.utils import from_sun, to_sun
+from src_v1.utils.node_status import node_status, native_balance_status, demon_status, balancer_status
 
 from config import AdminWallet
 

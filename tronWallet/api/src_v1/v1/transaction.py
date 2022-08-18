@@ -5,9 +5,9 @@ from typing import List, Dict, Tuple
 import requests
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
-from src.utils.token_database import token_db
-from src.utils.node import NodeTron
-from src.utils.types import TronAccountAddress, TokenTRC20, ContractAddress, TransactionHash
+from src_v1.utils.token_database import token_db
+from src_v1.utils.node import NodeTron
+from src_v1.utils.types import TronAccountAddress, TokenTRC20, ContractAddress, TransactionHash
 from config import network, decimals
 
 

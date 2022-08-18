@@ -1,8 +1,8 @@
 from tronpy.tron import Tron, HTTPProvider
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
-from src.utils.token_database import token_db
-from src.utils.utils import from_sun, to_sun
+from src_v1.utils.token_database import token_db
+from src_v1.utils.utils import from_sun, to_sun
 
 from config import network, node
 

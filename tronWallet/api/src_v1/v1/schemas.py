@@ -5,7 +5,7 @@ from typing import List, Optional, Dict
 
 from pydantic import BaseModel, Field
 
-from src.utils.types import TronAccountPrivateKey, TronAccountPublicKey, TronAccountAddress, Amount, TokenTRC20
+from src_v1.utils.types import TronAccountPrivateKey, TronAccountPublicKey, TronAccountAddress, Amount, TokenTRC20
 from config import AdminFee, decimals, ReportingAddress
 
 

@@ -3,9 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from src.v1.wallet import wallet
-from src.v1.schemas import ResponseCreateWallet, BodyCreateWallet, ResponseGetBalance
-from src.utils.types import TronAccountAddress, Coins
+from src_v1.v1.wallet import wallet
+from src_v1.v1.schemas import ResponseCreateWallet, BodyCreateWallet, ResponseGetBalance
+from src_v1.utils.types import TronAccountAddress, Coins
 from config import logger
 
 

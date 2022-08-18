@@ -2,8 +2,8 @@ import pika
 import time
 from tronpy.tron import Tron, HTTPProvider
 
-from src.utils.utils import is_block_ex, get_public_node, get_last_block
-from src.v1.wallet import wallet
+from src_v1.utils.utils import is_block_ex, get_public_node, get_last_block
+from src_v1.v1.wallet import wallet
 from config import AdminWallet, min_balance, MAX_BALANCER_MESSAGE, BALANCER_QUEUE, RABBITMQ_URL, node, network
 
 

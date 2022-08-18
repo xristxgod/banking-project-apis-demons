@@ -4,8 +4,8 @@ from typing import List, Dict
 from asyncpg import Connection, connect, Record
 from aiofiles import open as async_open
 
-from src.utils.types import TokenTRC20
-from src.utils.es_send import send_exception_to_kibana
+from src_v1.utils.types import TokenTRC20
+from src_v1.utils.es_send import send_exception_to_kibana
 from config import db_url, fileTokens, network
 
 

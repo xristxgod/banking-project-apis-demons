@@ -1,6 +1,6 @@
-from src.utils.node import NodeTron
-from src.utils.types import TronAccountAddress, TokenTRC20
-from src.v1.schemas import BodyCreateWallet, ResponseCreateWallet, ResponseGetBalance
+from src_v1.utils.node import NodeTron
+from src_v1.utils.types import TronAccountAddress, TokenTRC20
+from src_v1.v1.schemas import BodyCreateWallet, ResponseCreateWallet, ResponseGetBalance
 from config import decimals
 
 
