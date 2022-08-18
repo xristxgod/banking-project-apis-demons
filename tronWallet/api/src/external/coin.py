@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+from tronpy.tron import TAddress
+
+
 from .database import Database
 from config import Config
 
@@ -8,7 +11,7 @@ from config import Config
 class Token:
     name: str
     symbol: str
-    address: str
+    address: TAddress
     decimals: int
     bandwidth: int
     feeLimit: int
@@ -38,6 +41,10 @@ class Coin:
 
 
 class TokenController:
+    NATIVE = "trx"
+    TOKEN_USDT = 'usdt'
+    TOKEN_USDC = 'usdc'
+
     @staticmethod
     def get_token(name: str) -> Token:
         result = await Database.get("SELECT * FROM contract WHERE type='tron'")
@@ -45,6 +52,14 @@ class TokenController:
         if len(token_name) == 0:
             raise Exception("This token is not in the system!!")
         return Coin.__dict__.get(token_name[0]["name"].upper())
+
+    @staticmethod
+    def is_native(coin: str):
+        return coin.lower() == TokenController.NATIVE
+
+    @staticmethod
+    def is_token(coin: str):
+        return coin.lower() in [value for key, value in TokenController.__dict__.items() if key.startswith('TOKEN_')]
 
 
 __all__ = [
