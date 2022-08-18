@@ -1,5 +1,5 @@
 from .elastic import ElasticController, SendData
-from .coin import TokenController, Token
+from .coin import CoinController, Token
 from .database import Database
 
 
