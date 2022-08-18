@@ -4,7 +4,6 @@ import decimal
 
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.join(ROOT_DIR, "src/files")
 
 
 decimals = decimal.Context()
