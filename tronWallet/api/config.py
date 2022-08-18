@@ -32,11 +32,11 @@ class Config:
 
     RABBITMQ_URL = os.getenv("RABBITMQ_URL")
     BALANCER_QUEUE = os.getenv("BALANCER_QUEUE")
-    MAX_BALANCER_MESSAGE = int(os.getenv("MAX_BALANCER_MESSAGE"))
+    MAX_BALANCER_MESSAGE = int(os.getenv("MAX_BALANCER_MESSAGE", 1))
 
-    NETWORK = os.getenv("NETWORK")
-    NODE_URL = os.getenv("NODE_URL")
-    MIN_BALANCE = decimals.create_decimal(os.getenv("MIN_BALANCE_NATIVE"))
+    NETWORK = os.getenv("NETWORK", "TESTNET")
+    NODE_URL = os.getenv("NODE_URL", "http://tron-mainnet.mangobank.elcorp.io:8090")
+    MIN_BALANCE = decimals.create_decimal(os.getenv("MIN_BALANCE_NATIVE", 10))
 
     ADMIN_WALLET_ADDRESS = os.getenv("ADMIN_WALLET_ADDRESS")
     ADMIN_WALLET_PRIVATE_KEY = os.getenv("ADMIN_WALLET_PRIVATE_KEY")

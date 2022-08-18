@@ -1,7 +1,10 @@
 from typing import Union, Dict
 
+from hdwallet import BIP44HDWallet
+from hdwallet.cryptocurrencies import TronMainnet
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider, TAddress
 
+from .schemas import BodyCreateWallet, ResponseCreateWallet
 from config import Config, decimals
 
 
@@ -79,6 +82,17 @@ class NodeCore:
             return 0
         else:
             return energy - int(total_energy)
+
+    @staticmethod
+    def create_wallet(body: BodyCreateWallet) -> ResponseCreateWallet:
+        hdwallet: BIP44HDWallet = BIP44HDWallet(cryptocurrency=TronMainnet)
+        hdwallet.from_mnemonic(mnemonic=body.mnemonicWords, language="english")
+        return ResponseCreateWallet(
+            mnemonicWords=body.mnemonicWords,
+            privateKey=hdwallet.private_key(),
+            publicKey=hdwallet.public_key(),
+            address=hdwallet.address()
+        )
 
 
 core = NodeCore()
