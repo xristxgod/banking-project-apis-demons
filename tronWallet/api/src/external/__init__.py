@@ -5,6 +5,6 @@ from .database import Database
 
 __all__ = [
     "ElasticController", "SendData",
-    "TokenController", "Token",
+    "CoinController", "Token",
     "Database"
 ]

@@ -40,7 +40,7 @@ class Coin:
     )
 
 
-class TokenController:
+class CoinController:
     NATIVE = "trx"
     TOKEN_USDT = 'usdt'
     TOKEN_USDC = 'usdc'
@@ -55,13 +55,13 @@ class TokenController:
 
     @staticmethod
     def is_native(coin: str):
-        return coin.lower() == TokenController.NATIVE
+        return coin.lower() == CoinController.NATIVE
 
     @staticmethod
     def is_token(coin: str):
-        return coin.lower() in [value for key, value in TokenController.__dict__.items() if key.startswith('TOKEN_')]
+        return coin.lower() in [value for key, value in CoinController.__dict__.items() if key.startswith('TOKEN_')]
 
 
 __all__ = [
-    "TokenController", "Token"
+    "CoinController", "Token"
 ]
