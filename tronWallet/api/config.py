@@ -1,52 +1,47 @@
 import os
-from logging import getLogger
-from decimal import Context
+import logging
+import decimal
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-decimals = Context()
-decimals.prec = 8
-
-# Node network
-network = os.getenv("Network").lower()
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.join(ROOT_DIR, "src/files")
 
-if network == "mainnet":    __token = "tokensMainNet.json"
-elif network == "shasta":   __token = "tokensShastaNet.json"
-else:    __token = "tokensNileNet.json"
-# File for TRC20 tokens
-fileTokens = os.path.join(BASE_DIR, __token)
 
-min_balance = decimals.create_decimal(os.getenv("MinBalanceNative"))
+decimals = decimal.Context()
+decimals.prec = 8
 
-# The node url
-node = os.getenv("NodeURL")
 
-AdminWallet = os.getenv("AdminWallet")
-AdminFee = os.getenv("AdminFee")
-AdminFeeToken = os.getenv("AdminFeeToken", "1.0")
-AdminPrivateKey = os.getenv("AdminPrivateKey")
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format=u"%(levelname)s:     %(filename)s line:%(lineno)d  %(message)s",
+    level=logging.INFO
+)
 
-ReportingAddress = os.getenv("ReportingAddress")
 
-db_url = os.getenv("DataBaseURL")
+class Config:
+    API_URL = os.getenv("API_URL")
 
-ElasticLogServer = os.getenv("ELASTIC_LOG_SERVER")
-ElasticLogin = os.getenv("ELASTIC_LOGIN")
-ElasticPassword = os.getenv("ELASTIC_PASSWORD")
-ElasticLogIndex = os.getenv('ELASTIC_LOG_INDEX')
-ElasticLogIndexEx = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-api"
+    DATABASE_URL = os.getenv("DATABASE_URL")
 
-NGINX_DOMAIN = os.getenv("NGINX_DOMAIN")
+    ELASTIC_LOG_SERVER = os.getenv("ELASTIC_LOG_SERVER")
+    ELASTIC_LOG_INDEX_EX = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-api"
+    ELASTIC_LOGIN = os.getenv("ELASTIC_LOGIN")
+    ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD")
+    ELASTIC_LOG_INDEX = os.getenv("ELASTIC_LOG_INDEX")
 
-BALANCER_QUEUE = os.getenv("QueueBalancer")
-RABBITMQ_URL = os.getenv("RabbitMQURL")
-MAX_BALANCER_MESSAGE = int(os.getenv("MaxBalancerMessage"))
+    NGINX_DOMAIN = os.getenv("NGINX_DOMAIN")
 
-API_URL = os.getenv("ApiURL")
+    RABBITMQ_URL = os.getenv("RABBITMQ_URL")
+    BALANCER_QUEUE = os.getenv("BALANCER_QUEUE")
+    MAX_BALANCER_MESSAGE = int(os.getenv("MAX_BALANCER_MESSAGE"))
 
-logger = getLogger(__name__)
+    NETWORK = os.getenv("NETWORK")
+    NODE_URL = os.getenv("NODE_URL")
+    MIN_BALANCE = decimals.create_decimal(os.getenv("MIN_BALANCE_NATIVE"))
+
+    ADMIN_WALLET_ADDRESS = os.getenv("ADMIN_WALLET_ADDRESS")
+    ADMIN_WALLET_PRIVATE_KEY = os.getenv("ADMIN_WALLET_PRIVATE_KEY")
+    ADMIN_FEE = os.getenv("ADMIN_FEE")
+    ADMIN_FEE_TOKEN = os.getenv("ADMIN_FEE_TOKEN")
+
+    REPORTING_ADDRESS = os.getenv("REPORTING_ADDRESS")
