@@ -5,6 +5,24 @@ from tronpy.keys import is_address
 from pydantic import BaseModel, Field, validator
 from hdwallet.utils import generate_mnemonic
 
+from .external import CoinController
+
+
+NETWORKS = [
+    ("trx", "tron"),
+    *[
+        (
+            f"{coin.symbol.lower()}",
+            f"tron-{coin.symbol.lower()}",
+            f"tron-trc20-{coin.symbol.lower()}",
+            f"trx-{coin.symbol.lower()}",
+            f"trx-trc20-{coin.symbol.lower()}"
+        )
+        for coin in CoinController.get_all_token()
+
+    ]
+]
+
 
 # <<<----------------------------------->>> Data <<<----------------------------------------------------------------->>>
 
@@ -71,6 +89,22 @@ class QueryAccount(BaseModel):
         if not is_address(address):
             raise ValueError("Address is bad")
         return address
+
+
+class QueryNetwork(BaseModel):
+    """
+    List of networks:
+        ** trx, tron - For native currency
+        ** usdt, tron-usdt, tron-trc20-usdt, trx-usdt, trx-trc20-usdt - For USDT token
+        ** usdc, tron-usdc, tron-trc20-usdc, trx-usdc, trx-trc20-usdc - For USDC token
+    """
+    network: str = Field(description="Network & token")
+
+    @validator("network")
+    def valid_network(cls, network: str):
+        if len(list(filter(lambda x: network in x, NETWORKS))) == 0:
+            raise ValueError("This network was not found")
+        return network
 
 
 # <<<----------------------------------->>> Body <<<----------------------------------------------------------------->>>
