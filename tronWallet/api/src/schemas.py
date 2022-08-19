@@ -104,7 +104,7 @@ class QueryNetwork(BaseModel):
     def valid_network(cls, network: str):
         if len(list(filter(lambda x: network in x, NETWORKS))) == 0:
             raise ValueError("This network was not found")
-        return network
+        return list(filter(lambda x: x.symbol in network, CoinController.get_all_token()))[0]
 
 
 # <<<----------------------------------->>> Body <<<----------------------------------------------------------------->>>
