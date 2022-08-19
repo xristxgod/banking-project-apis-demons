@@ -34,4 +34,4 @@ async def create_wallet(body: BodyCreateWallet, network: Optional[QueryNetwork] 
     response_model_exclude_unset=True,
 )
 async def get_balance(network: QueryNetwork, account: QueryAccount):
-    return AccountController(Account(address=account.address)).balance(network.network)
+    return await AccountController(Account(address=account.address)).balance(network.network)
