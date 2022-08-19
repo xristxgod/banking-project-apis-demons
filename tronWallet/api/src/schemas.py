@@ -104,7 +104,10 @@ class QueryNetwork(BaseModel):
     def valid_network(cls, network: str):
         if len(list(filter(lambda x: network in x, NETWORKS))) == 0:
             raise ValueError("This network was not found")
-        return list(filter(lambda x: x.symbol in network, CoinController.get_all_token()))[0]
+        token = list(filter(lambda x: x.symbol in network, CoinController.get_all_token()))
+        if len(token) == 1:
+            return token
+        return None
 
 
 # <<<----------------------------------->>> Body <<<----------------------------------------------------------------->>>
@@ -230,6 +233,17 @@ class ResponseBalance(BaseModel):
         schema_extra = {
             "example": {
                 "balance": 100.41244
+            }
+        }
+
+
+class ResponseOptimalFee(BaseModel):
+    fee: float = Field(default=0, description="Optimal fee for transaction")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "fee": 4.41244
             }
         }
 
