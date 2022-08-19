@@ -13,7 +13,7 @@ from config import Config
 
 @dataclass()
 class Account:
-    address: TAddress
+    address: Optional[TAddress] = field(default=None)
     privateKey: Optional[str] = field(default=None)
 
 
@@ -58,8 +58,7 @@ class AccountController(BaseController):
             bandwidth += 267
         else:
             coin = CoinController.get_token(coin)
-            contract = await core.node.get_contract(addr=coin.address)
-            if int(await contract.functions.balanceOf(self.address)) > 0:
+            if (await self.balance(coin.symbol)).balance > 0:
                 energy += coin.fullEnergy
             else:
                 energy += coin.notEnergy
