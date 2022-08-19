@@ -74,7 +74,9 @@ class BodyCreateTransaction(BaseModel):
         return address
 
     @validator("adminFee")
-    async def valid_admin_fee(self, value: float):
+    async def valid_admin_fee(cls, value: Optional[float] = None):
+        if cls.adminAddress is not None and value is None:
+            return 10.00
         if isinstance(value, str) and not value.isdigit():
             raise ValueError("Admin fee must be a number")
         if value < 0:
@@ -134,7 +136,7 @@ class ResponseCreateWallet(BaseModel):
 
 
 class ResponseBalance(BaseModel):
-    balance: float = Field(description="Account balance")
+    balance: float = Field(default=0, description="Account balance")
 
     class Config:
         schema_extra = {
@@ -146,7 +148,7 @@ class ResponseBalance(BaseModel):
 
 class ParticipantData(BaseModel):
     address: TAddress = Field(description="Wallet address")
-    amount: float = Field(description="Transaction amount")
+    amount: float = Field(default=0, description="Transaction amount")
 
     class Config:
         schema_extra = {
@@ -162,8 +164,8 @@ class TransactionData(BaseModel):
     transactionId: str = Field(description="Transaction hash")
     inputs: List[ParticipantData] = Field(description="Senders address")
     outputs: List[ParticipantData] = Field(description="Recipients address")
-    amount: float = Field(description="Transaction amount")
-    fee: float = Field(description="Transaction fee")
+    amount: float = Field(default=0, description="Transaction amount")
+    fee: float = Field(default=0, description="Transaction fee")
     token: Optional[str] = Field(default=None, description="Transaction Token")
 
     def __init__(self, **kwargs):
@@ -229,6 +231,7 @@ class ResponseCreateTransaction(BaseModel):
 class ResponseSendTransaction(BaseModel):
     timestamp: int = Field(description="Transaction time")
     transactionId: str = Field(description="Transaction hash")
+    bodyTransaction: TransactionData = Field(description="Transaction body")
     successfully: Optional[bool] = Field(default=True, description="Transaction status")
 
     class Config:

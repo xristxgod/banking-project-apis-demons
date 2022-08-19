@@ -40,7 +40,7 @@ class AccountController(BaseController):
             except tronpy.exceptions.AddressNotFound:
                 pass
         else:
-            coin = CoinController.get_token(coin)
+            coin = await CoinController.get_token(coin)
             contract = await core.node.get_contract(addr=coin.address)
             if int(await contract.functions.balanceOf(self.address)) > 0:
                 result = int(await contract.functions.balanceOf(self.address)) / 10 ** coin.decimals
@@ -57,7 +57,7 @@ class AccountController(BaseController):
                 fee += 1
             bandwidth += 267
         else:
-            coin = CoinController.get_token(coin)
+            coin = await CoinController.get_token(coin)
             if (await self.balance(coin.symbol)).balance > 0:
                 energy += coin.fullEnergy
             else:

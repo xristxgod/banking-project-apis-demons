@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from typing import List
 
 from tronpy.tron import TAddress
-
 
 from .database import Database
 from config import Config
@@ -46,7 +46,7 @@ class CoinController:
     TOKEN_USDC = 'usdc'
 
     @staticmethod
-    def get_token(name: str) -> Token:
+    async def get_token(name: str) -> Token:
         result = await Database.get("SELECT * FROM contract WHERE type='tron'")
         token_name = list(filter(lambda x: x["name"].lower() == name.lower(), result))
         if len(token_name) == 0:
@@ -54,14 +54,37 @@ class CoinController:
         return Coin.__dict__.get(token_name[0]["name"].upper())
 
     @staticmethod
-    def is_native(coin: str):
+    def get_all_token() -> List[Token]:
+        return [
+            coin for key, coin in Coin.__dict__.items() if not key.startswith("_") and not key.endswith("_")
+        ]
+
+    @staticmethod
+    def is_native(coin: str) -> bool:
         return coin.lower() == CoinController.NATIVE
 
     @staticmethod
-    def is_token(coin: str):
+    def is_token(coin: str) -> bool:
         return coin.lower() in [value for key, value in CoinController.__dict__.items() if key.startswith('TOKEN_')]
 
 
+URL_MAIN = [
+    "https://api.mainnet.trongrid.io/v1/accounts/<address>/transactions?limit=200",
+    *[
+        f"https://api.mainnet.trongrid.io/v1/accounts/<address>/trc20?limit=200&contract_address={coin.address}"
+        for coin in CoinController.get_all_token()
+    ]
+]
+URL_TESTNET = [
+    "https://api.shasta.trongrid.io/v1/accounts/<address>/transactions?limit=200",
+    *[
+        f"https://api.shasta.trongrid.io/v1/accounts/<address>/trc20?limit=200&contract_address={coin.address}"
+        for coin in CoinController.get_all_token()
+    ]
+]
+
+
 __all__ = [
-    "CoinController", "Token"
+    "CoinController", "Token",
+    "URL_MAIN", "URL_TESTNET"
 ]
