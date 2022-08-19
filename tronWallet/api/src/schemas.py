@@ -43,7 +43,7 @@ class BodyCreateWallet(BaseModel):
 
 class BodyCreateTransaction(BaseModel):
     input: Optional[TAddress] = Field(default=None, description="Sender's address")
-    output: List[Dict] = Field(description="Sender's address")
+    outputs: List[Dict] = Field(description="Sender's address")
     adminAddress: Optional[TAddress] = Field(default=None, description="Reporting addresses.")
     adminFee: Optional[float] = Field(default=None, description="Admin fee")
 
