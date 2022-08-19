@@ -42,8 +42,8 @@ class BodyCreateWallet(BaseModel):
 
 
 class BodyCreateTransaction(BaseModel):
-    input: Optional[TAddress] = Field(default=None, description="Sender's address")
-    outputs: List[Dict] = Field(description="Sender's address")
+    input: Optional[TAddress] = Field(default=None, description="Senders address")
+    outputs: List[Dict] = Field(description="Recipients address")
     adminAddress: Optional[TAddress] = Field(default=None, description="Reporting addresses.")
     adminFee: Optional[float] = Field(default=None, description="Admin fee")
 
@@ -117,11 +117,108 @@ class ResponseCreateWallet(BaseModel):
 
 
 class ResponseBalance(BaseModel):
-    balance: float
+    balance: float = Field(description="Account balance")
 
     class Config:
         schema_extra = {
             "example": {
                 "balance": 100.41244
+            }
+        }
+
+
+class ParticipantData(BaseModel):
+    address: TAddress = Field(description="Wallet address")
+    amount: float = Field(description="Transaction amount")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
+                "amount": 10
+            }
+        }
+
+
+class TransactionData(BaseModel):
+    timestamp: int = Field(description="Transaction time")
+    transactionId: str = Field(description="Transaction hash")
+    inputs: List[ParticipantData] = Field(description="Senders address")
+    outputs: List[ParticipantData] = Field(description="Recipients address")
+    amount: float = Field(description="Transaction amount")
+    fee: float = Field(description="Transaction fee")
+    token: Optional[str] = Field(default=None, description="Transaction Token")
+
+    def __init__(self, **kwargs):
+        super(TransactionData, self).__init__(**kwargs)
+        if self.token is None:
+            del self.token
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "timestamp": 1660372014,
+                "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
+                "inputs": [
+                    {
+                        "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
+                        "amount": 10
+                    }
+                ],
+                "outputs": [
+                    {
+                        "address": "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx",
+                        "amount": 10
+                    }
+                ],
+                "amount": 10,
+                "fee": 0,
+                "token": "USDT"
+            }
+        }
+
+
+class ResponseCreateTransaction(BaseModel):
+    createTxHex: str = Field(description="The hex of the unsigned transaction")
+    bodyTransaction: TransactionData = Field(description="Transaction body")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "createTxHex": "7b22636f6e7472616374223a205b7b22706172616d65746572223a207b2276616c7565223a207b226f776e65725f61646472657373223a2022343132653131646131346633353935326566366664363234333263373933656665313734363262636339222c2022636f6e74726163745f61646472657373223a2022343161663136353731303831643332366436303830376265663131366230633035366139343733363833222c202264617461223a202261393035396362623030303030303030303030303030303030303030303030306464653165303530636439643038366635656238626539376535336539636330343336616164633930303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030393839363830222c202263616c6c5f746f6b656e5f76616c7565223a20302c202263616c6c5f76616c7565223a20302c2022746f6b656e5f6964223a20307d2c2022747970655f75726c223a2022747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e54726967676572536d617274436f6e7472616374227d2c202274797065223a202254726967676572536d617274436f6e7472616374227d5d2c202274696d657374616d70223a20313636303839303135303434342c202265787069726174696f6e223a20313636303839303231303434342c20227265665f626c6f636b5f6279746573223a202231643938222c20227265665f626c6f636b5f68617368223a202266366330626561316664633032613236222c20226665655f6c696d6974223a2031303030303030307d",
+                "bodyTransaction": {
+                    "timestamp": 1660372014,
+                    "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
+                    "inputs": [
+                        {
+                            "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
+                            "amount": 10
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "address": "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx",
+                            "amount": 10
+                        }
+                    ],
+                    "amount": 10,
+                    "fee": 0,
+                    "token": "USDT"
+                }
+            }
+        }
+
+
+class ResponseSendTransaction(BaseModel):
+    timestamp: int = Field(description="Transaction time")
+    transactionId: str = Field(description="Transaction hash")
+    successfully: Optional[bool] = Field(default=True, description="Transaction status")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "timestamp": 1660372014,
+                "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
+                "successfully": True
             }
         }
