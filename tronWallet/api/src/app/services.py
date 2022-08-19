@@ -74,3 +74,8 @@ admin = AccountController(account=Account(
     address=Config.ADMIN_WALLET_ADDRESS,
     privateKey=Config.ADMIN_WALLET_PRIVATE_KEY
 ))
+
+
+__all__ = [
+    "AccountController", "Account", "admin"
+]

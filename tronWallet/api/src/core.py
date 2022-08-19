@@ -5,11 +5,13 @@ from hdwallet.cryptocurrencies import TronMainnet
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider, TAddress
 import tronpy.exceptions
 
+from .utils import Utils
 from .schemas import BodyCreateWallet, ResponseCreateWallet
 from config import Config, decimals
 
 
 class NodeCore:
+    utils = Utils
 
     def __new__(cls):
         if not hasattr(cls, 'instance'):
@@ -97,3 +99,8 @@ class NodeCore:
 
 
 core = NodeCore()
+
+
+__all__ = [
+    "core"
+]
