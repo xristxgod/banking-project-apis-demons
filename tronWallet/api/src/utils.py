@@ -1,6 +1,9 @@
 from typing import Union
 from decimal import Decimal, localcontext
 
+import tronpy.exceptions
+from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
+
 
 class Utils:
     SUN = Decimal("1000000")
@@ -63,6 +66,24 @@ class Utils:
             raise ValueError("Resulting wei value must be between 1 and 2**256 - 1")
 
         return int(result)
+
+    @staticmethod
+    async def get_public_node() -> AsyncTron:
+        """Returns a working public node"""
+        for public_node in [
+            "http://3.225.171.164:8090",
+            "http://52.53.189.99:8090",
+            "http://18.196.99.16:8090"
+        ]:
+            node = AsyncTron(
+                provider=AsyncHTTPProvider(public_node),
+                network="mainnet"
+            )
+            if int((await node.get_node_info())["activeConnectCount"]) == 0:
+                continue
+            return node
+        else:
+            raise tronpy.exceptions.BugInJavaTron("Public node is bad")
 
 
 __all__ = [

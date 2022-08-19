@@ -6,7 +6,61 @@ from pydantic import BaseModel, Field, validator
 from hdwallet.utils import generate_mnemonic
 
 
-# <<<----------------------------------->>> Query <<<------------------------------------------------------------->>>
+# <<<----------------------------------->>> Data <<<----------------------------------------------------------------->>>
+
+
+class ParticipantData(BaseModel):
+    address: TAddress = Field(description="Wallet address")
+    amount: float = Field(default=0, description="Transaction amount")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
+                "amount": 10
+            }
+        }
+
+
+class TransactionData(BaseModel):
+    timestamp: int = Field(description="Transaction time")
+    transactionId: str = Field(description="Transaction hash")
+    inputs: List[ParticipantData] = Field(description="Senders address")
+    outputs: List[ParticipantData] = Field(description="Recipients address")
+    amount: float = Field(default=0, description="Transaction amount")
+    fee: float = Field(default=0, description="Transaction fee")
+    token: Optional[str] = Field(default=None, description="Transaction Token")
+
+    def __init__(self, **kwargs):
+        super(TransactionData, self).__init__(**kwargs)
+        if self.token is None:
+            del self.token
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "timestamp": 1660372014,
+                "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
+                "inputs": [
+                    {
+                        "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
+                        "amount": 10
+                    }
+                ],
+                "outputs": [
+                    {
+                        "address": "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx",
+                        "amount": 10
+                    }
+                ],
+                "amount": 10,
+                "fee": 0,
+                "token": "USDT"
+            }
+        }
+
+
+# <<<----------------------------------->>> Query <<<---------------------------------------------------------------->>>
 
 
 class QueryAccount(BaseModel):
@@ -19,7 +73,7 @@ class QueryAccount(BaseModel):
         return address
 
 
-# <<<----------------------------------->>> Body <<<------------------------------------------------------------->>>
+# <<<----------------------------------->>> Body <<<----------------------------------------------------------------->>>
 
 
 class BodyCreateWallet(BaseModel):
@@ -146,57 +200,6 @@ class ResponseBalance(BaseModel):
         }
 
 
-class ParticipantData(BaseModel):
-    address: TAddress = Field(description="Wallet address")
-    amount: float = Field(default=0, description="Transaction amount")
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
-                "amount": 10
-            }
-        }
-
-
-class TransactionData(BaseModel):
-    timestamp: int = Field(description="Transaction time")
-    transactionId: str = Field(description="Transaction hash")
-    inputs: List[ParticipantData] = Field(description="Senders address")
-    outputs: List[ParticipantData] = Field(description="Recipients address")
-    amount: float = Field(default=0, description="Transaction amount")
-    fee: float = Field(default=0, description="Transaction fee")
-    token: Optional[str] = Field(default=None, description="Transaction Token")
-
-    def __init__(self, **kwargs):
-        super(TransactionData, self).__init__(**kwargs)
-        if self.token is None:
-            del self.token
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "timestamp": 1660372014,
-                "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
-                "inputs": [
-                    {
-                        "address": "TEAoUFfm3H5hYXo1X2VHwYFu1KMPDtZR4G",
-                        "amount": 10
-                    }
-                ],
-                "outputs": [
-                    {
-                        "address": "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx",
-                        "amount": 10
-                    }
-                ],
-                "amount": 10,
-                "fee": 0,
-                "token": "USDT"
-            }
-        }
-
-
 class ResponseCreateTransaction(BaseModel):
     createTxHex: str = Field(description="The hex of the unsigned transaction")
     bodyTransaction: TransactionData = Field(description="Transaction body")
@@ -240,5 +243,47 @@ class ResponseSendTransaction(BaseModel):
                 "timestamp": 1660372014,
                 "transactionId": "96756db705d81f48d00ca9f1cd75bde3a8357aafa7e9698b776a1336f2b3778f",
                 "successfully": True
+            }
+        }
+
+
+class ResponseStatus(BaseModel):
+    message: Optional[str] = Field(default=None, description="Error message")
+    successfully: bool = Field(default=True, description="Status system. Work or not!")
+
+    def __init__(self, **kwargs):
+        super(ResponseStatus, self).__init__(**kwargs)
+        if self.message is None:
+            del self.message
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "message": "Problems with the node. There are no active connections",
+                "successfully": False
+            }
+        }
+
+
+class ResponseBlock(BaseModel):
+    ourBlock: int = Field(description="Our node block")
+    publicBlock: int = Field(description="Public node block")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ourBlock": 26725523,
+                "publicBlock": 26725523
+            }
+        }
+
+
+class ResponseMessageCount(BaseModel):
+    messageCount: int = Field(default=0, description="Number of messages in the balancer")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "messageCount": 0
             }
         }

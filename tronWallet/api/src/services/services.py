@@ -5,7 +5,6 @@ import tronpy.exceptions
 from tronpy.tron import TAddress
 
 from src import core
-from ..base import BaseController
 from ..external import CoinController
 from ..schemas import ResponseBalance
 from config import Config
@@ -17,7 +16,7 @@ class Account:
     privateKey: Optional[str] = field(default=None)
 
 
-class AccountController(BaseController):
+class AccountController:
     def __init__(self, account: Account):
         self.__account = account
 

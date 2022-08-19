@@ -1,9 +1,8 @@
-from typing import Union, Optional, Dict
+from typing import Union, Dict
 
 from hdwallet import BIP44HDWallet
 from hdwallet.cryptocurrencies import TronMainnet
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider, TAddress
-import tronpy.exceptions
 
 from .utils import Utils
 from .schemas import BodyCreateWallet, ResponseCreateWallet

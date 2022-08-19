@@ -181,3 +181,8 @@ class TransactionParser:
             }
         except tronpy.exceptions.AddressNotFound:
             pass
+
+
+__all__ = [
+    "Transaction", "TransactionParser"
+]

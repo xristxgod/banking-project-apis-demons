@@ -88,7 +88,9 @@ def get_public_node() -> Tron:
     """Returns a working public node"""
     for public_node in ["http://3.225.171.164:8090", "http://52.53.189.99:8090", "http://18.196.99.16:8090"]:
         try:
-            __node = Tron(provider=HTTPProvider(public_node) if network == "mainnet" else None, network=network)
+            __node = Tron(
+                provider=HTTPProvider(public_node),
+                network="mainnet")
             if int(__node.get_node_info()["activeConnectCount"]) == 0:
                 raise Exception
             else:
