@@ -1,8 +1,9 @@
-from typing import Union, Dict
+from typing import Union, Optional, Dict
 
 from hdwallet import BIP44HDWallet
 from hdwallet.cryptocurrencies import TronMainnet
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider, TAddress
+import tronpy.exceptions
 
 from .schemas import BodyCreateWallet, ResponseCreateWallet
 from config import Config, decimals
@@ -73,7 +74,7 @@ class NodeCore:
             "totalEnergy": total_energy
         }
 
-    async def get_energy(self, address: str, energy: int) -> int:
+    async def get_energy(self, address: TAddress, energy: int) -> int:
         """If the user has enough energy."""
         total_energy = (await self.get_account_energy(address=address))["totalEnergy"]
         if int(total_energy) <= 0:

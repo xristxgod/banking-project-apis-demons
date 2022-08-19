@@ -48,6 +48,27 @@ class AccountController(BaseController):
             balance=result
         )
 
+    async def optimal_fee(self, address: TAddress, coin: Optional[str] = None) -> float:
+        fee, energy, bandwidth = 0, 0, 0
+        if coin is None:
+            try:
+                _ = await core.node.get_account(address)
+            except tronpy.exceptions.AddressNotFound:
+                fee += 1
+            bandwidth += 267
+        else:
+            coin = CoinController.get_token(coin)
+            contract = await core.node.get_contract(addr=coin.address)
+            if int(await contract.functions.balanceOf(self.address)) > 0:
+                energy += coin.fullEnergy
+            else:
+                energy += coin.notEnergy
+            fee += await core.get_energy(self.address, energy=energy) / await core.calculate_burn_energy(1)
+            bandwidth += coin.bandwidth
+        if int((await core.get_account_bandwidth(self.address))["totalBandwidth"]) <= bandwidth:
+            fee += 267 / 1_000
+        return fee
+
 
 admin = AccountController(account=Account(
     address=Config.ADMIN_WALLET_ADDRESS,
