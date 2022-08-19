@@ -57,12 +57,18 @@ async def get_transactions(account: QueryAccount):
 async def create_transaction(network: QueryNetwork, body: BodyCreateTransaction):
     try:
         logger.error(f"Create transaction: {body.input} -> {body.outputs}")
-        await ElasticController.send_message(message=f"Create transaction: {body.input} -> {body.outputs}")
-        return await Transaction.create(
+        transaction = await Transaction.create(
             account=AccountController(Account(address=body.input)),
             body=body,
             coin=network.network
         )
+        await ElasticController.send_message(
+            message=(
+                f"TX: {transaction.bodyTransaction.transactionId} | "
+                f"Create transaction: {body.input} -> {body.outputs}"
+            )
+        )
+        return transaction
     except Exception as error:
         logger.error(f"{error}")
         await ElasticController.send_exception(ex=error, message="Bad create transaction!")
@@ -81,7 +87,10 @@ async def send_transaction(body: BodySendTransaction, network: Optional[QueryNet
             body=body
         )
         await ElasticController.send_message(
-            message=f"Send transaction: {transaction.bodyTransaction.inputs} -> {transaction.bodyTransaction.outputs}"
+            message=(
+                f"TX: {transaction.bodyTransaction.transactionId} | "
+                f"Send transaction: {transaction.bodyTransaction.inputs} -> {transaction.bodyTransaction.outputs}"
+            )
         )
         return transaction
     except Exception as error:
