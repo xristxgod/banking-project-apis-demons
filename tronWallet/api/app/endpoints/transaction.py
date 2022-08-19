@@ -1,8 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from tronpy.tron import TAddress
 
+from src.external import ElasticController
 from src.schemas import (
     QueryAccount, QueryNetwork,
     BodyCreateTransaction, BodySendTransaction,
@@ -13,6 +14,7 @@ from src.services import (
     AccountController, Account,
     Transaction, TransactionParser
 )
+from config import logger
 
 
 router = APIRouter(
@@ -53,11 +55,18 @@ async def get_transactions(account: QueryAccount):
     response_model=ResponseCreateTransaction
 )
 async def create_transaction(network: QueryNetwork, body: BodyCreateTransaction):
-    return await Transaction.create(
-        account=AccountController(Account(address=body.input)),
-        body=body,
-        coin=network.network
-    )
+    try:
+        logger.error(f"Create transaction: {body.input} -> {body.outputs}")
+        await ElasticController.send_message(message=f"Create transaction: {body.input} -> {body.outputs}")
+        return await Transaction.create(
+            account=AccountController(Account(address=body.input)),
+            body=body,
+            coin=network.network
+        )
+    except Exception as error:
+        logger.error(f"{error}")
+        await ElasticController.send_exception(ex=error, message="Bad create transaction!")
+        raise HTTPException(detail="Transaction error", status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @router.patch(
@@ -65,7 +74,17 @@ async def create_transaction(network: QueryNetwork, body: BodyCreateTransaction)
     response_model=ResponseSendTransaction
 )
 async def send_transaction(body: BodySendTransaction, network: Optional[QueryNetwork] = None):
-    return await Transaction.send(
-        account=AccountController(Account(privateKey=body.privateKeys[0])),
-        body=body
-    )
+    try:
+        logger.error(f"Send transaction")
+        transaction = await Transaction.send(
+            account=AccountController(Account(privateKey=body.privateKeys[0])),
+            body=body
+        )
+        await ElasticController.send_message(
+            message=f"Send transaction: {transaction.bodyTransaction.inputs} -> {transaction.bodyTransaction.outputs}"
+        )
+        return transaction
+    except Exception as error:
+        logger.error(f"{error}")
+        await ElasticController.send_exception(ex=error, message="Bad send transaction!")
+        raise HTTPException(detail="Transaction error", status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
