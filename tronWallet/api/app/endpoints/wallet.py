@@ -11,7 +11,9 @@ from src.schemas import (
 from src.services import Account, AccountController
 
 
-router = APIRouter()
+router = APIRouter(
+    tags=["WALLET"]
+)
 
 
 @router.post(
@@ -19,7 +21,7 @@ router = APIRouter()
     response_model=ResponseCreateWallet,
     summary="Create wallet",
     response_description="Wallet created",
-    response_model_exclude_unset=True
+    response_model_exclude_unset=True,
 )
 async def create_wallet(body: BodyCreateWallet, network: Optional[QueryNetwork] = None):
     return core.create_wallet(body=body)
@@ -29,7 +31,7 @@ async def create_wallet(body: BodyCreateWallet, network: Optional[QueryNetwork] 
     "/{network}/balance/{account}",
     response_model=ResponseBalance,
     summary="Get account balance",
-    response_model_exclude_unset=True
+    response_model_exclude_unset=True,
 )
 async def get_balance(network: QueryNetwork, account: QueryAccount):
     return AccountController(Account(address=account.address)).balance(network.network)
