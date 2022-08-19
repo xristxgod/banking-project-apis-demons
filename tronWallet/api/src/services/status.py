@@ -83,9 +83,9 @@ class Stabilizer:
         )
 
 
-def get_status(system: str = "node") -> Tuple:
+async def get_status(system: str = "node") -> Tuple:
     if system in [method for method in Stabilizer.__dict__ if not method.startswith("_") and not method.endswith("_")]:
-        return Stabilizer().__getattribute__(system)()
+        return await Stabilizer().__getattribute__(system)()
     raise Exception("There is no such method!")
 
 
