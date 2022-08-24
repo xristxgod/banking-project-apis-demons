@@ -11,7 +11,7 @@ from config import Config
 
 class Stabilizer:
     @staticmethod
-    def node() -> Tuple[ResponseStatus, ResponseBlock]:
+    async def node() -> Tuple[ResponseStatus, ResponseBlock]:
         status = True, None
         if Config.NETWORK == "MAINNET":
             our_node = core.node

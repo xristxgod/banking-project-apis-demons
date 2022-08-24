@@ -15,7 +15,7 @@ from config import logger
 
 
 router = APIRouter(
-    prefix="admin",
+    prefix="/admin",
     tags=[
         "ADMIN"
     ],

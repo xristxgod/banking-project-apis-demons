@@ -144,7 +144,7 @@ class BodyCreateTransaction(BaseModel):
             raise ValueError("Address is bad")
         return address
 
-    @validator("output")
+    @validator("output", check_fields=False)
     async def valid_output(cls, output: List[Dict]):
         if not isinstance(output, list):
             raise ValueError("Output must be list")
