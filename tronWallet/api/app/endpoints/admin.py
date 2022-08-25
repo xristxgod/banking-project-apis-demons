@@ -49,7 +49,7 @@ async def get_optimal_fee(address: TAddress, network: QueryNetwork = Depends()):
         ],
             status_code=status.HTTP_400_BAD_REQUEST
         )
-    return await admin.optimal_fee(address=address, coin=network.network)
+    return ResponseOptimalFee(fee=await admin.optimal_fee(address=address, coin=network.network))
 
 
 @router.post(
