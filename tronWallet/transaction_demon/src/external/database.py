@@ -44,5 +44,5 @@ class DatabaseController:
 
 
 __all__ = [
-    "DatabaseController"
+    "DatabaseController", "Database"
 ]
