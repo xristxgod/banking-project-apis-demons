@@ -1,16 +1,17 @@
 import asyncio
+from time import time as timer
 from typing import Optional, List
 
 from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
 
 from .core import Core
-from .utils import Utils, LastBlock, NOT_SEND
+from .utils import Utils, LastBlock, NotSend
 from .schemas import (
     ProcessingTransaction, SmartContractData, Participant,
     Transaction, BodyTransaction, SendTransactionData, Header
 )
-from .external import DatabaseController, CoinController, ElasticController
+from .external import DatabaseController, CoinController, ElasticController, DatabaseController
 from config import Config, decimals, logger
 
 
@@ -177,4 +178,30 @@ class Daemon:
         except Exception as error:
             logger.error(f"{error}")
             await ElasticController.send_exception(ex=error, message="Send to rabbit error")
+            await NotSend.save(data=package)
 
+    async def run(self) -> Optional:
+        """Run daemon infinitely"""
+        start_block = await self.get_last_block_number()
+        pack_size = 1
+        while True:
+            end_block = await self.get_node_block_number()
+            if end_block - start_block < pack_size:
+                await asyncio.sleep(3)
+            else:
+                start_time = timer()
+                addresses = await DatabaseController.get_addresses()
+                success = await asyncio.gather(*[
+                    self.processing_block(block_number=block_number, addresses=addresses)
+                    for block_number in range(start_block, start_block + pack_size)
+                ])
+                logger.info(f"End block: {start_block}. Time taken: {start_time - timer()} sec")
+                if all(success):
+                    start_block += pack_size
+                    await LastBlock.save(number=start_block)
+                else:
+                    await ElasticController.send_error(message=f"Block {start_block} error!")
+                    continue
+
+    async def start_in_range(self, start_block: int, end_block: int, addresses: O=None):
+        pass
