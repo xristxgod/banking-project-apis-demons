@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from tronpy.tron import TAddress
 
@@ -11,7 +9,7 @@ from src.schemas import (
     ResponseBalance, ResponseOptimalFee, ResponseCreateTransaction, ResponseSendTransaction
 )
 from src.services import Transaction
-from config import logger
+from config import Config, logger
 
 
 router = APIRouter(
@@ -33,11 +31,24 @@ async def get_balance(network: QueryNetwork = Depends()):
 
 
 @router.get(
-    "/{network}/transaction/to/{address}",
+    "/{network}/transaction/to/{address}/fee",
     response_model=ResponseOptimalFee,
     tags=["TRANSACTION"]
 )
 async def get_optimal_fee(address: TAddress, network: QueryNetwork = Depends()):
+    if address == Config.ADMIN_WALLET_ADDRESS:
+        raise HTTPException(detail=[
+            {
+                "loc": [
+                    "query",
+                    "address"
+                ],
+                "msg": "The admin's address and the recipient's address must not match.",
+                "type": "type_error.str"
+            }
+        ],
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
     return await admin.optimal_fee(address=address, coin=network.network)
 
 

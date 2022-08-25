@@ -23,7 +23,7 @@ router = APIRouter(
 
 
 @router.get(
-    "/{network}/transaction/{account}/to/{address}",
+    "/{network}/transaction/{account}/to/{address}/fee",
     response_model=ResponseOptimalFee
 )
 async def get_optimal_fee(network: QueryNetwork, account: QueryAccount, address: TAddress):

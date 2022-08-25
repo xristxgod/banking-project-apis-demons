@@ -2,6 +2,7 @@ from typing import Optional, List, Dict
 
 from tronpy.tron import TAddress
 from tronpy.keys import is_address
+from fastapi import HTTPException, status
 from pydantic import BaseModel, Field, validator
 from hdwallet.utils import generate_mnemonic
 
@@ -103,7 +104,18 @@ class QueryNetwork(BaseModel):
     @validator("network")
     def valid_network(cls, network: str):
         if len(list(filter(lambda x: network in x, NETWORKS))) == 0:
-            raise ValueError("This network was not found")
+            raise HTTPException(detail=[
+                {
+                    "loc": [
+                        "query",
+                        "network"
+                    ],
+                    "msg": "This network was not found",
+                    "type": "type_error.str"
+                }
+            ],
+                status_code=status.HTTP_404_NOT_FOUND
+            )
         token = list(filter(lambda x: x.symbol.upper() in network.upper(), CoinController.get_all_token()))
         if len(token) == 1:
             return token[0].symbol
