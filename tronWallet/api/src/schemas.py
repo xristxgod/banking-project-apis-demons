@@ -98,15 +98,15 @@ class QueryNetwork(BaseModel):
         ** usdt, tron-usdt, tron-trc20-usdt, trx-usdt, trx-trc20-usdt - For USDT token
         ** usdc, tron-usdc, tron-trc20-usdc, trx-usdc, trx-trc20-usdc - For USDC token
     """
-    network: str = Field(description="Network & token")
+    network: str = Field(description="Network & token", default="trx")
 
     @validator("network")
     def valid_network(cls, network: str):
         if len(list(filter(lambda x: network in x, NETWORKS))) == 0:
             raise ValueError("This network was not found")
-        token = list(filter(lambda x: x.symbol in network, CoinController.get_all_token()))
+        token = list(filter(lambda x: x.symbol.upper() in network.upper(), CoinController.get_all_token()))
         if len(token) == 1:
-            return token
+            return token[0].symbol
         return None
 
 

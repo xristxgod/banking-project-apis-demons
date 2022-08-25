@@ -29,7 +29,7 @@ router = APIRouter(
     tags=["WALLET"]
 )
 async def get_balance(network: QueryNetwork = Depends()):
-    return await admin.balance()
+    return await admin.balance(coin=network.network)
 
 
 @router.get(

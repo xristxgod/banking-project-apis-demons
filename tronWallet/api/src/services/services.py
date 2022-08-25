@@ -33,9 +33,9 @@ class AccountController:
 
     async def balance(self, coin: Optional[str] = None) -> ResponseBalance:
         result = 0
-        if coin is None:
+        if coin is None or CoinController.is_native(coin=coin):
             try:
-                result = core.node.get_account_balance(addr=self.address)
+                result = await core.node.get_account_balance(addr=self.address)
             except tronpy.exceptions.AddressNotFound:
                 pass
         else:

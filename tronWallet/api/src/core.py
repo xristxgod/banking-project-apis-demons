@@ -20,7 +20,7 @@ class NodeCore:
     def __init__(self):
         self.node = AsyncTron(
             provider=AsyncHTTPProvider(Config.NODE_URL) if Config.NETWORK.upper() == "MAINNET" else None,
-            network=Config.NETWORK.lower()
+            network="mainnet" if Config.NETWORK.upper() == "MAINNET" else "shasta"
         )
 
     # <<<=======================================>>> Tron Station <<<=================================================>>>
