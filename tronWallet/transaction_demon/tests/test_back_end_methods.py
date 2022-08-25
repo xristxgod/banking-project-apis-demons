@@ -16,7 +16,7 @@ python -m unittest test_back_end_methods.TestProjectMethods.test_get_transaction
 import unittest
 
 import psycopg2.extras
-from src.utils import from_sun, to_base58check_address, convert_time, get_asset_trc20, get_transaction_for_fee
+from src_1.utils import from_sun, to_base58check_address, convert_time, get_asset_trc20, get_transaction_for_fee
 from config import USDT, USDC, ReportingAddress, decimals
 
 

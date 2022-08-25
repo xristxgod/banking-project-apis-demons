@@ -13,7 +13,7 @@ python -m unittest test_demon_script.TestDemonScript.test_processing_transaction
 """
 import unittest
 
-from src.demon import TransactionDemon
+from src_1.demon import TransactionDemon
 from config import USDT, USDC
 
 

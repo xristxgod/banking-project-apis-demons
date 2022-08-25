@@ -38,9 +38,9 @@ class Config:
     NODE_URL = os.getenv("NODE_URL", "http://tron-mainnet.mangobank.elcorp.io:8090")
     MIN_BALANCE = decimals.create_decimal(os.getenv("MIN_BALANCE_NATIVE", 10))
 
-    ADMIN_WALLET_ADDRESS = os.getenv("ADMIN_WALLET_ADDRESS")
-    ADMIN_WALLET_PRIVATE_KEY = os.getenv("ADMIN_WALLET_PRIVATE_KEY")
-    ADMIN_FEE = os.getenv("ADMIN_FEE")
-    ADMIN_FEE_TOKEN = os.getenv("ADMIN_FEE_TOKEN")
+    ADMIN_WALLET_ADDRESS = os.getenv("ADMIN_WALLET_ADDRESS", "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx")
+    ADMIN_WALLET_PRIVATE_KEY = os.getenv("ADMIN_WALLET_PRIVATE_KEY", "53054a7ebbda440df4f15b225def00dc8abc62a4a5a269a7c6023223a31d7032")
+    ADMIN_FEE = os.getenv("ADMIN_FEE", 5.3)
+    ADMIN_FEE_TOKEN = os.getenv("ADMIN_FEE_TOKEN", 18.4)
 
-    REPORTING_ADDRESS = os.getenv("REPORTING_ADDRESS")
+    REPORTING_ADDRESS = os.getenv("REPORTING_ADDRESS", "TJmV58h1StTogUuVUoogtPoE5i3YPCS7yb")

@@ -10,9 +10,9 @@ from datetime import timedelta, datetime
 import aiofiles
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
-from src.external_data.database import get_addresses, get_all_transactions_hash
-from src.external_data.es_send import send_exception_to_kibana, send_msg_to_kibana
-from src.utils import (
+from src_1.external_data.database import get_addresses, get_all_transactions_hash
+from src_1.external_data.es_send import send_exception_to_kibana, send_msg_to_kibana
+from src_1.utils import (
     to_base58check_address, from_sun, convert_time, TronAccountAddress, get_asset_trc20,
     get_transaction_for_fee, send_to_rabbit_mq, get_transaction_in_db, send_to_rabbit_mq_balancer
 )

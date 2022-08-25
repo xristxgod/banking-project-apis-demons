@@ -8,9 +8,9 @@ from decimal import Decimal, localcontext
 
 from aiofiles import open as async_open
 
-from src.external_data.es_send import send_exception_to_kibana
-from src.external_data.rabbit_mq import send_to_balancer, send_message
-from src.external_data.database import get_transaction_hash, get_contracts
+from src_1.external_data.es_send import send_exception_to_kibana
+from src_1.external_data.rabbit_mq import send_to_balancer, send_message
+from src_1.external_data.database import get_transaction_hash, get_contracts
 from config import (
     network, fileTokens, decimals, ReportingAddress,
     logger, NOT_SEND, ERROR, NOT_SEND_TO_TRANSACTION

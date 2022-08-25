@@ -9,7 +9,7 @@ python -m unittest test_send_es.TestSendToKibana.test_send_to_kibana_ex
 """
 import unittest
 
-from src.external_data.es_send import send_msg_to_kibana, send_exception_to_kibana
+from src_1.external_data.es_send import send_msg_to_kibana, send_exception_to_kibana
 
 
 class TestSendToKibana(unittest.IsolatedAsyncioTestCase):

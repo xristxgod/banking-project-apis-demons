@@ -12,7 +12,7 @@ python -m unittest test_demon.TestDemon.test_get_contracts
 import unittest
 import random
 
-from src.external_data.database import get_addresses, get_all_transactions_hash, get_contracts, get_transaction_hash
+from src_1.external_data.database import get_addresses, get_all_transactions_hash, get_contracts, get_transaction_hash
 
 
 class TestDemon(unittest.IsolatedAsyncioTestCase):
