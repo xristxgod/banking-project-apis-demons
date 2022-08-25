@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from tronpy.tron import TAddress
 
 from src.external.elastic import ElasticController
@@ -28,7 +28,7 @@ router = APIRouter(
     response_model=ResponseBalance,
     tags=["WALLET"]
 )
-async def get_balance():
+async def get_balance(network: QueryNetwork = Depends()):
     return await admin.balance()
 
 
@@ -37,7 +37,7 @@ async def get_balance():
     response_model=ResponseOptimalFee,
     tags=["TRANSACTION"]
 )
-async def get_optimal_fee(network: QueryNetwork, address: TAddress):
+async def get_optimal_fee(address: TAddress, network: QueryNetwork = Depends()):
     return await admin.optimal_fee(address=address, coin=network.network)
 
 
@@ -46,7 +46,7 @@ async def get_optimal_fee(network: QueryNetwork, address: TAddress):
     response_model=ResponseCreateTransaction,
     tags=["TRANSACTION"]
 )
-async def create_transaction(network: QueryNetwork, body: BodyCreateTransaction):
+async def create_transaction(body: BodyCreateTransaction, network: QueryNetwork = Depends()):
     try:
         logger.error(f"Create admin transaction: {body.outputs}")
         transaction = await Transaction.create(
@@ -65,10 +65,10 @@ async def create_transaction(network: QueryNetwork, body: BodyCreateTransaction)
 
 
 @router.patch(
-    "/{network}/send/transaction",
+    "/send/transaction",
     response_model=ResponseSendTransaction
 )
-async def send_transaction(body: BodySendTransaction, network: Optional[QueryNetwork] = None):
+async def send_transaction(body: BodySendTransaction):
     try:
         logger.error(f"Send admin transaction")
         transaction = await Transaction.send(
