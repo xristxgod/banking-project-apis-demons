@@ -1,8 +1,14 @@
-from typing import Union
+import os
+import uuid
+import json
+from dataclasses import asdict
+from typing import Optional, Union, Any, List
 from decimal import Decimal, localcontext
 
-import tronpy.exceptions
-from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
+import aiofiles
+
+from .schemas import Header, SendTransactionData
+from config import LAST_BLOCK, NOT_SEND
 
 
 class Utils:
@@ -68,6 +74,48 @@ class Utils:
         return int(result)
 
 
+class BaseFileGet:
+    @staticmethod
+    async def get() -> Optional[Any]:
+        raise NotImplementedError
+
+
+class BaseFileSave:
+    @staticmethod
+    def save(**kwargs) -> Optional:
+        raise NotImplementedError
+
+
+class LastBlock(BaseFileGet, BaseFileSave):
+    @staticmethod
+    async def get() -> Optional[str]:
+        """
+        Get data from the file
+        :return: Block number
+        """
+        async with aiofiles.open(LAST_BLOCK, "r") as file:
+            return await file.read()
+
+    @staticmethod
+    async def save(number: int) -> Optional:
+        """
+        Save data to the file
+        :param number: Block number
+        """
+        async with aiofiles.open(LAST_BLOCK, "w") as file:
+            await file.write(str(number))
+
+
+class NotSend(BaseFileSave):
+    @staticmethod
+    async def save(data: List[Header, SendTransactionData]) -> Optional:
+        """"""
+        new_not_send_file = os.path.join(NOT_SEND, f'{uuid.uuid4()}.json')
+        async with aiofiles.open(new_not_send_file, 'w') as file:
+            # Write all the verified data to a json file, and do not praise the work
+            await file.write(json.dumps([asdict(data[0]), asdict(data[1])]))
+
+
 __all__ = [
-    "Utils"
+    "Utils", "LastBlock", "NotSend"
 ]
