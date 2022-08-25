@@ -1,87 +1,20 @@
 import asyncio
-import decimal
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict
+from typing import Optional, List
 
-import aiofiles
 from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
 
 from .core import Core
-from .utils import Utils
+from .utils import Utils, LastBlock, NOT_SEND
+from .schemas import (
+    ProcessingTransaction, SmartContractData, Participant,
+    Transaction, BodyTransaction, SendTransactionData, Header
+)
 from .external import DatabaseController, CoinController, ElasticController
-from config import LAST_BLOCK, decimals, logger
+from config import Config, decimals, logger
 
 
-@dataclass()
-class ProcessingTransaction:
-    transaction: Dict                               # Transaction Data
-    addresses: List[TAddress]                       # Wallet addresses in Database
-    timestamp: int                                  # Time to send transaction
-    transactionsHash: List[str]                     # Transactions in Database
-
-
-@dataclass()
-class SmartContractData:
-    amount: decimal.Decimal                         # Transaction amount
-    symbol: str                                     # Token name
-
-
-@dataclass()
-class Participant:
-    address: TAddress                               # Participant wallet address
-    amount: decimal.Decimal                         # Transaction amount
-
-
-@dataclass()
-class Transaction:
-    timestamp: int                                  # Time to send transaction
-    transactionHash: str                            # Transaction hash/id
-    amount: decimal.Decimal                         # Transaction amount
-    fee: decimal.Decimal                            # Transaction fee
-    inputs: List[Participant]                       # Sender transaction
-    outputs: List[Participant]                      # Recipient transaction
-    token: Optional[str] = field(default=None)      # Token symbol
-
-
-@dataclass()
-class BodyTransaction:
-    address: TAddress                               # Participant transaction in has to db
-    transactions: List[Transaction]                 # Transaction list
-
-
-@dataclass()
-class SendTransactionData:
-    transactionPackage: BodyTransaction             # Transactions for send
-    addresses: List[TAddress]                       # Wallet addresses in Database
-    transactionsHash: List[str]                     # Transactions in Database
-    blockNumber: int                                # Block in Blockchain
-
-
-@dataclass()
-class Header:
-    block: int                                      # Block in Blockchain
-    network: str                                    # Example: tron, tron_trc20_usdt, tron_trc20_usdc, etc.
-
-
-class FileController:
-    @staticmethod
-    def get() -> Optional[str]:
-        """
-        Get data from the file
-        :return: Block number
-        """
-        async with aiofiles.open(LAST_BLOCK, "r") as file:
-            return await file.read()
-
-    @staticmethod
-    def save(number: int) -> Optional:
-        """
-        Save data to the file
-        :param number: Block number
-        """
-        async with aiofiles.open(LAST_BLOCK, "w") as file:
-            await file.write(str(number))
+ADMIN_ADDRESSES = [Config.ADMIN_WALLET_ADDRESS, Config.REPORTING_ADDRESS]
 
 
 class Daemon:
@@ -110,7 +43,7 @@ class Daemon:
 
     async def get_last_block_number(self) -> int:
         """Get last block in file"""
-        last_block = FileController.get()
+        last_block = LastBlock.get()
         return await self.get_node_block_number() if not last_block else int(last_block)
 
     async def processing_block(self, block_number: int, addresses: List[TAddress]) -> Optional:
@@ -222,6 +155,26 @@ class Daemon:
             data.transactionPackage
         ]
         try:
-            pass
-        except:
-            pass
+            recipient = data.transactionPackage.transactions[0].outputs[0].address
+            sender = data.transactionPackage.transactions[0].inputs[0].address
+
+            if sender in ADMIN_ADDRESSES and header_network == "tron" and (recipient in data.addresses):
+                """
+                If the transaction was made from the admin, and it was not a token transaction, and the recipient
+                in this transaction was our address, then the transaction was most likely made to pay the commission.
+                """
+            elif sender in ADMIN_ADDRESSES and recipient not in data.addresses:
+                """
+                If the transaction was sent from the admin address, and the recipient is not our address,
+                then most likely these are withdrawal transactions to someone else's wallet.
+                """
+            else:
+                """
+                If the recipient is not an admin wallet, then this transaction is from someone
+                else's wallet to our wallet.
+                """
+
+        except Exception as error:
+            logger.error(f"{error}")
+            await ElasticController.send_exception(ex=error, message="Send to rabbit error")
+
