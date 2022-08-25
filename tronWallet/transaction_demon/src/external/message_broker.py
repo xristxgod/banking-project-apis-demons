@@ -1,0 +1,3 @@
+
+class MessageBroker:
+    pass
