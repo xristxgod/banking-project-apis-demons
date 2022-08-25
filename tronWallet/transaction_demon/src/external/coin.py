@@ -54,10 +54,18 @@ class CoinController:
         return Coin.__dict__.get(token_name[0]["name"].upper())
 
     @staticmethod
+    def get_token_by_address(address: TAddress) -> Token:
+        return [coin for coin in CoinController.get_all_token() if coin.address == address][0]
+
+    @staticmethod
     def get_all_token() -> List[Token]:
         return [
             coin for key, coin in Coin.__dict__.items() if not key.startswith("_") and not key.endswith("_")
         ]
+
+    @staticmethod
+    def is_address(address: TAddress) -> bool:
+        return address in [coin.address for coin in CoinController.get_all_token()]
 
     @staticmethod
     def is_native(coin: str) -> bool:
