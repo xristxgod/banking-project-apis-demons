@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import decimal
 from dataclasses import asdict
 from typing import Optional, Union, Any, List
 from decimal import Decimal, localcontext
@@ -72,6 +73,12 @@ class Utils:
             raise ValueError("Resulting wei value must be between 1 and 2**256 - 1")
 
         return int(result)
+
+    @staticmethod
+    def json_default(obj: Any) -> Any:
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return str(obj)
 
 
 class BaseFileGet:

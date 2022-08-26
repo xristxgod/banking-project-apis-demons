@@ -77,8 +77,14 @@ class Start:
     addresses: List[TAddress] = field(default=None)     # Wallet addresses in Database or user write
 
 
+@dataclass()
+class BalancerMessage:
+    address: TAddress                                   # Wallet address
+    network: str                                        # Network: TRX, USDT, USDC, etc.
+
+
 __all__ = [
     "ProcessingTransaction", "SmartContractData", "Participant",
     "Transaction", "BodyTransaction", "SendTransactionData", "Header",
-    "RangeSearch", "ListSearch", "Start"
+    "RangeSearch", "ListSearch", "Start", "BalancerMessage"
 ]

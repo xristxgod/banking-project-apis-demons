@@ -38,6 +38,7 @@ class Config:
     NGINX_DOMAIN = os.getenv("NGINX_DOMAIN")
 
     RABBITMQ_URL = os.getenv("RABBITMQ_URL")
+    MAIN_APP_QUEUE = os.getenv("MAIN_APP_QUEUE")
     BALANCER_QUEUE = os.getenv("BALANCER_QUEUE")
     MAX_BALANCER_MESSAGE = int(os.getenv("MAX_BALANCER_MESSAGE", 1))
 

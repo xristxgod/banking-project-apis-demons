@@ -1,7 +1,9 @@
+import os
 import asyncio
 from time import time as timer
 from typing import Optional, List
 
+import aiofiles
 from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
 
@@ -9,10 +11,13 @@ from .core import Core
 from .utils import Utils, LastBlock, NotSend
 from .schemas import (
     ProcessingTransaction, SmartContractData, Participant,
-    Transaction, BodyTransaction, SendTransactionData, Header
+    Transaction, BodyTransaction, SendTransactionData, Header,
+    RangeSearch, ListSearch, Start
 )
-from .external import DatabaseController, CoinController, ElasticController, DatabaseController
-from config import Config, decimals, logger
+from .external import (
+    DatabaseController, CoinController, ElasticController, MainApp, Balancer
+)
+from config import NOT_SEND, Config, decimals, logger
 
 
 ADMIN_ADDRESSES = [Config.ADMIN_WALLET_ADDRESS, Config.REPORTING_ADDRESS]
@@ -180,6 +185,22 @@ class Daemon:
             await ElasticController.send_exception(ex=error, message="Send to rabbit error")
             await NotSend.save(data=package)
 
+    @staticmethod
+    async def resend() -> Optional:
+        """Resend data if data in dir > 0"""
+        files = os.listdir(NOT_SEND)
+        for file_name in files:
+            try:
+                path = os.path.join(NOT_SEND, file_name)
+                async with aiofiles.open(path, 'r') as file:
+                    values = await file.read()
+                await MessageBrokerController.send(values=values)
+                os.remove(path)
+            except Exception as error:
+                logger.error(f"Error: {error}")
+                logger.error(f"Not send: {file_name}")
+                continue
+
     async def run(self) -> Optional:
         """Run daemon infinitely"""
         start_block = await self.get_last_block_number()
@@ -203,5 +224,47 @@ class Daemon:
                     await ElasticController.send_error(message=f"Block {start_block} error!")
                     continue
 
-    async def start_in_range(self, start_block: int, end_block: int, addresses: O=None):
-        pass
+    async def start_in_range(self, data: RangeSearch) -> Optional:
+        logger.error("Start range search")
+        for block_number in range(data.startBlock, data.endBlock):
+            await self.processing_block(block_number=block_number, addresses=data.addresses)
+
+    async def start_in_list_block(self, data: ListSearch) -> Optional:
+        logger.error("Start list search")
+        for block_number in data.listBlock:
+            await self.processing_block(block_number=int(block_number), addresses=data.addresses)
+
+    async def start(self, data: Optional[Start] = None) -> Optional:
+        if data is None:
+            await ElasticController.send_message("Start TRON demon")
+            await self.run()
+        else:
+            if data.addresses is None:
+                addresses = await DatabaseController.get_addresses()
+            else:
+                addresses = data.addresses
+
+            if data.listBlock:
+                await self.start_in_list_block(data=ListSearch(
+                    listBlock=data.listBlock,
+                    addresses=addresses
+                ))
+            elif data.startBlock and data.endBlock is None:
+                await self.start_in_range(data=RangeSearch(
+                    startBlock=data.startBlock,
+                    endBlock=await self.get_node_block_number(),
+                    addresses=addresses
+                ))
+            elif data.startBlock is None and data.endBlock:
+                await self.start_in_range(data=RangeSearch(
+                    startBlock=await self.get_node_block_number(),
+                    endBlock=data.endBlock,
+                    addresses=addresses
+                ))
+            else:
+                await self.start_in_range(data=RangeSearch(
+                    startBlock=data.startBlock,
+                    endBlock=data.endBlock,
+                    addresses=addresses
+                ))
+            logger.error("End search")
