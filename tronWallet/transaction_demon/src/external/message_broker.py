@@ -1,5 +1,5 @@
 import json
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from dataclasses import asdict
 
 import aio_pika
@@ -11,12 +11,21 @@ from config import Config, logger
 
 
 class MessageBroker:
+
     @staticmethod
-    async def send(data: json, query: str) -> bool:
+    async def send(data: json, query: str) -> Optional:
+        connection: Optional[aio_pika.Connection] = None
+        channel: Optional[aio_pika.Channel]
         try:
-            pass
+            connection = await aio_pika.connect_robust(url=Config.RABBITMQ_URL)
+            channel = await connection.channel()
+            await channel.declare_queue(query)
+            await channel.default_exchange.publish(message=aio_pika.Message(body=data), routing_key=query)
         except Exception as error:
-            pass
+            logger.error(f"{error}")
+        finally:
+            if connection is not None:
+                await connection.close()
 
 
 class Balancer:

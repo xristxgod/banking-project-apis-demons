@@ -225,12 +225,12 @@ class Daemon:
                     continue
 
     async def start_in_range(self, data: RangeSearch) -> Optional:
-        logger.error("Start range search")
+        logger.info("Start range search")
         for block_number in range(data.startBlock, data.endBlock):
             await self.processing_block(block_number=block_number, addresses=data.addresses)
 
     async def start_in_list_block(self, data: ListSearch) -> Optional:
-        logger.error("Start list search")
+        logger.info("Start list search")
         for block_number in data.listBlock:
             await self.processing_block(block_number=int(block_number), addresses=data.addresses)
 
@@ -267,4 +267,4 @@ class Daemon:
                     endBlock=data.endBlock,
                     addresses=addresses
                 ))
-            logger.error("End search")
+            logger.info("End search")
