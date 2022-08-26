@@ -31,8 +31,8 @@ class Transaction:
     transactionHash: str                                # Transaction hash/id
     amount: decimal.Decimal                             # Transaction amount
     fee: decimal.Decimal                                # Transaction fee
-    inputs: List[Participant]                           # Sender transaction
-    outputs: List[Participant]                          # Recipient transaction
+    inputs: List[Participant] = field(default=list)     # Sender transaction
+    outputs: List[Participant] = field(default=list)    # Recipient transaction
     token: Optional[str] = field(default=None)          # Token symbol
 
 

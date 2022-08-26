@@ -12,10 +12,11 @@ from .utils import Utils, LastBlock, NotSend
 from .schemas import (
     ProcessingTransaction, SmartContractData, Participant,
     Transaction, BodyTransaction, SendTransactionData, Header,
-    RangeSearch, ListSearch, Start
+    RangeSearch, ListSearch, Start, BalancerMessage
 )
 from .external import (
-    DatabaseController, CoinController, ElasticController, MainApp, Balancer
+    DatabaseController, CoinController, ElasticController,
+    MainApp, Balancer, MessageBroker
 )
 from config import NOT_SEND, Config, decimals, logger
 
@@ -169,17 +170,32 @@ class Daemon:
                 If the transaction was made from the admin, and it was not a token transaction, and the recipient
                 in this transaction was our address, then the transaction was most likely made to pay the commission.
                 """
+                package[1].transactions[0].inputs = [Participant(
+                    address=Config.REPORTING_ADDRESS,
+                    amount=data.transactionPackage.transactions[0].amount + data.transactionPackage.transactions[0].fee
+                )]
+                package[1].transactions[0].outputs = []
+                await MainApp.send(data=package)
             elif sender in ADMIN_ADDRESSES and recipient not in data.addresses:
                 """
                 If the transaction was sent from the admin address, and the recipient is not our address,
                 then most likely these are withdrawal transactions to someone else's wallet.
                 """
+                if data.transactionPackage.transactions[0].transactionHash in data.transactionsHash:
+                    pass
+
+                await MainApp.send(data=package)
             else:
                 """
                 If the recipient is not an admin wallet, then this transaction is from someone
                 else's wallet to our wallet.
                 """
-
+                token = data.transactionPackage.transactions[0].token
+                await MainApp.send(data=package)
+                await Balancer.send(data=BalancerMessage(
+                    address=package[1].address,
+                    network=token if token is not None else "TRX"
+                ))
         except Exception as error:
             logger.error(f"{error}")
             await ElasticController.send_exception(ex=error, message="Send to rabbit error")
@@ -194,7 +210,7 @@ class Daemon:
                 path = os.path.join(NOT_SEND, file_name)
                 async with aiofiles.open(path, 'r') as file:
                     values = await file.read()
-                await MessageBrokerController.send(values=values)
+                await MessageBroker.send(values=values)
                 os.remove(path)
             except Exception as error:
                 logger.error(f"Error: {error}")
