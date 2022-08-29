@@ -1,40 +1,46 @@
 import os
 import logging
-from decimal import Context
-from dotenv import load_dotenv
+import decimal
 
-load_dotenv()
-
-decimals = Context()
-decimals.prec = 18
-
-AdminAddress = os.getenv("AdminWallet")
-ReportingAddress = os.getenv("ReportingAddress")
-AdminPrivateKey = os.getenv("AdminPrivateKey")
-
-API_URL = os.getenv("ApiURL")
-DB_URL = os.getenv('DataBaseURL')
-
-rabbit_url = os.getenv("RabbitMQURL")
-queue = os.getenv("QueueBalancer")
-
-minTokenCost = decimals.create_decimal(os.getenv("MinTokenCost"))
-tokenCostUSDT = decimals.create_decimal(os.getenv('TokenCostUSDT'))
-tokenCostUSDC = decimals.create_decimal(os.getenv('TokenCostUSDC'))
-tokens = {"usdc": tokenCostUSDC, "usdt": tokenCostUSDT}
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.join(ROOT_DIR, "files")
-if "files" not in os.listdir(ROOT_DIR): os.mkdir(BASE_DIR)
-NOT_SEND = os.path.join(BASE_DIR, 'not_send')
-if 'not_send' not in os.listdir(BASE_DIR):  os.mkdir(NOT_SEND)
 
-get_network = lambda token: {"usdt": "tron_trc20_usdt", "usdc": "tron_trc20_usdc"}[token]
 
-ElasticLogServer = os.getenv("ELASTIC_LOG_SERVER")
-ElasticLogin = os.getenv("ELASTIC_LOGIN")
-ElasticPassword = os.getenv("ELASTIC_PASSWORD")
-ElasticLogIndex = os.getenv('ELASTIC_LOG_INDEX')
-ElasticLogIndexEx = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-balancer"
+decimals = decimal.Context()
+decimals.prec = 8
+
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format=u"%(levelname)s:     %(filename)s line:%(lineno)d  %(message)s",
+    level=logging.INFO
+)
+
+
+class Config:
+    API_URL = os.getenv("API_URL")
+
+    DATABASE_URL = os.getenv("DATABASE_URL")
+
+    ELASTIC_LOG_SERVER = os.getenv("ELASTIC_LOG_SERVER")
+    ELASTIC_LOG_INDEX_EX = f"{os.getenv('ELASTIC_LOG_INDEX_EX')}-api"
+    ELASTIC_LOGIN = os.getenv("ELASTIC_LOGIN", "1241244")
+    ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD", "1241244")
+    ELASTIC_LOG_INDEX = os.getenv("ELASTIC_LOG_INDEX")
+
+    NGINX_DOMAIN = os.getenv("NGINX_DOMAIN")
+
+    RABBITMQ_URL = os.getenv("RABBITMQ_URL")
+    BALANCER_QUEUE = os.getenv("BALANCER_QUEUE")
+    MAX_BALANCER_MESSAGE = int(os.getenv("MAX_BALANCER_MESSAGE", 1))
+
+    NETWORK = os.getenv("NETWORK", "TESTNET")
+    NODE_URL = os.getenv("NODE_URL", "http://tron-mainnet.mangobank.elcorp.io:8090")
+    MIN_BALANCE = decimals.create_decimal(os.getenv("MIN_BALANCE_NATIVE", 10))
+
+    ADMIN_WALLET_ADDRESS = os.getenv("ADMIN_WALLET_ADDRESS", "TWCQvcJ2JkWamoXWs7rAf7PiWTYaiB8WHx")
+    ADMIN_WALLET_PRIVATE_KEY = os.getenv("ADMIN_WALLET_PRIVATE_KEY", "53054a7ebbda440df4f15b225def00dc8abc62a4a5a269a7c6023223a31d7032")
+    ADMIN_FEE = os.getenv("ADMIN_FEE", 5.3)
+    ADMIN_FEE_TOKEN = os.getenv("ADMIN_FEE_TOKEN", 18.4)
+
+    REPORTING_ADDRESS = os.getenv("REPORTING_ADDRESS", "TJmV58h1StTogUuVUoogtPoE5i3YPCS7yb")
