@@ -1,4 +1,7 @@
+import json
 import os
+import copy
+import uuid
 import asyncio
 from time import time as timer
 from typing import Optional, List
@@ -32,6 +35,23 @@ class Daemon:
 
     def __init__(self):
         self.core = Core()
+
+    @staticmethod
+    async def convert_transaction(transaction: Transaction) -> Transaction:
+        """
+        :rtype: object
+        """
+        transaction_in_database = await DatabaseController.get_transaction_hash(transaction.transactionHash)
+        if transaction_in_database is not None:
+            transaction.inputs = Participant(
+                address=dict(transaction_in_database["from_wallets"])["address"],
+                amount=decimals.create_decimal(dict(transaction_in_database["from_wallets"])["amount"])
+            )
+            transaction.outputs = Participant(
+                address=dict(transaction_in_database["to_wallets"])["address"],
+                amount=decimals.create_decimal(dict(transaction_in_database["to_wallets"])["amount"])
+            )
+        return transaction
 
     @staticmethod
     async def smart_contract(data: str, address: TAddress) -> Optional[SmartContractData]:
@@ -182,8 +202,8 @@ class Daemon:
                 then most likely these are withdrawal transactions to someone else's wallet.
                 """
                 if data.transactionPackage.transactions[0].transactionHash in data.transactionsHash:
-                    pass
-
+                    package[1].transactions[0] = Daemon.convert_transaction(transaction=package[1].transactions[0])
+                    await Daemon.send_dummy(data=package)
                 await MainApp.send(data=package)
             else:
                 """
@@ -202,6 +222,22 @@ class Daemon:
             await NotSend.save(data=package)
 
     @staticmethod
+    async def send_dummy(data: List[Header, BodyTransaction]) -> Optional:
+        dummy: List[Header, BodyTransaction] = [
+            Header(block=data[0].block, network="tron"),
+            copy.deepcopy(data[1])
+        ]
+        dummy[1].transactions[0].transactionHash = str(uuid.uuid4().hex)
+        dummy[1].transactions[0].amount = dummy[1].transactions[0].fee
+        dummy[1].transactions[0].fee = 0
+        dummy[1].transactions[0].outputs = []
+        dummy[1].transactions[0].inputs = [Participant(
+            address=Config.REPORTING_ADDRESS,
+            amount=dummy[1].transactions[0].amount
+        )]
+        await MainApp.send(data=dummy)
+
+    @staticmethod
     async def resend() -> Optional:
         """Resend data if data in dir > 0"""
         files = os.listdir(NOT_SEND)
@@ -210,7 +246,7 @@ class Daemon:
                 path = os.path.join(NOT_SEND, file_name)
                 async with aiofiles.open(path, 'r') as file:
                     values = await file.read()
-                await MessageBroker.send(values=values)
+                await MessageBroker.send(data=json.loads(values), query=Config.MAIN_APP_QUEUE)
                 os.remove(path)
             except Exception as error:
                 logger.error(f"Error: {error}")
@@ -237,7 +273,7 @@ class Daemon:
                     start_block += pack_size
                     await LastBlock.save(number=start_block)
                 else:
-                    await ElasticController.send_error(message=f"Block {start_block} error!")
+                    await ElasticController.send_error(message=f"Block {start_block} error!", code=1)
                     continue
 
     async def start_in_range(self, data: RangeSearch) -> Optional:
