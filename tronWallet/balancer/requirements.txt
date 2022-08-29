@@ -17,3 +17,4 @@ aiofiles==0.8.0
 asyncpg==0.25.0
 python-dotenv==0.19.1
 art
+tronpy

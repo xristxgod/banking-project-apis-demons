@@ -5,11 +5,16 @@ from typing import Union, Optional, List, Dict, Coroutine
 import aio_pika
 
 from src.inc import Repository
+from src.middleware import user_middleware
 from worker.celery_app import celery_app
 from config import Config, logger
 
 
 class Balancer:
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(Balancer, cls).__new__(cls)
+        return cls.instance
 
     def __init__(self):
         self.repository = Repository()
@@ -24,11 +29,11 @@ class Balancer:
             logger.info(f"Taking message: {msg}")
             if isinstance(msg, dict) and len(msg.keys()) == 2 and msg.get("address") is not None:
                 address, token = msg.get("address"), msg.get("amount")
-            can_go, wait_time = self.repository.can_go(address)
+            can_go, wait_time = self.repository.get(address)
             extra = {"countdown": wait_time} if not can_go and wait_time > 5 else {}
             celery_app.send_task(
                 f'worker.celery_worker.send_transaction',
-                args=[address, token],
+                args=[user_middleware(address), token],
                 **extra
             )
 
