@@ -3,10 +3,10 @@ import asyncio
 import argparse
 from typing import List, Union
 
-from src.utils.types import TronAccountAddress, TokenTRC20
-from src.external.db import get_wallets
-from src.services.to_main_wallet_native import send_to_main_wallet_native
-from src.services.to_main_wallet_token import send_to_main_wallet_token
+from src_1.utils.types import TronAccountAddress, TokenTRC20
+from src_1.external.db import get_wallets
+from src_1.services.to_main_wallet_native import send_to_main_wallet_native
+from src_1.services.to_main_wallet_token import send_to_main_wallet_token
 
 def create_parser():
     """:return: Getting script params"""

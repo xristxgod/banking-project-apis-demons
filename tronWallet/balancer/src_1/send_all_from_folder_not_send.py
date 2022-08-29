@@ -2,7 +2,7 @@ import json
 import os
 from aio_pika import connect_robust, RobustConnection, Channel, Message
 
-from src.utils.is_error import is_error
+from src_1.utils.is_error import is_error
 from config import rabbit_url, queue, logger, NOT_SEND
 
 

@@ -17,10 +17,10 @@ import unittest
 import random
 import decimal
 
-from src.services.inc.get_balance import get_balance
-from src.services.inc.get_optimal_fee import get_optimal_fee
-from src.services.inc.send_transaction import create_transaction
-from src.external.db import get_private_key, get_wallets
+from src_1.services.inc.get_balance import get_balance
+from src_1.services.inc.get_optimal_fee import get_optimal_fee
+from src_1.services.inc.send_transaction import create_transaction
+from src_1.external.db import get_private_key, get_wallets
 
 from config import AdminAddress, ReportingAddress, decimals
 

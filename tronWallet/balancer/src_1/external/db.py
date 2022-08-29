@@ -2,8 +2,8 @@ from typing import Union, List
 
 from asyncpg import connect
 
-from src.utils.types import TronAccountPrivateKey, TronAccountAddress
-from src.utils.es_send import send_exception_to_kibana
+from src_1.utils.types import TronAccountPrivateKey, TronAccountAddress
+from src_1.utils.es_send import send_exception_to_kibana
 from config import DB_URL, logger
 
 

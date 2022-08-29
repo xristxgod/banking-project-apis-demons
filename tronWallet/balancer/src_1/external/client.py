@@ -2,7 +2,7 @@ from typing import Union, Dict
 
 import aiohttp
 
-from src.utils.es_send import send_exception_to_kibana
+from src_1.utils.es_send import send_exception_to_kibana
 from config import API_URL, logger
 
 

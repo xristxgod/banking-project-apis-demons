@@ -4,10 +4,10 @@ from typing import Dict
 from aio_pika import connect_robust, IncomingMessage, RobustConnection, Channel
 from asyncio import sleep as async_sleep
 
-from src.utils.types import TronAccountAddress, TokenTRC20
-from src.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
-from src.services.to_main_wallet_native import send_to_main_wallet_native
-from src.services.to_main_wallet_token import send_to_main_wallet_token
+from src_1.utils.types import TronAccountAddress, TokenTRC20
+from src_1.utils.es_send import send_msg_to_kibana, send_exception_to_kibana
+from src_1.services.to_main_wallet_native import send_to_main_wallet_native
+from src_1.services.to_main_wallet_token import send_to_main_wallet_token
 from config import logger, rabbit_url, queue, ReportingAddress, AdminAddress
 
 adminAddresses = [AdminAddress, ReportingAddress]

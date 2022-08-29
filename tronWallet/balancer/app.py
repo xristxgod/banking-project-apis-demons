@@ -1,5 +1,5 @@
 import asyncio
-from src.sending_to_main_wallet import sending_to_main_wallet
+from src_1.sending_to_main_wallet import sending_to_main_wallet
 
 async def main(loop):
     await asyncio.gather(*[

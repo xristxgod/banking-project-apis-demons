@@ -12,9 +12,9 @@ python -m unittest test_balancer_transaction.TestBalancerTransaction.test_get_tr
 """
 import unittest
 
-from src.services.helper.activate_account import activate_account
-from src.services.helper.get_trx_for_fee import get_trx_for_fee
-from src.services.inc.send_transaction import create_transaction, sign_send_transaction
+from src_1.services.helper.activate_account import activate_account
+from src_1.services.helper.get_trx_for_fee import get_trx_for_fee
+from src_1.services.inc.send_transaction import create_transaction, sign_send_transaction
 
 from config import AdminAddress, AdminPrivateKey, ReportingAddress, decimals
 

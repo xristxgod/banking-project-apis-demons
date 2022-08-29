@@ -1,9 +1,9 @@
 from typing import Dict
 from decimal import Decimal
 
-from src.external.client import get_request
-from src.services.helper.activate_account import activate_account
-from src.utils.types import TronAccountAddress
+from src_1.external.client import get_request
+from src_1.services.helper.activate_account import activate_account
+from src_1.utils.types import TronAccountAddress
 from config import decimals
 
 
