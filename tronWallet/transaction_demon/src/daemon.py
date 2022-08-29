@@ -10,7 +10,7 @@ import aiofiles
 from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
 
-from .core import Core
+from .core import Core, SearchTransactionBlock
 from .utils import Utils, LastBlock, NotSend
 from .schemas import (
     ProcessingTransaction, SmartContractData, Participant,
@@ -35,6 +35,7 @@ class Daemon:
 
     def __init__(self):
         self.core = Core()
+        self.searcher = SearchTransactionBlock()
 
     @staticmethod
     async def convert_transaction(transaction: Transaction) -> Transaction:
@@ -276,12 +277,12 @@ class Daemon:
                     await ElasticController.send_error(message=f"Block {start_block} error!", code=1)
                     continue
 
-    async def start_in_range(self, data: RangeSearch) -> Optional:
+    async def search_range(self, data: RangeSearch) -> Optional:
         logger.info("Start range search")
         for block_number in range(data.startBlock, data.endBlock):
             await self.processing_block(block_number=block_number, addresses=data.addresses)
 
-    async def start_in_list_block(self, data: ListSearch) -> Optional:
+    async def search_list_block(self, data: ListSearch) -> Optional:
         logger.info("Start list search")
         for block_number in data.listBlock:
             await self.processing_block(block_number=int(block_number), addresses=data.addresses)
@@ -295,26 +296,27 @@ class Daemon:
                 addresses = await DatabaseController.get_addresses()
             else:
                 addresses = data.addresses
-
+            if data.listBlock is None and data.startBlock is None and data.endBlock is None:
+                data.listBlock = self.searcher.search(addresses=addresses)
             if data.listBlock:
-                await self.start_in_list_block(data=ListSearch(
+                await self.search_list_block(data=ListSearch(
                     listBlock=data.listBlock,
                     addresses=addresses
                 ))
             elif data.startBlock and data.endBlock is None:
-                await self.start_in_range(data=RangeSearch(
+                await self.search_range(data=RangeSearch(
                     startBlock=data.startBlock,
                     endBlock=await self.get_node_block_number(),
                     addresses=addresses
                 ))
             elif data.startBlock is None and data.endBlock:
-                await self.start_in_range(data=RangeSearch(
+                await self.search_range(data=RangeSearch(
                     startBlock=await self.get_node_block_number(),
                     endBlock=data.endBlock,
                     addresses=addresses
                 ))
             else:
-                await self.start_in_range(data=RangeSearch(
+                await self.search_range(data=RangeSearch(
                     startBlock=data.startBlock,
                     endBlock=data.endBlock,
                     addresses=addresses
