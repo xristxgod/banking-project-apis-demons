@@ -6,7 +6,7 @@ import aio_pika
 
 from src.inc import Repository
 from src.middleware import user_middleware
-from worker.celery_app import celery_app
+from worker import app
 from config import Config, logger
 
 
@@ -31,9 +31,9 @@ class Balancer:
                 address, token = msg.get("address"), msg.get("amount")
             can_go, wait_time = self.repository.get(address)
             extra = {"countdown": wait_time} if not can_go and wait_time > 5 else {}
-            celery_app.send_task(
+            app.send_task(
                 f'worker.celery_worker.send_transaction',
-                args=[user_middleware(address), token],
+                args=[await user_middleware(address), token],
                 **extra
             )
 

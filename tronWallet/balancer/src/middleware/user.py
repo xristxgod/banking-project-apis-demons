@@ -47,8 +47,9 @@ class UserMiddleware:
         return self.tokens
 
 
-async def middleware(address: TAddress) -> UserMiddleware:
-    private_key: str = await DatabaseController.get_private_key(address=address)
+async def middleware(address: TAddress, private_key: Optional[str] = None) -> UserMiddleware:
+    if private_key is None:
+        private_key: str = await DatabaseController.get_private_key(address=address)
     balance_native: decimal.Decimal = await core.get_account_balance(addr=address)
     tokens: List[Token] = []
     for coin in CoinController.get_all_token():

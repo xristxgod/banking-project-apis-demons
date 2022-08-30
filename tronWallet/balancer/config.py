@@ -19,6 +19,7 @@ logging.basicConfig(
 
 class Config:
     API_URL = os.getenv("API_URL")
+    API_AUTH_TOKEN = os.getenv("API_AUTH_TOKEN")
 
     DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -46,3 +47,6 @@ class Config:
     ADMIN_FEE_TOKEN = os.getenv("ADMIN_FEE_TOKEN", 18.4)
 
     REPORTING_ADDRESS = os.getenv("REPORTING_ADDRESS", "TJmV58h1StTogUuVUoogtPoE5i3YPCS7yb")
+
+    MIN_BALANCE_FOR_TRANSFER_NATIVE = decimals.create_decimal(os.getenv("MIN_BALANCE_FOR_TRANSFER_NATIVE", 17.2))
+    MIN_BALANCE_FOR_TRANSFER_TOKEN = decimals.create_decimal(os.getenv("MIN_BALANCE_FOR_TRANSFER_TOKEN", 4.2))
