@@ -3,6 +3,7 @@ from typing import Optional
 
 import aiofiles
 from hdwallet import HDWallet, symbols
+from hdwallet.cryptocurrencies import TronMainnet
 from mnemonic.mnemonic import Mnemonic
 
 from src.settings import settings
@@ -29,12 +30,24 @@ class WalletIndex:
                 await file.write(str(index))
 
 
-async def create_wallet(is_admin: bool = True, mnemonic: Optional[str] = None) -> dict:
-    hdwallet = HDWallet(symbols.TRX)
+async def create_wallet(is_admin: bool = True, mnemonic: Optional[str] = None, index: int = 1) -> dict:
+    hdwallet = HDWallet(symbols.TRX, cryptocurrency=TronMainnet)
 
     if is_admin:
+        index = await WalletIndex.get()
         hdwallet.from_mnemonic(settings.CENTRAL_WALLET['mnemonic'])
-        hdwallet.from_index()
+        hdwallet.from_index(index)
     else:
         mnemonic = mnemonic or Mnemonic(language='english').generate(256)
         hdwallet.from_mnemonic(mnemonic)
+        hdwallet.from_index(index)
+
+    if is_admin:
+        await WalletIndex.set(index)
+
+    return dict(
+        address=hdwallet.p2pkh_address(),
+        public_key=hdwallet.public_key(),
+        private_key=hdwallet.private_key(),
+        mnemonic=mnemonic
+    )

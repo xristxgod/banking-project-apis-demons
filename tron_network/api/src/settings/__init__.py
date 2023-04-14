@@ -17,12 +17,11 @@ class Settings(BaseSettings):
     NODE_URL: str = NODE_URL
     CENTRAL_WALLET: dict = take_central_wallet_info(CENTRAL_WALLET_CONFIG)
 
-    @classmethod
-    async def setup(cls):
-        if not cls.CONFIG_DIR.is_dir():
-            cls.CONFIG_DIR.mkdir()
-        if not cls.WALLET_INDEX_FILE.is_file():
-            open(cls.WALLET_INDEX_FILE, 'r').close()
+    async def setup(self):
+        if not self.CONFIG_DIR.is_dir():
+            self.CONFIG_DIR.mkdir()
+        if not self.WALLET_INDEX_FILE.is_file():
+            open(self.WALLET_INDEX_FILE, 'w').close()
 
 
 settings = Settings()

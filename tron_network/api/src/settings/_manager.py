@@ -23,4 +23,4 @@ def take_central_wallet_info(central_wallet_config: dict) -> dict:
         case None:
             central_wallet_info = central_wallet_config.get('wallet')
 
-    return central_wallet_config
+    return central_wallet_info
