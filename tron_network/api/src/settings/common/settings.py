@@ -8,6 +8,7 @@ CONFIG_DIR = ROOT_DIR / 'config'
 WALLET_INDEX_FILE = CONFIG_DIR / 'index.txt'
 
 NODE_URL = os.getenv('NODE_URL')
+GLOBAL_FEE_LIMIT = 40_000_000
 
 CENTRAL_WALLET_CONFIG = {
     'manager': 'SecretStorage',

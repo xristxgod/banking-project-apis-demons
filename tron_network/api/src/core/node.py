@@ -4,9 +4,13 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 from src.settings import settings
 from src.core.contract import Contract
+from src.utils import from_sun, to_sun
 
 
 class Node:
+    to_sun = staticmethod(to_sun)
+    from_sun = staticmethod(from_sun)
+
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
             setattr(cls, 'instance', super(cls).__new__(*args, **kwargs))

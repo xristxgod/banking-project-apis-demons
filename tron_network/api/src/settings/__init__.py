@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     NODE_URL: str = NODE_URL
     CENTRAL_WALLET: dict = take_central_wallet_info(CENTRAL_WALLET_CONFIG)
+    GLOBAL_FEE_LIMIT = GLOBAL_FEE_LIMIT
 
     async def setup(self):
         if not self.CONFIG_DIR.is_dir():

@@ -1,6 +1,13 @@
 from fastapi import FastAPI
 
+from src import exceptions
+
 app = FastAPI()
+
+
+@app.exception_handler(exceptions.CurrencyNotFound)
+async def currency_not_found_exception_handler(request, exc):
+    pass
 
 
 @app.on_event('startup')
