@@ -31,7 +31,7 @@ class Transaction:
                 amount=amount,
                 fee_limit=fee_limit,
             )
-
+        t = await transaction.build()
         raise await transaction.build()
 
     async def freeze(self, owner_address: TAddress, amount: decimal.Decimal,

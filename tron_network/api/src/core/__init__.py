@@ -10,5 +10,8 @@ class NodeController:
     async def update(self):
         await self.core.update_contracts()
 
+    def has_currency(self, currency: str) -> bool:
+        return self.core.contracts.get(currency) is not None
+
 
 controller = NodeController()

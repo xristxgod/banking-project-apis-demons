@@ -42,10 +42,11 @@ async def create_wallet(is_admin: bool = True, mnemonic: Optional[str] = None, i
         hdwallet.from_mnemonic(mnemonic)
         hdwallet.from_index(index)
 
-    if is_admin:
+    if is_admin and index == 1:
         await WalletIndex.set(index)
 
     return dict(
+        index=index,
         address=hdwallet.p2pkh_address(),
         public_key=hdwallet.public_key(),
         private_key=hdwallet.private_key(),
