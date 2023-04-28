@@ -12,8 +12,8 @@ class BaseStorage(abc.ABC):
 
 
 class VaultStorage(BaseStorage):
-    url = os.getenv('VAULT_URL')
-    storage_paths = tuple(os.getenv('VAULT_STORAGE_PATHS'))
+    url = os.getenv('VAULT_URL', '')
+    storage_paths = tuple(os.getenv('VAULT_STORAGE_PATHS', []))
 
     auth_data = {
         'role_id': os.getenv('VAULT_ROLE_ID'),
