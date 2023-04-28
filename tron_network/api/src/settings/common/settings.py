@@ -9,6 +9,11 @@ WALLET_INDEX_FILE = CONFIG_DIR / 'index.txt'
 
 NODE_URL = os.getenv('NODE_URL')
 GLOBAL_FEE_LIMIT = 40_000_000
+IS_ENCODE = True
+ENCODE_SECRET_KEY_CONFIG = {
+    'manager': 'SecretStorage',
+    'value': os.getenv('ENCODE_SECRET_KEY_LABEL'),
+}
 
 CENTRAL_WALLET_CONFIG = {
     'manager': 'SecretStorage',
