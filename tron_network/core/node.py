@@ -3,7 +3,7 @@ import json
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
-from settings import env
+from settings import settings
 from core.contract import Contract
 
 
@@ -14,7 +14,7 @@ class Node:
         return getattr(cls, 'instance')
 
     def __init__(self):
-        self.node = AsyncTron(provider=AsyncHTTPProvider(env.NODE_URL))
+        self.node = AsyncTron(provider=AsyncHTTPProvider(settings.NODE_URL))
 
         self._contracts: dict[str, Contract] = {}
 

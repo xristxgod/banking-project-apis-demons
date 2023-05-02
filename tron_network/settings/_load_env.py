@@ -6,12 +6,12 @@ from typing import Type
 import requests
 
 
-class BaseStorage(abc.ABC):
+class BaseLoadFrom(abc.ABC):
     @abc.abstractmethod
     def get_envs(self) -> dict: ...
 
 
-class VaultStorage(BaseStorage):
+class LoadFromVault(BaseLoadFrom):
     url = os.getenv('VAULT_URL', '')
     storage_paths = tuple(os.getenv('VAULT_STORAGE_PATHS', []))
 
@@ -52,40 +52,10 @@ class VaultStorage(BaseStorage):
         return envs
 
 
-class LoadSettings:
-    def __init__(self, storage_cls: Type[BaseStorage]):
-        self._storage = storage_cls()
-
-        self._raw_env = None
-        self._settings_obj = None
-
-        self.last_update_time = None
-
-        self.update()
-
-    def update(self):
-        self._raw_env = self._storage.get_envs()
-        self._create_obj()
-        self.last_update_time = int(time.time())
-
-    def _create_obj(self):
-        self._settings_obj = type('Env', (), {})
-        for key, value in self._raw_env.items():
-            setattr(self._settings_obj, key.upper(), value)
-
-        def settings_getattr(obj, item):
-            try:
-                return object.__getattribute__(obj, item)
-            except AttributeError:
-                raise AttributeError(f'Env: {item} not found')
-
-        self._settings_obj.__getattribute__ = settings_getattr
-
-    @property
-    def obj(self) -> dict:
-        if not self._settings_obj:
-            self._create_obj()
-        return self._settings_obj
+class EnvVault:
+    def __init__(self, load_cls: Type[BaseLoadFrom]):
+        self._storage = load_cls()
+        self.env = self._storage.get_envs()
 
 
-load_settings = LoadSettings(storage_cls=VaultStorage)
+env_vault = EnvVault(load_cls=LoadFromVault)
