@@ -1,4 +1,4 @@
-from core.base import BaseNodeService
+from core.crypto.base import BaseNodeService
 from apps.common import schemas
 
 

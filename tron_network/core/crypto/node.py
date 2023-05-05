@@ -4,7 +4,7 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
 from settings import settings
-from core.contract import Contract
+from core.crypto.contract import Contract
 
 
 class Node:

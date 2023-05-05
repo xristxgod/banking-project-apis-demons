@@ -1,4 +1,4 @@
-from core.node import Node
+from core.crypto.node import Node
 
 __all__ = (
     'BaseNodeService',

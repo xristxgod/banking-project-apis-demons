@@ -1,3 +1,3 @@
-from .node import Node
+from core.crypto.node import Node
 
 core = Node()
