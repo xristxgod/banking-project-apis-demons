@@ -7,3 +7,4 @@ python_files='tests*.py'
 filterwarnings = [
   'ignore::DeprecationWarning:'
 ]
+env='NETWORK=TEST'

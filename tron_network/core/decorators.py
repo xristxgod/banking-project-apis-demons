@@ -1,11 +1,15 @@
 import asyncio
 import functools
-from typing import Callable
+from typing import Callable, Optional
+
+from cryptography.fernet import Fernet
 
 import settings
 
+fernet = Fernet(settings.CODER_SECRET_KEY)
 
-def decode(*, values: list, type: str = object, take: str = 'request'):
+
+def decode(*, values: Optional[list] = None, type=object, take: str = 'request'):
     """
     This function decodes the response or result
 
@@ -16,15 +20,26 @@ def decode(*, values: list, type: str = object, take: str = 'request'):
     use_this: bool = settings.USE_CODER
 
     def decode_func(value: str) -> str:
-        # TODO realize this
-        return value
+        return fernet.decrypt(value.encode()).decode()
 
     def decode_request(**kwargs):
-        for value in values:
-            kwargs[value] = decode_func(kwargs.pop(value))
+        for k, v in kwargs.items():
+            if type == str:
+                kwargs[k] = decode_func(v)
+                continue
+
+            for value in values:
+                if type == object:
+                    setattr(v, value, decode_func(getattr(v, value)))
+                elif type == dict:
+                    v[value] = decode_func(v[value])
+            kwargs[k] = v
         return kwargs
 
     def decode_response(response: object | dict):
+        if isinstance(response, str):
+            return decode_func(response)
+
         for value in values:
             if type == object:
                 setattr(response, value, decode_func(getattr(response, value)))
@@ -59,26 +74,37 @@ def decode(*, values: list, type: str = object, take: str = 'request'):
     return decorator
 
 
-def encode(*, values: list, type=object, take: str = 'request'):
+def encode(*, values: Optional[list] = None, type=object, take: str = 'request'):
     """
     This function encodes the response or result
 
     :param values: what needs to be encoded
-    :param type: object or dict
+    :param type: object or dict or str
     :param take: request or response
     """
     use_this: bool = settings.USE_CODER
 
     def encode_func(value: str) -> str:
-        # TODO realize this
-        return value
+        return fernet.encrypt(value.encode()).decode()
 
     def encode_request(**kwargs):
-        for value in values:
-            kwargs[value] = encode_func(kwargs.pop(value))
+        for k, v in kwargs.items():
+            if type == str:
+                kwargs[k] = encode_func(v)
+                continue
+
+            for value in values:
+                if type == object:
+                    setattr(v, value, encode_func(getattr(v, value)))
+                elif type == dict:
+                    v[value] = encode_func(v[value])
+            kwargs[k] = v
         return kwargs
 
     def encode_response(response: object | dict):
+        if isinstance(response, str):
+            return encode_func(response)
+
         for value in values:
             if type == object:
                 setattr(response, value, encode_func(getattr(response, value)))
