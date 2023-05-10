@@ -87,23 +87,23 @@ async def test_allowance(currency: str, amount: decimal.Decimal, mocker):
 
 @pytest.mark.asyncio
 class TestTransfer:
+    create_transfer_obj = services.CreateTransfer
 
     @pytest.mark.parametrize(
         'method, parameter, bandwidth_balance, energy_balance, is_to_address_active, energy_used',
-        [
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'TRX',
-                    },
-                    0,
-                    1500,
-                    True,
-                    0,
-            ),
+        [(
+                FEE_METHOD_TYPES.TRANSFER,
+                {
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'amount': decimal.Decimal(15.1),
+                    'currency': 'TRX',
+                },
+                0,
+                1500,
+                True,
+                0,
+        ),
             (
                     FEE_METHOD_TYPES.TRANSFER,
                     {
@@ -216,3 +216,84 @@ class TestTransfer:
         assert response.fee == fee
         assert response.bandwidth == bandwidth
         assert response.energy == energy
+
+    @pytest.mark.parametrize(
+        'body, fee, native_balance, token_balance, exception',
+        [(
+                schemas.BodyCreateTransfer(
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(12.4),
+                    currency='TRX',
+                ),
+                0,
+                decimal.Decimal(100),
+                None,
+                None,
+        ), (
+                schemas.BodyCreateTransfer(
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(100),
+                    currency='TRX',
+                ),
+                decimal.Decimal(0.267),
+                decimal.Decimal(100),
+                None,
+                create_transfer_obj.InvalidCreateTransfer,
+        ), (
+                schemas.BodyCreateTransfer(
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(15),
+                    currency='USDT',
+                ),
+                decimal.Decimal(13.99),
+                decimal.Decimal(100),
+                decimal.Decimal(170),
+                None,
+        ), (
+                schemas.BodyCreateTransfer(
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(200),
+                    currency='USDT',
+                ),
+                decimal.Decimal(13.99),
+                decimal.Decimal(100),
+                decimal.Decimal(170),
+                create_transfer_obj.InvalidCreateTransfer,
+        ), (
+                schemas.BodyCreateTransfer(
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(100),
+                    currency='USDT',
+                ),
+                decimal.Decimal(13.99),
+                decimal.Decimal(12),
+                decimal.Decimal(170),
+                create_transfer_obj.InvalidCreateTransfer,
+        )]
+    )
+    async def test_valid_create_transfer(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
+                                         native_balance: decimal.Decimal, token_balance: decimal.Decimal,
+                                         exception: Optional[Exception], mocker):
+        mocker.patch(
+            'tronpy.async_tron.AsyncTron.get_account_balance',
+            return_value=native_balance,
+        )
+        mocker.patch(
+            'core.crypto.contract.Contract.balance_of',
+            return_value=token_balance,
+        )
+
+        if not exception:
+            assert await self.create_transfer_obj.valid_create_transfer(
+                body=body, fee=fee
+            ) is None
+        else:
+            with pytest.raises(exception) as err:
+                await self.create_transfer_obj.valid_create_transfer(
+                    body=body, fee=fee
+                )

@@ -55,7 +55,7 @@ class CreateTransfer:
             has_native = has_amount = (balance - (body.amount + fee)) >= 0
         else:
             balance = await body.contract.balance_of(body.from_address)
-            has_native = native_balance - fee
+            has_native = (native_balance - fee) > 0
             has_amount = (balance - body.amount) >= 0
 
         if not all([has_amount, has_native]):
