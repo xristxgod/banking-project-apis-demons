@@ -130,7 +130,7 @@ class BodySendTransaction(BaseModel):
 
     @property
     def extra(self) -> dict:
-        return self.payload_dict.get('extra_fields')
+        return self.payload_dict.get('extra')
 
 
 class ResponseSendTransaction(BaseModel):

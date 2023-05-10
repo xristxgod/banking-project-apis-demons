@@ -51,7 +51,7 @@ async def create_transfer(body: schemas.BodyCreateTransfer):
     response_model=schemas.ResponseSendTransaction,
 )
 async def send_transaction(body: schemas.BodySendTransaction):
-    return await services.send_transaction(body)
+    return await services.SendTransaction.send_transaction(body)
 
 
 @router.post(

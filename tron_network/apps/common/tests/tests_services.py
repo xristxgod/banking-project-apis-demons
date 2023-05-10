@@ -1,14 +1,16 @@
+import uuid
+import time
 import decimal
 from typing import Optional
 
 import pytest
 
 from core.crypto.calculator import FEE_METHOD_TYPES
-from core.crypto.utils import from_sun
+from core.crypto.utils import from_sun, to_sun
 from apps.common import schemas
 from apps.common import services
 
-from .factories import fake_address, create_fake_contract
+from .factories import fake_private_key, fake_address, create_fake_contract
 
 
 @pytest.mark.asyncio
@@ -345,7 +347,7 @@ class TestTransfer:
         assert isinstance(response, schemas.ResponseCreateTransfer)
         assert response.payload_dict == {
             'data': {},
-            'extra_fields': {
+            'extra': {
                 'amount': str(body.amount),
                 'from_address': body.from_address,
                 'to_address': body.to_address,
@@ -354,3 +356,83 @@ class TestTransfer:
         }
 
         assert response.commission == commission
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    'payload, transaction_info',
+    [(
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(12.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'TRX',
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+            }
+    ), (
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(122.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'USDT',
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+                'fee': to_sun(decimal.Decimal(12.2)),
+            }
+    )]
+)
+async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
+    import json
+    from tronpy.keys import PrivateKey
+
+    private_key = fake_private_key()
+
+    body = schemas.BodySendTransaction(
+        payload=json.dumps(payload, default=str),
+        private_key=private_key,
+    )
+
+    assert isinstance(body.private_key_obj, PrivateKey)
+    assert body.payload_dict == json.loads(json.dumps(payload, default=str))
+    assert body.extra == json.loads(json.dumps(payload['extra'], default=str))
+
+    mocker.patch(
+        'apps.common.schemas.BodySendTransaction.create_transaction_obj',
+        return_value=None,
+    )
+    # There is no point in testing, the standard functionality is used, which has
+    # already been tested in the `tronpy` library itself
+    mocker.patch(
+        'apps.common.services.SendTransaction._send_transaction',
+        return_value=transaction_info,
+    )
+    obj = services.SendTransaction
+
+    response = await obj.send_transaction(body)
+
+    assert isinstance(response, schemas.ResponseSendTransaction)
+
+    fee = transaction_info.get('fee', 0)
+    if fee > 0:
+        fee = from_sun(fee)
+
+    assert response == schemas.ResponseSendTransaction(
+        transaction_id=transaction_info['id'],
+        timestamp=transaction_info['blockTimeStamp'],
+        fee=fee,
+        amount=payload['extra']['amount'],
+        from_address=payload['extra']['from_address'],
+        to_address=payload['extra']['to_address'],
+        currency=payload['extra']['currency'],
+    )

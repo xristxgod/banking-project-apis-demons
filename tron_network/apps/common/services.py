@@ -1,5 +1,8 @@
-import decimal
 import json
+import decimal
+
+from tronpy.keys import PrivateKey
+from tronpy.async_tron import AsyncTransaction
 
 from core.crypto import node
 from core.crypto.utils import from_sun
@@ -98,7 +101,7 @@ class CreateTransfer:
 
         payload = {
             'data': created_transaction_dict,
-            'extra_fields': {
+            'extra': {
                 'amount': body.amount,
                 'from_address': body.from_address,
                 'to_address': body.to_address,
@@ -112,26 +115,32 @@ class CreateTransfer:
         )
 
 
-async def send_transaction(body: schemas.BodySendTransaction) -> schemas.ResponseSendTransaction:
-    created_transaction = await body.create_transaction_obj()
+class SendTransaction:
+    @classmethod
+    async def _send_transaction(cls, private_key_obj: PrivateKey, transaction: AsyncTransaction) -> dict:
+        signed_transaction = transaction.sign(priv_key=private_key_obj)
+        transaction = await signed_transaction.broadcast()
+        return await transaction.wait()
 
-    signed_transaction = created_transaction.sign(priv_key=body.private_key_obj)
-    transaction = await signed_transaction.broadcast()
-    transaction_info = await transaction.wait()
+    @classmethod
+    async def send_transaction(cls, body: schemas.BodySendTransaction) -> schemas.ResponseSendTransaction:
+        created_transaction = await body.create_transaction_obj()
 
-    fee = transaction_info.get('fee', 0)
-    if fee > 0:
-        fee = from_sun(fee)
+        transaction_info = await cls._send_transaction(body.private_key_obj, created_transaction)
 
-    return schemas.ResponseSendTransaction(
-        transaction_id=transaction_info['id'],
-        timestamp=transaction_info['blockTimeStamp'],
-        fee=fee,
-        amount=body.extra.get('amount'),
-        from_address=body.extra.get('from_address'),
-        to_address=body.extra.get('to_address'),
-        currency=body.extra.get('currency'),
-    )
+        fee = transaction_info.get('fee', decimal.Decimal(0))
+        if fee > 0:
+            fee = from_sun(fee)
+
+        return schemas.ResponseSendTransaction(
+            transaction_id=transaction_info['id'],
+            timestamp=transaction_info['blockTimeStamp'],
+            fee=fee,
+            amount=decimal.Decimal(body.extra.get('amount')),
+            from_address=body.extra.get('from_address'),
+            to_address=body.extra.get('to_address'),
+            currency=body.extra.get('currency'),
+        )
 
 
 async def fee_calculator(body: schemas.BodyCommission, method: FEE_METHOD_TYPES) -> schemas.ResponseCommission:
