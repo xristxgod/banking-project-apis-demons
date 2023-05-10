@@ -4,8 +4,7 @@ from typing import Optional
 
 from tronpy.tron import TAddress, PrivateKey
 from tronpy.async_tron import AsyncTransaction
-from pydantic import BaseModel, Field, ValidationError
-from pydantic.class_validators import validator
+from pydantic import BaseModel, Field, validator
 
 import settings
 from core.crypto import node
@@ -46,7 +45,7 @@ class BodyWalletBalance(CurrencyMixin, BaseModel):
     def correct_currency(cls, currency: str):
         currency = currency.upper()
         if currency != 'TRX' and not node.has_currency(currency):
-            raise ValidationError(f'Currency: {currency} not found')
+            raise ValueError(f'Currency: {currency} not found')
         return currency
 
     @validator('address')
@@ -67,7 +66,7 @@ class BodyAllowance(CurrencyMixin, BaseModel):
     def correct_currency(cls, currency: str):
         currency = currency.upper()
         if not node.has_currency(currency):
-            raise ValidationError(f'Currency: {currency} not found')
+            raise ValueError(f'Currency: {currency} not found')
         return currency
 
     @validator('owner_address', 'spender_address')
@@ -115,12 +114,17 @@ class BodySendTransaction(BaseModel):
     extra: dict = Field(default_factory=dict)
     private_key: str
 
-    def create_transaction_obj(self) -> AsyncTransaction:
-        return AsyncTransaction(**json.loads(self.payload), client=node.client)
+    async def create_transaction_obj(self) -> AsyncTransaction:
+        data = json.loads(self.payload).get('data')
+        return await AsyncTransaction.from_json(data, client=node.client)
 
     @property
     def private_key_obj(self):
         return PrivateKey(private_key_bytes=bytes.fromhex(self.private_key))
+
+    @property
+    def extra_fields(self) -> dict:
+        return json.loads(self.payload).get('extra_fields')
 
 
 class ResponseSendTransaction(BaseModel):
@@ -133,15 +137,5 @@ class ResponseSendTransaction(BaseModel):
     currency: str = Field(default='TRX')
 
 
-class BodyCommission(BaseModel.Config):
+class BodyCommission(BaseModel):
     parameter: dict
-
-    class Config:
-        fields = {
-            'parameter': {
-                'from_address': 'FromTronAddress',
-                'to_address': 'ToTronAddress',
-                'amount': 1.2,
-                'currency': 'USDT',
-            }
-        }

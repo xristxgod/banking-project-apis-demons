@@ -23,5 +23,9 @@ async def connect(config: dict = settings.DATABASE_CONFIG):
     await Tortoise.init(config=config)
 
 
+async def disconnect():
+    await Tortoise.close_connections()
+
+
 async def drop():
     await Tortoise._drop_databases()

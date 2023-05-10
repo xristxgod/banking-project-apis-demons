@@ -91,22 +91,26 @@ class CreateTransfer:
         )
         created_transaction = await transaction.build()
 
-        return schemas.ResponseCreateTransfer(
-            payload=json.dumps(created_transaction.to_json()),
-            commission=schemas.ResponseCommission(**commission),
-            extra={
+        payload = {
+            'data': created_transaction.to_json(),
+            'extra_fields': {
                 'amount': body.amount,
                 'from_address': body.from_address,
                 'to_address': body.to_address,
                 'currency': body.currency,
             }
+        }
+
+        return schemas.ResponseCreateTransfer(
+            payload=json.dumps(payload, default=str),
+            commission=schemas.ResponseCommission(**commission),
         )
 
 
 async def send_transaction(body: schemas.BodySendTransaction) -> schemas.ResponseSendTransaction:
-    created_transaction = body.create_transaction_obj()
+    created_transaction = await body.create_transaction_obj()
 
-    signed_transaction = created_transaction.sign(body.private_key_obj)
+    signed_transaction = created_transaction.sign(priv_key=body.private_key_obj)
     transaction = await signed_transaction.broadcast()
     transaction_info = await transaction.wait()
 
@@ -118,10 +122,10 @@ async def send_transaction(body: schemas.BodySendTransaction) -> schemas.Respons
         transaction_id=transaction_info['id'],
         timestamp=transaction_info['blockTimeStamp'],
         fee=fee,
-        amount=body.extra.get('amount'),
-        from_address=body.extra.get('from_address'),
-        to_address=body.extra.get('to_address'),
-        currency=body.extra.get('currency'),
+        amount=body.extra_fields.get('amount'),
+        from_address=body.extra_fields.get('from_address'),
+        to_address=body.extra_fields.get('to_address'),
+        currency=body.extra_fields.get('currency'),
     )
 
 

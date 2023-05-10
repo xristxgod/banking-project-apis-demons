@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 from fastapi.exceptions import HTTPException
 
 from core.crypto.calculator import FEE_METHOD_TYPES
@@ -18,7 +18,7 @@ async def create_wallet(body: schemas.BodyCreateWallet):
 
 @router.post(
     '/balance',
-    response_model=schemas.ResponseCreateWallet,
+    response_model=schemas.ResponseWalletBalance,
 )
 async def wallet_balance(body: schemas.BodyWalletBalance):
     return await services.wallet_balance(body)
@@ -59,4 +59,4 @@ async def send_transaction(body: schemas.BodySendTransaction):
     response_model=schemas.ResponseCommission,
 )
 async def fee_calculator(body: schemas.BodyCommission, method: FEE_METHOD_TYPES = FEE_METHOD_TYPES.TRANSFER):
-    return await services.fee_calculator(body, method)
+    return await services.fee_calculator(body, method=method)
