@@ -14,9 +14,11 @@ APPS_MODELS = (
     'core.crypto.models',
 )
 
+DATABASE_PATH = CONFIG_DIR / 'db.db'
+
 DATABASE_CONFIG = {
     'connections': {
-        'master': f'sqlite:///{CONFIG_DIR}/db.db',
+        'master': f'sqlite:///{DATABASE_PATH}',
     },
     'apps': {
         'models': {
