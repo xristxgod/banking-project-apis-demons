@@ -3,6 +3,7 @@ from tronpy.exceptions import AddressNotFound
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
+from core.crypto import models
 from core.crypto.abi import ABI
 from core.crypto.contract import Contract
 from core.crypto.calculator import FeeCalculator
@@ -27,14 +28,22 @@ class Node:
 
         self.fee_calculator = FeeCalculator(self)
 
-        self.update_contract()
-
     @property
     def calculator(self) -> FeeCalculator:
         return self.fee_calculator
 
-    def update_contract(self):
-        pass
+    async def update_contracts(self):
+        contracts = await models.Contract.all()
+        for contract in contracts:
+            self.contracts.update({
+                contract.symbol: Contract(
+                    contract=await self.client.get_contract(contract.address),
+                    client=self.client,
+                    name=contract.name,
+                    symbol=contract.symbol,
+                    decimal_place=contract.decimal_place,
+                )
+            })
 
     def get_contract_by_symbol(self, symbol: str) -> Contract:
         contract = self.contracts.get(symbol)

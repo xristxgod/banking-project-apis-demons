@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from tronpy.exceptions import AddressNotFound
 
 from core import database
+from core.crypto import node
 from apps import router
 
 app = FastAPI()
@@ -12,6 +13,11 @@ app = FastAPI()
 database.connect_fastapi(app)
 
 app.include_router(router, prefix='/api')
+
+
+@app.on_event('startup')
+async def startup():
+    await node.update_contracts()
 
 
 @app.exception_handler(AddressNotFound)
