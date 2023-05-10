@@ -1,12 +1,7 @@
 from core.crypto import node
-from core.decorators import encode
 from apps.common import schemas
 
 
-@encode(
-    values=['mnemonic', 'passphrase', 'private_key'],
-    type=object, take='response'
-)
 async def create_wallet(body: schemas.BodyCreateWallet) -> schemas.ResponseCreateWallet:
     response = node.client.generate_address_from_mnemonic(
         mnemonic=body.mnemonic,
