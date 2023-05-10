@@ -9,13 +9,13 @@ from tronpy.async_tron import AsyncTron, AsyncContract, AsyncTransactionBuilder
 
 class ReadContractMixin:
     async def balance_of(self, address: TAddress) -> decimal.Decimal:
-        amount = self.contract.functions.balanceOf(address)
+        amount = await self.contract.functions.balanceOf(address)
         if amount > 0:
             amount = amount / self.decimals
         return decimal.Decimal(amount, context=self.context)
 
     async def allowance(self, owner_address: TAddress, spender_address: TAddress) -> decimal.Decimal:
-        amount = self.contract.functions.allowance(owner_address, spender_address)
+        amount = await self.contract.functions.allowance(owner_address, spender_address)
         if amount > 0:
             amount = amount / self.decimals
         return decimal.Decimal(amount, context=self.context)
@@ -25,9 +25,10 @@ class WriteContractMixin:
     async def transfer(self, from_address: TAddress, to_address: str,
                        amount: decimal.Decimal) -> AsyncTransactionBuilder:
         amount = int(amount * self.decimals)
-        return self.contract.functions.transfer(
+        transaction = await self.contract.functions.transfer(
             to_address, amount,
-        ).with_owner(
+        )
+        return transaction.with_owner(
             from_address
         )
 
@@ -68,11 +69,11 @@ class Contract(ContractMethodMixin):
     def decimals(self) -> int:
         return 10 ** self._decimal_place
 
-    async def energy_used(self, from_address: TAddress, function_selector: FunctionSelector, parameter: tuple) -> int:
+    async def energy_used(self, from_address: TAddress, function_selector: FunctionSelector, parameter: list) -> int:
         function_selector_view, parameter_view = function_selector
 
         def get_parameter_hex():
-            return trx_abi.encode(parameter_view, parameter).hex()
+            return trx_abi.encode_single(parameter_view, parameter).hex()
 
         response = await self.client.provider.make_request(
             "wallet/triggerconstantcontract",

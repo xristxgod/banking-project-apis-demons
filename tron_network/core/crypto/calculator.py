@@ -53,10 +53,10 @@ class FeeCalculator:
     async def _transfer(self, from_address: TAddress, to_address: TAddress,
                         amount: decimal.Decimal, currency: str) -> dict:
         contract = self.node.get_contract_by_symbol(currency)
-        parameter = (
+        parameter = [
             to_address,
             int(amount * contract.decimals),
-        )
+        ]
         energy = await contract.energy_used(
             from_address=from_address,
             function_selector=contract.FunctionSelector.TRANSFER,

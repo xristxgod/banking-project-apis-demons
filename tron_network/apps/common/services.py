@@ -80,7 +80,7 @@ class CreateTransfer:
                 amount=body.sun_amount
             )
         else:
-            transaction = body.contract.transfer(
+            transaction = await body.contract.transfer(
                 body.from_address,
                 to_address=body.to_address,
                 amount=body.amount,
