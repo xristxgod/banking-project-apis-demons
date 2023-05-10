@@ -28,3 +28,10 @@ async def wallet_balance(body: schemas.BodyWalletBalance):
 )
 async def allowance(body: schemas.BodyAllowance):
     return await services.allowance(body)
+
+
+@router.post(
+    '/transfer/create',
+)
+async def create_transfer():
+    pass

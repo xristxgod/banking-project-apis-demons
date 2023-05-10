@@ -3,7 +3,7 @@ from typing import Optional
 
 from tronpy.tron import TAddress
 from tronpy.keys import is_address, to_base58check_address
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, Json
 from pydantic.class_validators import validator
 
 from core.crypto import node
@@ -12,9 +12,12 @@ from apps.common import utils
 
 
 class WithContractMixin:
+    currency: str
+
     @property
     def contract(self) -> Contract:
-        return node.get_contract_by_symbol(self.currency)
+        if self.currency != 'TRX':
+            return node.get_contract_by_symbol(self.currency)
 
 
 class BodyCreateWallet(BaseModel):
@@ -41,9 +44,7 @@ class BodyWalletBalance(WithContractMixin, BaseModel):
 
     @validator('address')
     def correct_address(cls, address: TAddress):
-        if not is_address(address):
-            raise ValidationError(f'Address: {address} is not correct')
-        raise to_base58check_address(address)
+        return utils.correct_address(address)
 
 
 class ResponseWalletBalance(BaseModel):
@@ -64,10 +65,34 @@ class BodyAllowance(WithContractMixin, BaseModel):
 
     @validator('owner_address', 'spender_address')
     def correct_address(cls, address: TAddress):
-        if not is_address(address):
-            raise ValidationError(f'Address: {address} is not correct')
-        raise to_base58check_address(address)
+        return utils.correct_address(address)
 
 
 class ResponseAllowance(BaseModel):
     amount: decimal.Decimal = Field(default=0)
+
+
+class BodyCreateTransfer(WithContractMixin, BaseModel):
+    from_address: TAddress
+    to_address: TAddress
+    amount: decimal.Decimal
+
+    currency: str = Field(default='TRX')
+
+    fee_limit: Optional[int] = Field(default=None)
+
+    @validator('from_address', 'to_address')
+    def correct_address(cls, address: TAddress):
+        return utils.correct_address(address)
+
+
+class BodyCommission(BaseModel):
+    fee: decimal.Decimal = Field(default=0)
+    energy: int = Field(default=0)
+    bandwidth: int = Field(default=0)
+
+
+class ResponseCreateTransfer(BaseModel):
+    payload: Json
+    commission: BodyCommission
+    extra: dict = Field(default_factory=dict)

@@ -13,6 +13,12 @@ class ReadContractMixin:
             amount = amount / self.decimals
         return decimal.Decimal(amount, context=self.context)
 
+    async def allowance(self, owner_address: TAddress, spender_address: TAddress) -> decimal.Decimal:
+        amount = await self.contract.functions.allowance(owner_address, spender_address)
+        if amount > 0:
+            amount = amount / self.decimals
+        return decimal.Decimal(amount, context=self.context)
+
 
 class WriteContractMixin:
     async def transfer(self):
