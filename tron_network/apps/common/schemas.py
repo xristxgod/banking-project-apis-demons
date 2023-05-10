@@ -105,13 +105,13 @@ class ResponseCommission(BaseModel):
 
 
 class ResponseCreateTransfer(BaseModel):
-    payload: json
+    payload: str
     commission: ResponseCommission
     extra: dict = Field(default_factory=dict)
 
 
 class BodySendTransaction(BaseModel):
-    payload: json
+    payload: str
     extra: dict = Field(default_factory=dict)
     private_key: str
 

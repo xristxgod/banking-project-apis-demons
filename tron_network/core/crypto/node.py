@@ -4,7 +4,6 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
 from core.crypto import models
-from core.crypto.abi import ABI
 from core.crypto.contract import Contract
 from core.crypto.calculator import FeeCalculator
 
