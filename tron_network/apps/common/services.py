@@ -62,17 +62,7 @@ class CreateTransfer:
             raise cls.InvalidCreateTransfer('Invalid create transfer')
 
     @classmethod
-    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransfer:
-        commission = await node.calculator.calculate(
-            method=node.calculator.Method.TRANSFER,
-            from_address=body.from_address,
-            to_address=body.to_address,
-            currency=body.currency,
-            amount=body.amount,
-        )
-
-        await cls.valid_create_transfer(body, commission['fee'])
-
+    async def _create_transfer(cls, body: schemas.BodyCreateTransfer) -> dict:
         if body.is_native:
             transaction = node.client.trx.transfer(
                 body.from_address,
@@ -90,9 +80,24 @@ class CreateTransfer:
             body.fee_limit
         )
         created_transaction = await transaction.build()
+        return created_transaction.to_json()
+
+    @classmethod
+    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransfer:
+        commission = await node.calculator.calculate(
+            method=node.calculator.Method.TRANSFER,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            currency=body.currency,
+            amount=body.amount,
+        )
+
+        await cls.valid_create_transfer(body, commission['fee'])
+
+        created_transaction_dict = await cls._create_transfer(body=body)
 
         payload = {
-            'data': created_transaction.to_json(),
+            'data': created_transaction_dict,
             'extra_fields': {
                 'amount': body.amount,
                 'from_address': body.from_address,
@@ -122,10 +127,10 @@ async def send_transaction(body: schemas.BodySendTransaction) -> schemas.Respons
         transaction_id=transaction_info['id'],
         timestamp=transaction_info['blockTimeStamp'],
         fee=fee,
-        amount=body.extra_fields.get('amount'),
-        from_address=body.extra_fields.get('from_address'),
-        to_address=body.extra_fields.get('to_address'),
-        currency=body.extra_fields.get('currency'),
+        amount=body.extra.get('amount'),
+        from_address=body.extra.get('from_address'),
+        to_address=body.extra.get('to_address'),
+        currency=body.extra.get('currency'),
     )
 
 

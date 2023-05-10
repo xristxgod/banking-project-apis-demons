@@ -106,16 +106,22 @@ class ResponseCommission(BaseModel):
 class ResponseCreateTransfer(BaseModel):
     payload: str
     commission: ResponseCommission
-    extra: dict = Field(default_factory=dict)
+
+    @property
+    def payload_dict(self) -> dict:
+        return json.loads(self.payload)
 
 
 class BodySendTransaction(BaseModel):
     payload: str
-    extra: dict = Field(default_factory=dict)
     private_key: str
 
+    @property
+    def payload_dict(self) -> dict:
+        return json.loads(self.payload)
+
     async def create_transaction_obj(self) -> AsyncTransaction:
-        data = json.loads(self.payload).get('data')
+        data = self.payload_dict.get('data')
         return await AsyncTransaction.from_json(data, client=node.client)
 
     @property
@@ -123,8 +129,8 @@ class BodySendTransaction(BaseModel):
         return PrivateKey(private_key_bytes=bytes.fromhex(self.private_key))
 
     @property
-    def extra_fields(self) -> dict:
-        return json.loads(self.payload).get('extra_fields')
+    def extra(self) -> dict:
+        return self.payload_dict.get('extra_fields')
 
 
 class ResponseSendTransaction(BaseModel):

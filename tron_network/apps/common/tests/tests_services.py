@@ -170,7 +170,8 @@ class TestTransfer:
                     12_000,
             ),
             # TODO: Add when new ones appear
-        ])
+        ]
+    )
     async def test_fee_calculator(self, method: FEE_METHOD_TYPES, parameter: dict, bandwidth_balance: int,
                                   energy_balance: int, is_to_address_active: bool, energy_used: Optional[int],
                                   mocker):
@@ -297,3 +298,59 @@ class TestTransfer:
                 await self.create_transfer_obj.valid_create_transfer(
                     body=body, fee=fee
                 )
+
+    @pytest.mark.parametrize(
+        'currency, commission',
+        [(
+                'TRX',
+                {
+                    'fee': 0,
+                    'bandwidth': 267,
+                    'energy': 0,
+                }
+        ), (
+                'USDT',
+                {
+                    'fee': decimal.Decimal(13.2),
+                    'bandwidth': 365,
+                    'energy': 12_000,
+                }
+        )]
+    )
+    async def test_create_transfer(self, currency: str, commission: dict, mocker):
+        mocker.patch(
+            'core.crypto.calculator.FeeCalculator.calculate',
+            return_value=commission,
+        )
+        mocker.patch(
+            'apps.common.services.CreateTransfer.valid_create_transfer',
+            side_effect=None,
+        )
+        # There is no point in testing, the standard functionality is used, which has
+        # already been tested in the `tronpy` library itself
+        mocker.patch(
+            'apps.common.services.CreateTransfer._create_transfer',
+            return_value={},
+        )
+
+        body = schemas.BodyCreateTransfer(
+            from_address=fake_address(),
+            to_address=fake_address(),
+            amount=decimal.Decimal(12.4),
+            currency=currency,
+        )
+
+        response = await self.create_transfer_obj.create_transfer(body)
+
+        assert isinstance(response, schemas.ResponseCreateTransfer)
+        assert response.payload_dict == {
+            'data': {},
+            'extra_fields': {
+                'amount': str(body.amount),
+                'from_address': body.from_address,
+                'to_address': body.to_address,
+                'currency': body.currency,
+            }
+        }
+
+        assert response.commission == commission
