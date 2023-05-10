@@ -9,6 +9,15 @@ from core.crypto.utils import from_sun
 
 
 class FeeCalculator:
+    energy_sun_cost = 420
+    default_native_bandwidth_cost = 267
+    default_token_bandwidth_cost = 345
+
+    not_bandwidth_balance_extra_fee_native_cost = decimal.Decimal(0.267)
+    not_bandwidth_balance_extra_fee_token_cost = decimal.Decimal(0.345)
+    activate_account_trx_cost = decimal.Decimal(1.1)
+    activate_account_bandwidth_cost = 100
+
     class Method(enum.Enum):
         TRANSFER = 'transfer'
         TRANSFER_FROM = 'transfer_from'
@@ -20,29 +29,32 @@ class FeeCalculator:
     def __init__(self, node):
         self.node = node
 
-    async def _bandwidth_fee(self, from_address: TAddress, bandwidth: int) -> decimal.Decimal:
+    async def _bandwidth_fee(self, from_address: TAddress, bandwidth: int, currency: str) -> decimal.Decimal:
         bandwidth_balance = await self.node.get_bandwidth_balance(from_address)
 
-        amount = 0
+        amount = decimal.Decimal(0)
         if bandwidth_balance < bandwidth:
-            amount += 0.267
-        return decimal.Decimal(amount)
+            if currency == 'TRX':
+                amount += self.not_bandwidth_balance_extra_fee_native_cost
+            else:
+                amount += self.not_bandwidth_balance_extra_fee_token_cost
+        return amount
 
     async def _energy_fee(self, from_address: TAddress, energy: int) -> decimal.Decimal:
         energy_balance = await self.node.get_energy_balance(from_address)
 
         amount = decimal.Decimal(0)
         if energy_balance < energy:
-            amount += from_sun(energy * 420)
+            amount += from_sun(energy * self.energy_sun_cost)
         return amount
 
     async def _transfer_native(self, from_address: TAddress, to_address: TAddress) -> dict:
-        amount, bandwidth = decimal.Decimal(0), 267
-        if await self.node.is_active_address(address=to_address):
-            amount += decimal.Decimal(1.1)
-            bandwidth += 100
+        amount, bandwidth = decimal.Decimal(0), self.default_native_bandwidth_cost
+        if not await self.node.is_active_address(address=to_address):
+            amount += self.activate_account_trx_cost
+            bandwidth += self.activate_account_bandwidth_cost
 
-        amount += await self._bandwidth_fee(from_address, bandwidth)
+        amount += await self._bandwidth_fee(from_address, bandwidth, 'TRX')
 
         return dict(
             fee=amount,
@@ -62,9 +74,9 @@ class FeeCalculator:
             function_selector=contract.FunctionSelector.TRANSFER,
             parameter=parameter,
         )
-        bandwidth = 345
+        bandwidth = self.default_token_bandwidth_cost
 
-        bandwidth_fee = await self._bandwidth_fee(from_address, bandwidth)
+        bandwidth_fee = await self._bandwidth_fee(from_address, bandwidth, currency)
         energy_fee = await self._energy_fee(from_address, energy)
 
         return dict(
