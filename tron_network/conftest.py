@@ -42,3 +42,14 @@ async def initialize_tests():
     if settings.DATABASE_PATH.is_file():
         # Delete test.db
         settings.DATABASE_PATH.unlink()
+
+
+@pytest.fixture(scope="session")
+def mock_get_contract(mocker):
+    import asyncio
+    future = asyncio.Future()
+    mocker.patch(
+        'tronpy.async_tron.AsyncTron.get_contract',
+        return_value=future
+    )
+    return future
