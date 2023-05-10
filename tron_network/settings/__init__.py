@@ -2,7 +2,9 @@ from __future__ import absolute_import
 
 from .common import *
 
-if os.getenv('NETWORK').upper() == 'DEV':
+NETWORK = os.getenv('NETWORK', '').upper()
+
+if NETWORK == 'DEV':
     from .dev import *
-elif os.getenv('NETWORK').upper() == 'TEST':
+elif NETWORK == 'TEST':
     from .test import *
