@@ -4,9 +4,12 @@ from fastapi.responses import JSONResponse
 
 from tronpy.exceptions import AddressNotFound
 
+from core import database
 from apps import router
 
 app = FastAPI()
+
+database.connect_fastapi(app)
 
 app.include_router(router, prefix='/api')
 
