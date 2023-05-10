@@ -3,6 +3,7 @@ import json
 
 from core.crypto import node
 from core.crypto.utils import from_sun
+from core.crypto.calculator import FEE_METHOD_TYPES
 from apps.common import schemas
 
 
@@ -122,3 +123,8 @@ async def send_transaction(body: schemas.BodySendTransaction) -> schemas.Respons
         to_address=body.extra.get('to_address'),
         currency=body.extra.get('currency'),
     )
+
+
+async def fee_calculator(body: schemas.BodyCommission, method: FEE_METHOD_TYPES) -> schemas.ResponseCommission:
+    result = await node.fee_calculator.calculate(method=method, **body.parameter)
+    return schemas.ResponseCommission(**result)

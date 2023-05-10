@@ -131,3 +131,17 @@ class ResponseSendTransaction(BaseModel):
     from_address: TAddress
     to_address: TAddress
     currency: str = Field(default='TRX')
+
+
+class BodyCommission(BaseModel.Config):
+    parameter: dict
+
+    class Config:
+        fields = {
+            'parameter': {
+                'from_address': 'FromTronAddress',
+                'to_address': 'ToTronAddress',
+                'amount': 1.2,
+                'currency': 'USDT',
+            }
+        }

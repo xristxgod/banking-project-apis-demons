@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 
+from core.crypto.calculator import FEE_METHOD_TYPES
 from apps.common import schemas
 from apps.common import services
 
@@ -57,5 +58,5 @@ async def send_transaction(body: schemas.BodySendTransaction):
     '/fee/{method}/calculate',
     response_model=schemas.ResponseCommission,
 )
-async def fee_calculator(method: str, body):
-    pass
+async def fee_calculator(body: schemas.BodyCommission, method: FEE_METHOD_TYPES = FEE_METHOD_TYPES.TRANSFER):
+    return await services.fee_calculator(body, method)

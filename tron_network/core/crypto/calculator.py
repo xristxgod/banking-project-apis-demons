@@ -97,3 +97,6 @@ class FeeCalculator:
                 pass
             case _:
                 raise self.MethodNotFound(f'Method: {method} not found')
+
+
+FEE_METHOD_TYPES = FeeCalculator.Method
