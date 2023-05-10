@@ -32,6 +32,7 @@ async def allowance(body: schemas.BodyAllowance):
 
 @router.post(
     '/transfer/create',
+    response_model=schemas.ResponseCreateTransfer
 )
-async def create_transfer():
+async def create_transfer(body: schemas.BodyCreateTransfer):
     pass

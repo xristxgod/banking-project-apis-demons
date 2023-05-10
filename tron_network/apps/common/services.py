@@ -34,3 +34,25 @@ async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
     return schemas.ResponseAllowance(
         amount=amount,
     )
+
+
+class Transfer:
+    @classmethod
+    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransfer:
+        if body.is_native:
+            transaction = node.client.trx.transfer(
+                body.from_address,
+                to=body.to_address,
+                amount=body.sun_amount
+            )
+        else:
+            transaction = body.contract.transfer(
+                body.from_address,
+                to_address=body.to_address,
+                amount=body.amount,
+            )
+
+        transaction = transaction.fee_limit(
+            body.fee_limit
+        )
+        created_transaction = await transaction.build()

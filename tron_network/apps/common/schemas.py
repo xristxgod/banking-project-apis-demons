@@ -2,21 +2,26 @@ import decimal
 from typing import Optional
 
 from tronpy.tron import TAddress
-from tronpy.keys import is_address, to_base58check_address
 from pydantic import BaseModel, Field, ValidationError, Json
 from pydantic.class_validators import validator
 
+import settings
 from core.crypto import node
+from core.crypto.utils import to_sun
 from core.crypto.contract import Contract
 from apps.common import utils
 
 
-class WithContractMixin:
+class CurrencyMixin:
     currency: str
 
     @property
+    def is_native(self) -> bool:
+        return self.currency == 'TRX'
+
+    @property
     def contract(self) -> Contract:
-        if self.currency != 'TRX':
+        if not self.is_native:
             return node.get_contract_by_symbol(self.currency)
 
 
@@ -31,7 +36,7 @@ class ResponseCreateWallet(BodyCreateWallet):
     address: TAddress
 
 
-class BodyWalletBalance(WithContractMixin, BaseModel):
+class BodyWalletBalance(CurrencyMixin, BaseModel):
     address: TAddress
     currency: Optional[str] = Field(default='TRX')
 
@@ -51,7 +56,7 @@ class ResponseWalletBalance(BaseModel):
     balance: decimal.Decimal = Field(default=0)
 
 
-class BodyAllowance(WithContractMixin, BaseModel):
+class BodyAllowance(CurrencyMixin, BaseModel):
     owner_address: TAddress
     spender_address: TAddress
     currency: str
@@ -72,14 +77,19 @@ class ResponseAllowance(BaseModel):
     amount: decimal.Decimal = Field(default=0)
 
 
-class BodyCreateTransfer(WithContractMixin, BaseModel):
+class BodyCreateTransfer(CurrencyMixin, BaseModel):
     from_address: TAddress
     to_address: TAddress
     amount: decimal.Decimal
 
     currency: str = Field(default='TRX')
 
-    fee_limit: Optional[int] = Field(default=None)
+    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+
+    @property
+    def sun_amount(self) -> int:
+        # Amount to Sun amount
+        return to_sun(self.amount)
 
     @validator('from_address', 'to_address')
     def correct_address(cls, address: TAddress):

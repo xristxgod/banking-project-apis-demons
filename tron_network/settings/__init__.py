@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 
-import os
-
-from common import *
+from .common import *
 
 if os.getenv('NETWORK').upper() == 'DEV':
     from .dev import *
