@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status
+from fastapi.exceptions import HTTPException
 
 from apps.common import schemas
 from apps.common import services
@@ -35,4 +36,26 @@ async def allowance(body: schemas.BodyAllowance):
     response_model=schemas.ResponseCreateTransfer
 )
 async def create_transfer(body: schemas.BodyCreateTransfer):
+    try:
+        return await services.CreateTransfer.create_transfer(body)
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(err)
+        )
+
+
+@router.post(
+    '/transaction/send',
+    response_model=schemas.ResponseSendTransaction,
+)
+async def send_transaction(body: schemas.BodySendTransaction):
+    return await services.send_transaction(body)
+
+
+@router.post(
+    '/fee/{method}/calculate',
+    response_model=schemas.ResponseCommission,
+)
+async def fee_calculator(method: str, body):
     pass

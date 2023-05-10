@@ -1,8 +1,10 @@
+import json
 import decimal
 from typing import Optional
 
-from tronpy.tron import TAddress
-from pydantic import BaseModel, Field, ValidationError, Json
+from tronpy.tron import TAddress, PrivateKey
+from tronpy.async_tron import AsyncTransaction
+from pydantic import BaseModel, Field, ValidationError
 from pydantic.class_validators import validator
 
 import settings
@@ -96,13 +98,36 @@ class BodyCreateTransfer(CurrencyMixin, BaseModel):
         return utils.correct_address(address)
 
 
-class BodyCommission(BaseModel):
+class ResponseCommission(BaseModel):
     fee: decimal.Decimal = Field(default=0)
     energy: int = Field(default=0)
     bandwidth: int = Field(default=0)
 
 
 class ResponseCreateTransfer(BaseModel):
-    payload: Json
-    commission: BodyCommission
+    payload: json
+    commission: ResponseCommission
     extra: dict = Field(default_factory=dict)
+
+
+class BodySendTransaction(BaseModel):
+    payload: json
+    extra: dict = Field(default_factory=dict)
+    private_key: str
+
+    def create_transaction_obj(self) -> AsyncTransaction:
+        return AsyncTransaction(**json.loads(self.payload), client=node.client)
+
+    @property
+    def private_key_obj(self):
+        return PrivateKey(private_key_bytes=bytes.fromhex(self.private_key))
+
+
+class ResponseSendTransaction(BaseModel):
+    transaction_id: str
+    timestamp: int
+    amount: decimal.Decimal
+    fee: decimal.Decimal
+    from_address: TAddress
+    to_address: TAddress
+    currency: str = Field(default='TRX')
