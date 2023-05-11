@@ -292,12 +292,12 @@ class TestTransfer:
         )
 
         if not exception:
-            assert await self.create_transfer_obj.valid_create_transfer(
+            assert await self.create_transfer_obj.valid(
                 body=body, fee=fee
             ) is None
         else:
             with pytest.raises(exception) as err:
-                await self.create_transfer_obj.valid_create_transfer(
+                await self.create_transfer_obj.valid(
                     body=body, fee=fee
                 )
 
@@ -325,13 +325,13 @@ class TestTransfer:
             return_value=commission,
         )
         mocker.patch(
-            'apps.common.services.CreateTransfer.valid_create_transfer',
+            'apps.common.services.CreateTransfer.valid',
             side_effect=None,
         )
         # There is no point in testing, the standard functionality is used, which has
         # already been tested in the `tronpy` library itself
         mocker.patch(
-            'apps.common.services.CreateTransfer._create_transfer',
+            'apps.common.services.CreateTransfer._create',
             return_value={},
         )
 
@@ -342,7 +342,7 @@ class TestTransfer:
             currency=currency,
         )
 
-        response = await self.create_transfer_obj.create_transfer(body)
+        response = await self.create_transfer_obj.create(body)
 
         assert isinstance(response, schemas.ResponseCreateTransaction)
         assert response.payload_dict == {

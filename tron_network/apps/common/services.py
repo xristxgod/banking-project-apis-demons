@@ -1,6 +1,8 @@
+import abc
 import json
 import decimal
 
+import pydantic
 from tronpy.keys import PrivateKey
 from tronpy.async_tron import AsyncTransaction
 
@@ -48,10 +50,21 @@ async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
     )
 
 
-class CreateTransfer:
+class BaseCreateTransaction(abc.ABC):
+    @classmethod
+    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs) -> bool: ...
 
     @classmethod
-    async def valid_create_transfer(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal) -> bool:
+    async def _create(cls, body: pydantic.BaseModel) -> dict: ...
+
+    @classmethod
+    async def create(cls, body: pydantic.BaseModel) -> pydantic.BaseModel: ...
+
+
+class CreateTransfer(BaseCreateTransaction):
+
+    @classmethod
+    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs) -> bool:
         native_balance = await node.client.get_account_balance(body.from_address)
 
         if body.is_native:
@@ -66,7 +79,7 @@ class CreateTransfer:
             raise InvalidCreateTransaction('Invalid create transfer')
 
     @classmethod
-    async def _create_transfer(cls, body: schemas.BodyCreateTransfer) -> dict:
+    async def _create(cls, body: schemas.BodyCreateTransfer) -> dict:
         if body.is_native:
             transaction = node.client.trx.transfer(
                 body.from_address,
@@ -87,7 +100,7 @@ class CreateTransfer:
         return created_transaction.to_json()
 
     @classmethod
-    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransaction:
+    async def create(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransaction:
         commission = await node.calculator.calculate(
             method=node.calculator.Method.TRANSFER,
             from_address=body.from_address,
@@ -96,9 +109,9 @@ class CreateTransfer:
             amount=body.amount,
         )
 
-        await cls.valid_create_transfer(body, commission['fee'])
+        await cls.valid(body, commission['fee'])
 
-        created_transaction_dict = await cls._create_transfer(body=body)
+        created_transaction_dict = await cls._create(body=body)
 
         payload = {
             'data': created_transaction_dict,
@@ -116,10 +129,10 @@ class CreateTransfer:
         )
 
 
-class CreateApprove:
+class CreateApprove(BaseCreateTransaction):
 
     @classmethod
-    async def valid_create_approve(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal) -> bool:
+    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs) -> bool:
         native_balance = await node.client.get_account_balance(body.spender_address)
 
         has_native = (native_balance - fee) > 0
@@ -128,7 +141,7 @@ class CreateApprove:
             raise InvalidCreateTransaction('Invalid create approve')
 
     @classmethod
-    async def _create_approve(cls, body: schemas.BodyCreateApprove) -> dict:
+    async def _create(cls, body: schemas.BodyCreateApprove) -> dict:
         transaction = await body.contract.approve(
             owner_address=body.owner_address,
             spender_address=body.spender_address,
@@ -141,7 +154,7 @@ class CreateApprove:
         return created_transaction.to_json()
 
     @classmethod
-    async def create_approve(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
+    async def create(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
         commission = await node.calculator.calculate(
             method=node.calculator.Method.TRANSFER,
             owner_address=body.owner_address,
@@ -150,9 +163,9 @@ class CreateApprove:
             amount=body.amount,
         )
 
-        await cls.valid_create_approve(body, fee=commission['fee'])
+        await cls.valid(body, fee=commission['fee'])
 
-        created_transaction_dict = await cls._create_approve(body=body)
+        created_transaction_dict = await cls._create(body=body)
 
         payload = {
             'data': created_transaction_dict,
