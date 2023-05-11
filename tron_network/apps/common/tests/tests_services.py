@@ -1,15 +1,14 @@
-import uuid
-import time
 import decimal
+import time
+import uuid
 from typing import Type, Optional
 
 import pytest
 
-from core.crypto.calculator import FEE_METHOD_TYPES
-from core.crypto.utils import from_sun, to_sun
 from apps.common import schemas
 from apps.common import services
-
+from core.crypto.calculator import FEE_METHOD_TYPES
+from core.crypto.utils import from_sun, to_sun
 from .factories import fake_private_key, fake_address, create_fake_contract
 
 
@@ -359,6 +358,109 @@ class TestTransfer:
                 'amount': str(body.amount),
                 'from_address': body.from_address,
                 'to_address': body.to_address,
+                'currency': body.currency,
+            }
+        }
+
+        assert response.commission == commission
+
+
+@pytest.mark.asyncio
+class TestApprove:
+    create_approve_obj = services.CreateApprove
+
+    @pytest.mark.parametrize(
+        'body, fee, native_balance, exception',
+        [(
+                schemas.BodyCreateApprove(
+                    owner_address=fake_address(),
+                    spender_address=fake_address(),
+                    amount=decimal.Decimal(12.4),
+                    currency='USDT',
+                ),
+                decimal.Decimal(12.43),
+                decimal.Decimal(100),
+                None,
+        ), (
+                schemas.BodyCreateApprove(
+                    owner_address=fake_address(),
+                    spender_address=fake_address(),
+                    amount=decimal.Decimal(12.4),
+                    currency='USDT',
+                ),
+                decimal.Decimal(12.43),
+                decimal.Decimal(0),
+                services.InvalidCreateTransaction,
+        )]
+    )
+    async def test_valid(self, body: schemas.BodyCreateApprove, fee: decimal.Decimal,
+                         native_balance: decimal.Decimal, exception: Optional[Type[Exception]],
+                         mocker):
+        mocker.patch(
+            'tronpy.async_tron.AsyncTron.get_account_balance',
+            return_value=native_balance,
+        )
+
+        if not exception:
+            assert await self.create_approve_obj.valid(
+                body=body, fee=fee
+            ) is None
+        else:
+            with pytest.raises(exception) as err:
+                await self.create_approve_obj.valid(
+                    body=body, fee=fee
+                )
+
+    @pytest.mark.parametrize(
+        'currency, commission',
+        [(
+                'USDT',
+                {
+                    'fee': decimal.Decimal(13.2),
+                    'bandwidth': 365,
+                    'energy': 12_000,
+                }
+        ), (
+                'USDC',
+                {
+                    'fee': decimal.Decimal(13.2),
+                    'bandwidth': 365,
+                    'energy': 12_000,
+                }
+        )]
+    )
+    async def test_create(self, currency: str, commission: dict, mocker):
+        mocker.patch(
+            'core.crypto.calculator.FeeCalculator.calculate',
+            return_value=commission,
+        )
+        mocker.patch(
+            'apps.common.services.CreateApprove.valid',
+            side_effect=None,
+        )
+        # There is no point in testing, the standard functionality is used, which has
+        # already been tested in the `tronpy` library itself
+        mocker.patch(
+            'apps.common.services.CreateApprove._create',
+            return_value={},
+        )
+
+        body = schemas.BodyCreateApprove(
+            owner_address=fake_address(),
+            spender_address=fake_address(),
+            amount=decimal.Decimal(12.4),
+            currency=currency,
+        )
+
+        response = await self.create_approve_obj.create(body)
+
+        assert isinstance(response, schemas.ResponseCreateTransaction)
+        assert response.payload_dict == {
+            'data': {},
+            'extra': {
+                'amount': str(body.amount),
+                'from_address': body.owner_address,
+                'to_address': body.spender_address,
                 'currency': body.currency,
             }
         }

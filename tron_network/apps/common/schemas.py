@@ -104,13 +104,6 @@ class BodyCreateApprove(CurrencyMixin, BaseModel):
 
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
-    @validator('currency')
-    def correct_currency(cls, currency: str):
-        currency = currency.upper()
-        if not node.has_currency(currency):
-            raise ValueError(f'Currency: {currency} not found')
-        return currency
-
 
 class ResponseCommission(BaseModel):
     fee: decimal.Decimal = Field(default=0)
