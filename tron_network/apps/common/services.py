@@ -190,7 +190,17 @@ class CreateTransferFrom(BaseCreateTransaction):
 
     @classmethod
     async def _create(cls, body: schemas.BodyCreateTransferFrom) -> dict:
-        pass
+        transaction = await body.contract.transfer_from(
+            owner_address=body.owner_address,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            amount=body.amount,
+        )
+        transaction = transaction.fee_limit(
+            body.fee_limit
+        )
+        created_transaction = await transaction.build()
+        return created_transaction.to_json()
 
     @classmethod
     async def create(cls, body: schemas.BodyCreateTransferFrom) -> schemas.ResponseCreateTransaction:
@@ -204,6 +214,23 @@ class CreateTransferFrom(BaseCreateTransaction):
         )
 
         await cls.valid(body, fee=commission['fee'])
+
+        created_transaction_dict = await cls._create(body=body)
+
+        payload = {
+            'data': created_transaction_dict,
+            'extra': {
+                'amount': body.amount,
+                'from_address': body.from_address,
+                'to_address': body.to_address,
+                'currency': body.currency,
+                'owner_address': body.owner_address,
+            }
+        }
+        return schemas.ResponseCreateTransaction(
+            payload=json.dumps(payload, default=str),
+            commission=schemas.ResponseCommission(**commission),
+        )
 
 
 class SendTransaction:

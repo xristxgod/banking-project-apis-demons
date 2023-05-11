@@ -9,6 +9,7 @@ from core.crypto.utils import from_sun
 
 
 class FeeCalculator:
+    # TODO: Figure out how to calculate bandwidth
     energy_sun_cost = 420
     default_native_bandwidth_cost = 267
     default_token_bandwidth_cost = 345
