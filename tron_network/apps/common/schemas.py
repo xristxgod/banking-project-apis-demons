@@ -13,7 +13,7 @@ from core.crypto.contract import Contract
 from apps.common import utils
 
 
-class CurrencyMixin:
+class CurrencyMixin(BaseModel):
     currency: str
 
     @property
@@ -97,13 +97,28 @@ class BodyCreateTransfer(CurrencyMixin, BaseModel):
         return utils.correct_address(address)
 
 
+class BodyCreateApprove(CurrencyMixin, BaseModel):
+    owner_address: TAddress
+    spender_address: TAddress
+    amount: decimal.Decimal
+
+    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+
+    @validator('currency')
+    def correct_currency(cls, currency: str):
+        currency = currency.upper()
+        if not node.has_currency(currency):
+            raise ValueError(f'Currency: {currency} not found')
+        return currency
+
+
 class ResponseCommission(BaseModel):
     fee: decimal.Decimal = Field(default=0)
     energy: int = Field(default=0)
     bandwidth: int = Field(default=0)
 
 
-class ResponseCreateTransfer(BaseModel):
+class ResponseCreateTransaction(BaseModel):
     payload: str
     commission: ResponseCommission
 
@@ -133,6 +148,10 @@ class BodySendTransaction(BaseModel):
         return self.payload_dict.get('extra')
 
 
+class ResponseSendTransactionExtra(BaseModel):
+    type: str
+
+
 class ResponseSendTransaction(BaseModel):
     transaction_id: str
     timestamp: int
@@ -141,7 +160,22 @@ class ResponseSendTransaction(BaseModel):
     from_address: TAddress
     to_address: TAddress
     currency: str = Field(default='TRX')
+    # extra: ResponseSendTransactionExtra
 
 
 class BodyCommission(BaseModel):
+    """
+    Parameter schemas:
+        Transfer:
+            from_address
+            to_address
+            amount
+            currency
+        Approve:
+            owner_address
+            spender_address
+            amount
+            currency
+    """
+
     parameter: dict

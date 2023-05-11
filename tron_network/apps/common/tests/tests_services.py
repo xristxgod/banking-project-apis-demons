@@ -243,7 +243,7 @@ class TestTransfer:
                 decimal.Decimal(0.267),
                 decimal.Decimal(100),
                 None,
-                create_transfer_obj.InvalidCreateTransfer,
+                services.InvalidCreateTransaction,
         ), (
                 schemas.BodyCreateTransfer(
                     from_address=fake_address(),
@@ -265,7 +265,7 @@ class TestTransfer:
                 decimal.Decimal(13.99),
                 decimal.Decimal(100),
                 decimal.Decimal(170),
-                create_transfer_obj.InvalidCreateTransfer,
+                services.InvalidCreateTransaction,
         ), (
                 schemas.BodyCreateTransfer(
                     from_address=fake_address(),
@@ -276,7 +276,7 @@ class TestTransfer:
                 decimal.Decimal(13.99),
                 decimal.Decimal(12),
                 decimal.Decimal(170),
-                create_transfer_obj.InvalidCreateTransfer,
+                services.InvalidCreateTransaction,
         )]
     )
     async def test_valid_create_transfer(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
@@ -344,7 +344,7 @@ class TestTransfer:
 
         response = await self.create_transfer_obj.create_transfer(body)
 
-        assert isinstance(response, schemas.ResponseCreateTransfer)
+        assert isinstance(response, schemas.ResponseCreateTransaction)
         assert response.payload_dict == {
             'data': {},
             'extra': {

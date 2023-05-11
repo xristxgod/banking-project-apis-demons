@@ -10,6 +10,10 @@ from core.crypto.calculator import FEE_METHOD_TYPES
 from apps.common import schemas
 
 
+class InvalidCreateTransaction(Exception):
+    pass
+
+
 async def create_wallet(body: schemas.BodyCreateWallet) -> schemas.ResponseCreateWallet:
     response = node.client.generate_address_from_mnemonic(
         mnemonic=body.mnemonic,
@@ -46,9 +50,6 @@ async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
 
 class CreateTransfer:
 
-    class InvalidCreateTransfer(Exception):
-        pass
-
     @classmethod
     async def valid_create_transfer(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal) -> bool:
         native_balance = await node.client.get_account_balance(body.from_address)
@@ -62,7 +63,7 @@ class CreateTransfer:
             has_amount = (balance - body.amount) >= 0
 
         if not all([has_amount, has_native]):
-            raise cls.InvalidCreateTransfer('Invalid create transfer')
+            raise InvalidCreateTransaction('Invalid create transfer')
 
     @classmethod
     async def _create_transfer(cls, body: schemas.BodyCreateTransfer) -> dict:
@@ -86,7 +87,7 @@ class CreateTransfer:
         return created_transaction.to_json()
 
     @classmethod
-    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransfer:
+    async def create_transfer(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransaction:
         commission = await node.calculator.calculate(
             method=node.calculator.Method.TRANSFER,
             from_address=body.from_address,
@@ -109,7 +110,60 @@ class CreateTransfer:
             }
         }
 
-        return schemas.ResponseCreateTransfer(
+        return schemas.ResponseCreateTransaction(
+            payload=json.dumps(payload, default=str),
+            commission=schemas.ResponseCommission(**commission),
+        )
+
+
+class CreateApprove:
+
+    @classmethod
+    async def valid_create_approve(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal) -> bool:
+        native_balance = await node.client.get_account_balance(body.spender_address)
+
+        has_native = (native_balance - fee) > 0
+
+        if not all([has_native]):
+            raise InvalidCreateTransaction('Invalid create approve')
+
+    @classmethod
+    async def _create_approve(cls, body: schemas.BodyCreateApprove) -> dict:
+        transaction = await body.contract.approve(
+            owner_address=body.owner_address,
+            spender_address=body.spender_address,
+            amount=body.amount,
+        )
+        transaction = transaction.fee_limit(
+            body.fee_limit
+        )
+        created_transaction = await transaction.build()
+        return created_transaction.to_json()
+
+    @classmethod
+    async def create_approve(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
+        commission = await node.calculator.calculate(
+            method=node.calculator.Method.TRANSFER,
+            owner_address=body.owner_address,
+            spender_address=body.spender_address,
+            currency=body.currency,
+            amount=body.amount,
+        )
+
+        await cls.valid_create_approve(body, fee=commission['fee'])
+
+        created_transaction_dict = await cls._create_approve(body=body)
+
+        payload = {
+            'data': created_transaction_dict,
+            'extra': {
+                'amount': body.amount,
+                'from_address': body.owner_address,
+                'to_address': body.spender_address,
+                'currency': body.currency,
+            }
+        }
+        return schemas.ResponseCreateTransaction(
             payload=json.dumps(payload, default=str),
             commission=schemas.ResponseCommission(**commission),
         )

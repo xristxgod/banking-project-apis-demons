@@ -34,7 +34,7 @@ async def allowance(body: schemas.BodyAllowance):
 
 @router.post(
     '/transfer/create',
-    response_model=schemas.ResponseCreateTransfer
+    response_model=schemas.ResponseCreateTransaction
 )
 async def create_transfer(body: schemas.BodyCreateTransfer):
     try:
@@ -44,6 +44,14 @@ async def create_transfer(body: schemas.BodyCreateTransfer):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err)
         )
+
+
+@router.post(
+    '/approve/create',
+    response_model=schemas.ResponseCreateTransaction,
+)
+async def create_approve(body: schemas.BodyCreateApprove):
+    return await services.CreateApprove.create_approve(body)
 
 
 @router.post(
