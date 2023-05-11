@@ -55,6 +55,14 @@ async def create_approve(body: schemas.BodyCreateApprove):
 
 
 @router.post(
+    '/transfer-from/create',
+    response_model=schemas.ResponseCreateTransaction
+)
+async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
+    pass
+
+
+@router.post(
     '/transaction/send',
     response_model=schemas.ResponseSendTransaction,
 )

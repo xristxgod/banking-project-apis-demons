@@ -9,6 +9,7 @@ from core.crypto.utils import from_sun
 
 
 class FeeCalculator:
+    # TODO: Figure out how to calculate bandwidth
     energy_sun_cost = 420
     default_native_bandwidth_cost = 267
     default_token_bandwidth_cost = 345
@@ -105,6 +106,26 @@ class FeeCalculator:
             bandwidth=bandwidth,
         )
 
+    async def _transfer_from(self, owner_address: TAddress, from_address: TAddress, to_address: TAddress,
+                             amount: decimal.Decimal, currency: str) -> dict:
+        contract = self.node.get_contract_by_symbol(currency)
+        parameter = [from_address, to_address, int(amount * contract.decimals)]
+        energy = await contract.energy_used(
+            owner_address=owner_address,
+            function_selector=contract.FunctionSelector.TRANSFER_FROM,
+            parameter=parameter,
+        )
+        bandwidth = self.default_token_bandwidth_cost
+
+        bandwidth_fee = await self._bandwidth_fee(owner_address, bandwidth, currency)
+        energy_fee = await self._energy_fee(owner_address, energy)
+
+        return dict(
+            fee=bandwidth_fee + energy_fee,
+            energy=energy,
+            bandwidth=bandwidth,
+        )
+
     async def calculate(self, method: Method, **kwargs) -> dict:
         match method:
             case self.Method.TRANSFER:
@@ -121,15 +142,16 @@ class FeeCalculator:
                     amount=kwargs['amount'],
                     currency=kwargs['currency'],
                 )
-            case self.Method.TRANSFER_FROM:
-                # TODO transfer from
-                pass
             case self.Method.APPROVE:
                 return await self._approve(
                     owner_address=kwargs['owner_address'],
                     spender_address=kwargs['spender_address'],
                     amount=kwargs['amount'],
                     currency=kwargs['currency'],
+                )
+            case self.Method.TRANSFER_FROM:
+                return await self._transfer_from(
+
                 )
             case _:
                 raise self.MethodNotFound(f'Method: {method} not found')

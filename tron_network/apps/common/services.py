@@ -1,4 +1,5 @@
 import abc
+import enum
 import json
 import decimal
 
@@ -14,6 +15,12 @@ from apps.common import schemas
 
 class InvalidCreateTransaction(Exception):
     pass
+
+
+class TransactionType(enum.Enum):
+    TRANSFER = 'transfer'
+    APPROVE = 'approve'
+    TRANSFER_FROM = 'transfer_from'
 
 
 async def create_wallet(body: schemas.BodyCreateWallet) -> schemas.ResponseCreateWallet:
@@ -51,20 +58,20 @@ async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
 
 
 class BaseCreateTransaction(abc.ABC):
-    @classmethod
-    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs) -> bool: ...
+    @abc.abstractclassmethod
+    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs): ...
 
-    @classmethod
+    @abc.abstractclassmethod
     async def _create(cls, body: pydantic.BaseModel) -> dict: ...
 
-    @classmethod
+    @abc.abstractclassmethod
     async def create(cls, body: pydantic.BaseModel) -> pydantic.BaseModel: ...
 
 
 class CreateTransfer(BaseCreateTransaction):
 
     @classmethod
-    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs) -> bool:
+    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs):
         native_balance = await node.client.get_account_balance(body.from_address)
 
         if body.is_native:
@@ -120,6 +127,7 @@ class CreateTransfer(BaseCreateTransaction):
                 'from_address': body.from_address,
                 'to_address': body.to_address,
                 'currency': body.currency,
+                'type': TransactionType.TRANSFER.value,
             }
         }
 
@@ -132,7 +140,7 @@ class CreateTransfer(BaseCreateTransaction):
 class CreateApprove(BaseCreateTransaction):
 
     @classmethod
-    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs) -> bool:
+    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs):
         native_balance = await node.client.get_account_balance(body.spender_address)
 
         has_native = (native_balance - fee) > 0
@@ -156,7 +164,7 @@ class CreateApprove(BaseCreateTransaction):
     @classmethod
     async def create(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
         commission = await node.calculator.calculate(
-            method=node.calculator.Method.TRANSFER,
+            method=node.calculator.Method.APPROVE,
             owner_address=body.owner_address,
             spender_address=body.spender_address,
             currency=body.currency,
@@ -174,6 +182,70 @@ class CreateApprove(BaseCreateTransaction):
                 'from_address': body.owner_address,
                 'to_address': body.spender_address,
                 'currency': body.currency,
+                'type': TransactionType.APPROVE.value,
+            }
+        }
+        return schemas.ResponseCreateTransaction(
+            payload=json.dumps(payload, default=str),
+            commission=schemas.ResponseCommission(**commission),
+        )
+
+
+class CreateTransferFrom(BaseCreateTransaction):
+
+    @classmethod
+    async def valid(cls, body: schemas.BodyCreateTransferFrom, fee: decimal.Decimal, **kwargs):
+        native_balance = await node.client.get_account_balance(body.owner_address)
+        allowance_balance = await allowance(schemas.BodyAllowance(
+            owner_address=body.from_address,
+            spender_address=body.owner_address,
+            currency=body.currency,
+        ))
+
+        has_native = (native_balance - fee) > 0
+        has_allowance = (allowance_balance.amount > body.amount)
+
+        if not all([has_native, has_allowance]):
+            raise InvalidCreateTransaction('Invalid create approve')
+
+    @classmethod
+    async def _create(cls, body: schemas.BodyCreateTransferFrom) -> dict:
+        transaction = await body.contract.transfer_from(
+            owner_address=body.owner_address,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            amount=body.amount,
+        )
+        transaction = transaction.fee_limit(
+            body.fee_limit
+        )
+        created_transaction = await transaction.build()
+        return created_transaction.to_json()
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransferFrom) -> schemas.ResponseCreateTransaction:
+        commission = await node.calculator.calculate(
+            method=node.calculator.Method.TRANSFER_FROM,
+            owner_address=body.owner_address,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            currency=body.currency,
+            amount=body.amount,
+        )
+
+        await cls.valid(body, fee=commission['fee'], amount=body.amount)
+
+        created_transaction_dict = await cls._create(body=body)
+
+        payload = {
+            'data': created_transaction_dict,
+            'extra': {
+                'amount': body.amount,
+                'from_address': body.from_address,
+                'to_address': body.to_address,
+                'currency': body.currency,
+                'owner_address': body.owner_address,
+                'type': TransactionType.TRANSFER_FROM.value,
             }
         }
         return schemas.ResponseCreateTransaction(
@@ -207,6 +279,10 @@ class SendTransaction:
             from_address=body.extra.get('from_address'),
             to_address=body.extra.get('to_address'),
             currency=body.extra.get('currency'),
+            extra=schemas.ResponseSendTransactionExtra(
+                type=body.extra.get('type'),
+                owner_address=body.extra.get('owner_address'),
+            )
         )
 
 

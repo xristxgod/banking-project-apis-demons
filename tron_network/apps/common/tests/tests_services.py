@@ -7,6 +7,7 @@ import pytest
 
 from apps.common import schemas
 from apps.common import services
+from apps.common.services import TransactionType
 from core.crypto.calculator import FEE_METHOD_TYPES
 from core.crypto.utils import from_sun, to_sun
 from .factories import fake_private_key, fake_address, create_fake_contract
@@ -225,7 +226,7 @@ async def test_fee_calculator(method: FEE_METHOD_TYPES, parameter: dict, bandwid
 
 @pytest.mark.asyncio
 class TestTransfer:
-    create_transfer_obj = services.CreateTransfer
+    obj = services.CreateTransfer
 
     @pytest.mark.parametrize(
         'body, fee, native_balance, token_balance, exception',
@@ -299,12 +300,12 @@ class TestTransfer:
         )
 
         if not exception:
-            assert await self.create_transfer_obj.valid(
+            assert await self.obj.valid(
                 body=body, fee=fee
             ) is None
         else:
             with pytest.raises(exception) as err:
-                await self.create_transfer_obj.valid(
+                await self.obj.valid(
                     body=body, fee=fee
                 )
 
@@ -349,7 +350,7 @@ class TestTransfer:
             currency=currency,
         )
 
-        response = await self.create_transfer_obj.create(body)
+        response = await self.obj.create(body)
 
         assert isinstance(response, schemas.ResponseCreateTransaction)
         assert response.payload_dict == {
@@ -359,6 +360,7 @@ class TestTransfer:
                 'from_address': body.from_address,
                 'to_address': body.to_address,
                 'currency': body.currency,
+                'type': TransactionType.TRANSFER.value,
             }
         }
 
@@ -367,7 +369,7 @@ class TestTransfer:
 
 @pytest.mark.asyncio
 class TestApprove:
-    create_approve_obj = services.CreateApprove
+    obj = services.CreateApprove
 
     @pytest.mark.parametrize(
         'body, fee, native_balance, exception',
@@ -386,7 +388,7 @@ class TestApprove:
                     owner_address=fake_address(),
                     spender_address=fake_address(),
                     amount=decimal.Decimal(12.4),
-                    currency='USDT',
+                    currency='USDC',
                 ),
                 decimal.Decimal(12.43),
                 decimal.Decimal(0),
@@ -402,12 +404,12 @@ class TestApprove:
         )
 
         if not exception:
-            assert await self.create_approve_obj.valid(
+            assert await self.obj.valid(
                 body=body, fee=fee
             ) is None
         else:
             with pytest.raises(exception) as err:
-                await self.create_approve_obj.valid(
+                await self.obj.valid(
                     body=body, fee=fee
                 )
 
@@ -452,7 +454,7 @@ class TestApprove:
             currency=currency,
         )
 
-        response = await self.create_approve_obj.create(body)
+        response = await self.obj.create(body)
 
         assert isinstance(response, schemas.ResponseCreateTransaction)
         assert response.payload_dict == {
@@ -462,6 +464,123 @@ class TestApprove:
                 'from_address': body.owner_address,
                 'to_address': body.spender_address,
                 'currency': body.currency,
+                'type': TransactionType.APPROVE.value,
+            }
+        }
+
+        assert response.commission == commission
+
+
+@pytest.mark.asyncio
+class TestTransferFrom:
+    obj = services.CreateTransferFrom
+
+    @pytest.mark.parametrize(
+        'body, fee, native_balance, allowance_balance, exception',
+        [(
+                schemas.BodyCreateTransferFrom(
+                    owner_address=fake_address(),
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(12.4),
+                    currency='USDT',
+                ),
+                decimal.Decimal(12.43),
+                decimal.Decimal(100),
+                decimal.Decimal(500),
+                None,
+        ), (
+                schemas.BodyCreateTransferFrom(
+                    owner_address=fake_address(),
+                    from_address=fake_address(),
+                    to_address=fake_address(),
+                    amount=decimal.Decimal(505),
+                    currency='USDT',
+                ),
+                decimal.Decimal(12.43),
+                decimal.Decimal(100),
+                decimal.Decimal(500),
+                services.InvalidCreateTransaction,
+        )]
+    )
+    async def test_valid(self, body: schemas.BodyCreateTransferFrom, fee: decimal.Decimal,
+                         native_balance: decimal.Decimal, allowance_balance: decimal.Decimal,
+                         exception: Optional[Type[Exception]], mocker):
+        mocker.patch(
+            'tronpy.async_tron.AsyncTron.get_account_balance',
+            return_value=native_balance,
+        )
+        mocker.patch(
+            'apps.common.services.allowance',
+            return_value=schemas.ResponseAllowance(
+                amount=allowance_balance,
+            )
+        )
+
+        if not exception:
+            assert await self.obj.valid(
+                body=body, fee=fee
+            ) is None
+        else:
+            with pytest.raises(exception) as err:
+                await self.obj.valid(
+                    body=body, fee=fee
+                )
+
+    @pytest.mark.parametrize(
+        'currency, commission',
+        [(
+                'USDC',
+                {
+                    'fee': decimal.Decimal(12.41),
+                    'bandwidth': 267,
+                    'energy': 12_000,
+                }
+        ), (
+                'USDT',
+                {
+                    'fee': decimal.Decimal(13.2),
+                    'bandwidth': 365,
+                    'energy': 12_000,
+                }
+        )]
+    )
+    async def test_create(self, currency: str, commission: dict, mocker):
+        mocker.patch(
+            'core.crypto.calculator.FeeCalculator.calculate',
+            return_value=commission,
+        )
+        mocker.patch(
+            'apps.common.services.CreateTransferFrom.valid',
+            side_effect=None,
+        )
+        # There is no point in testing, the standard functionality is used, which has
+        # already been tested in the `tronpy` library itself
+        mocker.patch(
+            'apps.common.services.CreateTransferFrom._create',
+            return_value={},
+        )
+
+        body = schemas.BodyCreateTransferFrom(
+            owner_address=fake_address(),
+            from_address=fake_address(),
+            to_address=fake_address(),
+            amount=decimal.Decimal(12.4),
+            currency=currency,
+        )
+
+        response = await self.obj.create(body)
+
+        assert isinstance(response, schemas.ResponseCreateTransaction)
+        assert response.payload_dict == {
+            'data': {},
+            'extra': {
+                'amount': str(body.amount),
+                'from_address': body.from_address,
+                'to_address': body.to_address,
+                'currency': body.currency,
+                'owner_address': body.owner_address,
+                'type': TransactionType.TRANSFER_FROM.value,
             }
         }
 
@@ -479,6 +598,7 @@ class TestApprove:
                     'from_address': fake_address(),
                     'to_address': fake_address(),
                     'currency': 'TRX',
+                    'type': TransactionType.TRANSFER.value,
                 }
             },
             {
@@ -493,6 +613,7 @@ class TestApprove:
                     'from_address': fake_address(),
                     'to_address': fake_address(),
                     'currency': 'USDT',
+                    'type': TransactionType.TRANSFER.value,
                 }
             },
             {
@@ -500,7 +621,40 @@ class TestApprove:
                 'blockTimeStamp': int(time.time()),
                 'fee': to_sun(decimal.Decimal(12.2)),
             }
-    )]
+    ), (
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(122.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'USDT',
+                    'type': TransactionType.APPROVE.value,
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+                'fee': to_sun(decimal.Decimal(12.2)),
+            }
+    ), (
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(122.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'USDT',
+                    'owner_address': fake_address(),
+                    'type': TransactionType.TRANSFER_FROM.value,
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+                'fee': to_sun(decimal.Decimal(12.2)),
+            }
+    ),]
 )
 async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
     import json
@@ -545,4 +699,8 @@ async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
         from_address=payload['extra']['from_address'],
         to_address=payload['extra']['to_address'],
         currency=payload['extra']['currency'],
+        extra=schemas.ResponseSendTransactionExtra(
+            type=payload['extra']['type'],
+            owner_address=payload['extra'].get('owner_address'),
+        )
     )
