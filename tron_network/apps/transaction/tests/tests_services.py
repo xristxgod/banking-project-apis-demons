@@ -231,7 +231,7 @@ class TestTransfer:
                 body=body, fee=fee
             ) is None
         else:
-            with pytest.raises(exception) as err:
+            with pytest.raises(exception):
                 await self.obj.valid(
                     body=body, fee=fee
                 )
@@ -335,7 +335,7 @@ class TestApprove:
                 body=body, fee=fee
             ) is None
         else:
-            with pytest.raises(exception) as err:
+            with pytest.raises(exception):
                 await self.obj.valid(
                     body=body, fee=fee
                 )
@@ -449,7 +449,7 @@ class TestTransferFrom:
                 body=body, fee=fee
             ) is None
         else:
-            with pytest.raises(exception) as err:
+            with pytest.raises(exception):
                 await self.obj.valid(
                     body=body, fee=fee
                 )
@@ -581,7 +581,7 @@ class TestTransferFrom:
                 'blockTimeStamp': int(time.time()),
                 'fee': to_sun(decimal.Decimal(12.2)),
             }
-    ),]
+    )]
 )
 async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
     import json
