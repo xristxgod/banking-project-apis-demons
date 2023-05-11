@@ -87,13 +87,22 @@ async def test_allowance(currency: str, amount: decimal.Decimal, mocker):
     assert response.amount == amount
 
 
-@pytest.mark.asyncio
-class TestTransfer:
-    create_transfer_obj = services.CreateTransfer
-
-    @pytest.mark.parametrize(
-        'method, parameter, bandwidth_balance, energy_balance, is_to_address_active, energy_used',
-        [(
+@pytest.mark.parametrize(
+    'method, parameter, bandwidth_balance, energy_balance, is_to_address_active, energy_used',
+    [(
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'TRX',
+            },
+            0,
+            1500,
+            True,
+            0,
+    ),
+        (
                 FEE_METHOD_TYPES.TRANSFER,
                 {
                     'from_address': fake_address(),
@@ -103,122 +112,114 @@ class TestTransfer:
                 },
                 0,
                 1500,
-                True,
+                False,
                 0,
         ),
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'TRX',
-                    },
-                    0,
-                    1500,
-                    False,
-                    0,
-            ),
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'TRX',
-                    },
-                    0,
-                    0,
-                    False,
-                    0,
-            ),
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'USDT',
-                    },
-                    100_000,
-                    1500,
-                    True,
-                    12_000,
-            ),
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'USDT',
-                    },
-                    0,
-                    1500,
-                    True,
-                    12_000,
-            ),
-            (
-                    FEE_METHOD_TYPES.TRANSFER,
-                    {
-                        'from_address': fake_address(),
-                        'to_address': fake_address(),
-                        'amount': decimal.Decimal(15.1),
-                        'currency': 'USDT',
-                    },
-                    0,
-                    0,
-                    True,
-                    12_000,
-            ),
-            # TODO: Add when new ones appear
-        ]
+        (
+                FEE_METHOD_TYPES.TRANSFER,
+                {
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'amount': decimal.Decimal(15.1),
+                    'currency': 'TRX',
+                },
+                0,
+                0,
+                False,
+                0,
+        ),
+        (
+                FEE_METHOD_TYPES.TRANSFER,
+                {
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'amount': decimal.Decimal(15.1),
+                    'currency': 'USDT',
+                },
+                100_000,
+                1500,
+                True,
+                12_000,
+        ),
+        (
+                FEE_METHOD_TYPES.TRANSFER,
+                {
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'amount': decimal.Decimal(15.1),
+                    'currency': 'USDT',
+                },
+                0,
+                1500,
+                True,
+                12_000,
+        ),
+        (
+                FEE_METHOD_TYPES.TRANSFER,
+                {
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'amount': decimal.Decimal(15.1),
+                    'currency': 'USDT',
+                },
+                0,
+                0,
+                True,
+                12_000,
+        ),
+        # TODO: Add when new ones appear
+    ]
+)
+async def test_fee_calculator(method: FEE_METHOD_TYPES, parameter: dict, bandwidth_balance: int,
+                              energy_balance: int, is_to_address_active: bool, energy_used: Optional[int],
+                              mocker):
+    from core.crypto.calculator import FeeCalculator
+
+    mocker.patch(
+        'core.crypto.node.Node.is_active_address',
+        return_value=is_to_address_active
     )
-    async def test_fee_calculator(self, method: FEE_METHOD_TYPES, parameter: dict, bandwidth_balance: int,
-                                  energy_balance: int, is_to_address_active: bool, energy_used: Optional[int],
-                                  mocker):
-        from core.crypto.calculator import FeeCalculator
+    mocker.patch(
+        'core.crypto.node.Node.get_bandwidth_balance',
+        return_value=bandwidth_balance,
+    )
+    mocker.patch(
+        'core.crypto.node.Node.get_energy_balance',
+        return_value=energy_balance,
+    )
 
+    fee, bandwidth, energy = 0, 0, energy_used
+    if parameter['currency'] == 'TRX':
+        bandwidth += FeeCalculator.default_native_bandwidth_cost
+        if not is_to_address_active:
+            fee += FeeCalculator.activate_account_trx_cost
+            bandwidth += FeeCalculator.activate_account_bandwidth_cost
+        if bandwidth_balance < bandwidth:
+            fee += FeeCalculator.not_bandwidth_balance_extra_fee_native_cost
+    else:
+        bandwidth += FeeCalculator.default_token_bandwidth_cost
+        fee += from_sun(energy_used * FeeCalculator.energy_sun_cost)
+        await create_fake_contract(symbol=parameter['currency'])
         mocker.patch(
-            'core.crypto.node.Node.is_active_address',
-            return_value=is_to_address_active
+            'core.crypto.contract.Contract.energy_used',
+            return_value=energy_used
         )
-        mocker.patch(
-            'core.crypto.node.Node.get_bandwidth_balance',
-            return_value=bandwidth_balance,
-        )
-        mocker.patch(
-            'core.crypto.node.Node.get_energy_balance',
-            return_value=energy_balance,
-        )
+        if bandwidth_balance < bandwidth:
+            fee += FeeCalculator.not_bandwidth_balance_extra_fee_token_cost
 
-        fee, bandwidth, energy = 0, 0, energy_used
-        if parameter['currency'] == 'TRX':
-            bandwidth += FeeCalculator.default_native_bandwidth_cost
-            if not is_to_address_active:
-                fee += FeeCalculator.activate_account_trx_cost
-                bandwidth += FeeCalculator.activate_account_bandwidth_cost
-            if bandwidth_balance < bandwidth:
-                fee += FeeCalculator.not_bandwidth_balance_extra_fee_native_cost
-        else:
-            bandwidth += FeeCalculator.default_token_bandwidth_cost
-            fee += from_sun(energy_used * FeeCalculator.energy_sun_cost)
-            await create_fake_contract(symbol=parameter['currency'])
-            mocker.patch(
-                'core.crypto.contract.Contract.energy_used',
-                return_value=energy_used
-            )
-            if bandwidth_balance < bandwidth:
-                fee += FeeCalculator.not_bandwidth_balance_extra_fee_token_cost
+    body = schemas.BodyCommission(parameter=parameter)
 
-        body = schemas.BodyCommission(parameter=parameter)
+    response = await services.fee_calculator(body, method=method)
 
-        response = await services.fee_calculator(body, method=method)
+    assert isinstance(response, schemas.ResponseCommission)
+    assert response.fee == fee
+    assert response.bandwidth == bandwidth
+    assert response.energy == energy
 
-        assert isinstance(response, schemas.ResponseCommission)
-        assert response.fee == fee
-        assert response.bandwidth == bandwidth
-        assert response.energy == energy
+
+@pytest.mark.asyncio
+class TestTransfer:
+    create_transfer_obj = services.CreateTransfer
 
     @pytest.mark.parametrize(
         'body, fee, native_balance, token_balance, exception',
@@ -279,7 +280,7 @@ class TestTransfer:
                 services.InvalidCreateTransaction,
         )]
     )
-    async def test_valid_create_transfer(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
+    async def test_valid(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
                                          native_balance: decimal.Decimal, token_balance: decimal.Decimal,
                                          exception: Optional[Exception], mocker):
         mocker.patch(
@@ -319,7 +320,7 @@ class TestTransfer:
                 }
         )]
     )
-    async def test_create_transfer(self, currency: str, commission: dict, mocker):
+    async def test_create(self, currency: str, commission: dict, mocker):
         mocker.patch(
             'core.crypto.calculator.FeeCalculator.calculate',
             return_value=commission,
