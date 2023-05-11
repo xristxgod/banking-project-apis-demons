@@ -1,4 +1,5 @@
 import abc
+import enum
 import json
 import decimal
 
@@ -14,6 +15,12 @@ from apps.common import schemas
 
 class InvalidCreateTransaction(Exception):
     pass
+
+
+class TransactionType(enum.Enum):
+    TRANSFER = 'transfer'
+    APPROVE = 'approve'
+    TRANSFER_FROM = 'transfer_from'
 
 
 async def create_wallet(body: schemas.BodyCreateWallet) -> schemas.ResponseCreateWallet:
@@ -120,6 +127,7 @@ class CreateTransfer(BaseCreateTransaction):
                 'from_address': body.from_address,
                 'to_address': body.to_address,
                 'currency': body.currency,
+                'type': TransactionType.TRANSFER.value,
             }
         }
 
@@ -156,7 +164,7 @@ class CreateApprove(BaseCreateTransaction):
     @classmethod
     async def create(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
         commission = await node.calculator.calculate(
-            method=node.calculator.Method.TRANSFER,
+            method=node.calculator.Method.APPROVE,
             owner_address=body.owner_address,
             spender_address=body.spender_address,
             currency=body.currency,
@@ -174,6 +182,7 @@ class CreateApprove(BaseCreateTransaction):
                 'from_address': body.owner_address,
                 'to_address': body.spender_address,
                 'currency': body.currency,
+                'type': TransactionType.APPROVE.value,
             }
         }
         return schemas.ResponseCreateTransaction(
@@ -225,6 +234,7 @@ class CreateTransferFrom(BaseCreateTransaction):
                 'to_address': body.to_address,
                 'currency': body.currency,
                 'owner_address': body.owner_address,
+                'type': TransactionType.TRANSFER_FROM.value,
             }
         }
         return schemas.ResponseCreateTransaction(
@@ -258,6 +268,10 @@ class SendTransaction:
             from_address=body.extra.get('from_address'),
             to_address=body.extra.get('to_address'),
             currency=body.extra.get('currency'),
+            extra=schemas.ResponseSendTransactionExtra(
+                type=body.extra.get('type'),
+                owner_address=body.extra.get('owner_address'),
+            )
         )
 
 

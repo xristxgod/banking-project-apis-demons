@@ -7,6 +7,7 @@ import pytest
 
 from apps.common import schemas
 from apps.common import services
+from apps.common.services import TransactionType
 from core.crypto.calculator import FEE_METHOD_TYPES
 from core.crypto.utils import from_sun, to_sun
 from .factories import fake_private_key, fake_address, create_fake_contract
@@ -359,6 +360,7 @@ class TestTransfer:
                 'from_address': body.from_address,
                 'to_address': body.to_address,
                 'currency': body.currency,
+                'type': TransactionType.TRANSFER.value,
             }
         }
 
@@ -462,6 +464,7 @@ class TestApprove:
                 'from_address': body.owner_address,
                 'to_address': body.spender_address,
                 'currency': body.currency,
+                'type': TransactionType.APPROVE.value,
             }
         }
 
@@ -479,6 +482,7 @@ class TestApprove:
                     'from_address': fake_address(),
                     'to_address': fake_address(),
                     'currency': 'TRX',
+                    'type': TransactionType.TRANSFER.value,
                 }
             },
             {
@@ -493,6 +497,7 @@ class TestApprove:
                     'from_address': fake_address(),
                     'to_address': fake_address(),
                     'currency': 'USDT',
+                    'type': TransactionType.TRANSFER.value,
                 }
             },
             {
@@ -500,7 +505,40 @@ class TestApprove:
                 'blockTimeStamp': int(time.time()),
                 'fee': to_sun(decimal.Decimal(12.2)),
             }
-    )]
+    ), (
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(122.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'USDT',
+                    'type': TransactionType.APPROVE.value,
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+                'fee': to_sun(decimal.Decimal(12.2)),
+            }
+    ), (
+            {
+                'data': {},
+                'extra': {
+                    'amount': decimal.Decimal(122.4),
+                    'from_address': fake_address(),
+                    'to_address': fake_address(),
+                    'currency': 'USDT',
+                    'owner_address': fake_address(),
+                    'type': TransactionType.TRANSFER_FROM.value,
+                }
+            },
+            {
+                'id': uuid.uuid4().hex,
+                'blockTimeStamp': int(time.time()),
+                'fee': to_sun(decimal.Decimal(12.2)),
+            }
+    ),]
 )
 async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
     import json
@@ -545,4 +583,8 @@ async def test_send_transaction(payload: dict, transaction_info: dict, mocker):
         from_address=payload['extra']['from_address'],
         to_address=payload['extra']['to_address'],
         currency=payload['extra']['currency'],
+        extra=schemas.ResponseSendTransactionExtra(
+            type=payload['extra']['type'],
+            owner_address=payload['extra'].get('owner_address'),
+        )
     )

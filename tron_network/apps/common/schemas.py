@@ -102,6 +102,8 @@ class BodyCreateApprove(CurrencyMixin, BaseModel):
     spender_address: TAddress
     amount: decimal.Decimal
 
+    currency: str
+
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
 
@@ -152,6 +154,7 @@ class BodySendTransaction(BaseModel):
 
 class ResponseSendTransactionExtra(BaseModel):
     type: str
+    owner_address: Optional[TAddress] = None
 
 
 class ResponseSendTransaction(BaseModel):
@@ -162,7 +165,7 @@ class ResponseSendTransaction(BaseModel):
     from_address: TAddress
     to_address: TAddress
     currency: str = Field(default='TRX')
-    # extra: ResponseSendTransactionExtra
+    extra: ResponseSendTransactionExtra
 
 
 class BodyCommission(BaseModel):
