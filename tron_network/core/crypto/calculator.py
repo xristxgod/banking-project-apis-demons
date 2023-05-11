@@ -70,7 +70,7 @@ class FeeCalculator:
             int(amount * contract.decimals),
         ]
         energy = await contract.energy_used(
-            from_address=from_address,
+            owner_address=from_address,
             function_selector=contract.FunctionSelector.TRANSFER,
             parameter=parameter,
         )
@@ -78,6 +78,26 @@ class FeeCalculator:
 
         bandwidth_fee = await self._bandwidth_fee(from_address, bandwidth, currency)
         energy_fee = await self._energy_fee(from_address, energy)
+
+        return dict(
+            fee=bandwidth_fee + energy_fee,
+            energy=energy,
+            bandwidth=bandwidth,
+        )
+
+    async def _approve(self, owner_address: TAddress, spender_address: TAddress,
+                       amount: decimal.Decimal, currency: str) -> dict:
+        contract = self.node.get_contract_by_symbol(currency)
+        parameter = [spender_address, int(amount * contract.decimals)]
+        energy = await contract.energy_used(
+            owner_address=owner_address,
+            function_selector=contract.FunctionSelector.APPROVE,
+            parameter=parameter,
+        )
+        bandwidth = self.default_token_bandwidth_cost
+
+        bandwidth_fee = await self._bandwidth_fee(owner_address, bandwidth, currency)
+        energy_fee = await self._energy_fee(owner_address, energy)
 
         return dict(
             fee=bandwidth_fee + energy_fee,
@@ -105,8 +125,12 @@ class FeeCalculator:
                 # TODO transfer from
                 pass
             case self.Method.APPROVE:
-                # TODO approve
-                pass
+                return await self._approve(
+                    owner_address=kwargs['owner_address'],
+                    spender_address=kwargs['spender_address'],
+                    amount=kwargs['amount'],
+                    currency=kwargs['currency'],
+                )
             case _:
                 raise self.MethodNotFound(f'Method: {method} not found')
 

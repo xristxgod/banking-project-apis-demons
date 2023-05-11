@@ -32,6 +32,16 @@ class WriteContractMixin:
             from_address
         )
 
+    async def approve(self, owner_address: TAddress, spender_address: str,
+                      amount: decimal.Decimal) -> AsyncTransactionBuilder:
+        amount = int(amount * self.decimals)
+        transaction = await self.contract.functions.approve(
+            spender_address, amount,
+        )
+        return transaction.with_owner(
+            owner_address
+        )
+
 
 class ContractMethodMixin(ReadContractMixin, WriteContractMixin):
     pass
@@ -42,6 +52,7 @@ class Contract(ContractMethodMixin):
     class FunctionSelector:
         # name      function selector, parameter
         TRANSFER = 'transfer(address,uint256)', '(address,uint256)'
+        APPROVE = 'approve(address,uint256)', '(address,uint256)'
 
     def __init__(self, contract: AsyncContract, client: AsyncTron, **kwargs):
         self.contract = contract
@@ -69,7 +80,7 @@ class Contract(ContractMethodMixin):
     def decimals(self) -> int:
         return 10 ** self._decimal_place
 
-    async def energy_used(self, from_address: TAddress, function_selector: FunctionSelector, parameter: list) -> int:
+    async def energy_used(self, owner_address: TAddress, function_selector: FunctionSelector, parameter: list) -> int:
         function_selector_view, parameter_view = function_selector
 
         def get_parameter_hex():
@@ -78,7 +89,7 @@ class Contract(ContractMethodMixin):
         response = await self.client.provider.make_request(
             "wallet/triggerconstantcontract",
             {
-                "owner_address": from_address,
+                "owner_address": owner_address,
                 "contract_address": self.address,
                 "function_selector": function_selector_view,
                 "parameter": get_parameter_hex(),
