@@ -1,7 +1,7 @@
 import uuid
 import time
 import decimal
-from typing import Optional
+from typing import Type, Optional
 
 import pytest
 
@@ -289,7 +289,7 @@ class TestTransfer:
     )
     async def test_valid(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
                          native_balance: decimal.Decimal, token_balance: decimal.Decimal,
-                         exception: Optional[Exception], mocker):
+                         exception: Optional[Type[Exception]], mocker):
         mocker.patch(
             'tronpy.async_tron.AsyncTron.get_account_balance',
             return_value=native_balance,
