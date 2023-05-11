@@ -42,6 +42,16 @@ class WriteContractMixin:
             owner_address
         )
 
+    async def transfer_from(self, owner_address: TAddress, from_address: TAddress, to_address: TAddress,
+                            amount: decimal.Decimal) -> AsyncTransactionBuilder:
+        amount = int(amount * self.decimals)
+        transaction = await self.contract.functions.transferFrom(
+            from_address, to_address, amount,
+        )
+        return transaction.with_owner(
+            owner_address
+        )
+
 
 class ContractMethodMixin(ReadContractMixin, WriteContractMixin):
     pass
@@ -53,6 +63,7 @@ class Contract(ContractMethodMixin):
         # name      function selector, parameter
         TRANSFER = 'transfer(address,uint256)', '(address,uint256)'
         APPROVE = 'approve(address,uint256)', '(address,uint256)'
+        TRANSFER_FROM = 'transferFrom(address,address,uint256)', '(address,address,uint256)'
 
     def __init__(self, contract: AsyncContract, client: AsyncTron, **kwargs):
         self.contract = contract

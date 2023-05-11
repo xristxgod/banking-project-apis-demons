@@ -51,20 +51,20 @@ async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
 
 
 class BaseCreateTransaction(abc.ABC):
-    @classmethod
-    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs) -> bool: ...
+    @abc.abstractclassmethod
+    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs): ...
 
-    @classmethod
+    @abc.abstractclassmethod
     async def _create(cls, body: pydantic.BaseModel) -> dict: ...
 
-    @classmethod
+    @abc.abstractclassmethod
     async def create(cls, body: pydantic.BaseModel) -> pydantic.BaseModel: ...
 
 
 class CreateTransfer(BaseCreateTransaction):
 
     @classmethod
-    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs) -> bool:
+    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs):
         native_balance = await node.client.get_account_balance(body.from_address)
 
         if body.is_native:
@@ -132,7 +132,7 @@ class CreateTransfer(BaseCreateTransaction):
 class CreateApprove(BaseCreateTransaction):
 
     @classmethod
-    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs) -> bool:
+    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs):
         native_balance = await node.client.get_account_balance(body.spender_address)
 
         has_native = (native_balance - fee) > 0
@@ -180,6 +180,30 @@ class CreateApprove(BaseCreateTransaction):
             payload=json.dumps(payload, default=str),
             commission=schemas.ResponseCommission(**commission),
         )
+
+
+class CreateTransferFrom(BaseCreateTransaction):
+
+    @classmethod
+    async def valid(cls, body: schemas.BodyCreateTransferFrom, fee: decimal.Decimal, **kwargs):
+        pass
+
+    @classmethod
+    async def _create(cls, body: schemas.BodyCreateTransferFrom) -> dict:
+        pass
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransferFrom) -> schemas.ResponseCreateTransaction:
+        commission = await node.calculator.calculate(
+            method=node.calculator.Method.TRANSFER_FROM,
+            owner_address=body.owner_address,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            currency=body.currency,
+            amount=body.amount,
+        )
+
+        await cls.valid(body, fee=commission['fee'])
 
 
 class SendTransaction:

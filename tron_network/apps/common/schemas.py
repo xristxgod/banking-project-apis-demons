@@ -13,7 +13,7 @@ from core.crypto.contract import Contract
 from apps.common import utils
 
 
-class CurrencyMixin(BaseModel):
+class CurrencyMixin:
     currency: str
 
     @property
@@ -101,6 +101,15 @@ class BodyCreateApprove(CurrencyMixin, BaseModel):
     owner_address: TAddress
     spender_address: TAddress
     amount: decimal.Decimal
+
+    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+
+
+class BodyCreateTransferFrom(CurrencyMixin, BaseModel):
+    owner_address: TAddress
+    from_address: TAddress
+    to_address: TAddress
+    amount: TAddress
 
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
