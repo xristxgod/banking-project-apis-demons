@@ -101,72 +101,79 @@ async def test_allowance(currency: str, amount: decimal.Decimal, mocker):
             1500,
             True,
             0,
+    ), (
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'TRX',
+            },
+            0,
+            1500,
+            False,
+            0,
+    ), (
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'TRX',
+            },
+            0,
+            0,
+            False,
+            0,
+    ), (
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'USDT',
+            },
+            100_000,
+            1500,
+            True,
+            12_000,
+    ), (
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'USDT',
+            },
+            0,
+            1500,
+            True,
+            12_000,
+    ), (
+            FEE_METHOD_TYPES.TRANSFER,
+            {
+                'from_address': fake_address(),
+                'to_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'USDT',
+            },
+            0,
+            0,
+            True,
+            12_000,
+    ), (
+            FEE_METHOD_TYPES.APPROVE,
+            {
+                'owner_address': fake_address(),
+                'spender_address': fake_address(),
+                'amount': decimal.Decimal(15.1),
+                'currency': 'USDT',
+            },
+            0,
+            0,
+            True,
+            12_000,
     ),
-        (
-                FEE_METHOD_TYPES.TRANSFER,
-                {
-                    'from_address': fake_address(),
-                    'to_address': fake_address(),
-                    'amount': decimal.Decimal(15.1),
-                    'currency': 'TRX',
-                },
-                0,
-                1500,
-                False,
-                0,
-        ),
-        (
-                FEE_METHOD_TYPES.TRANSFER,
-                {
-                    'from_address': fake_address(),
-                    'to_address': fake_address(),
-                    'amount': decimal.Decimal(15.1),
-                    'currency': 'TRX',
-                },
-                0,
-                0,
-                False,
-                0,
-        ),
-        (
-                FEE_METHOD_TYPES.TRANSFER,
-                {
-                    'from_address': fake_address(),
-                    'to_address': fake_address(),
-                    'amount': decimal.Decimal(15.1),
-                    'currency': 'USDT',
-                },
-                100_000,
-                1500,
-                True,
-                12_000,
-        ),
-        (
-                FEE_METHOD_TYPES.TRANSFER,
-                {
-                    'from_address': fake_address(),
-                    'to_address': fake_address(),
-                    'amount': decimal.Decimal(15.1),
-                    'currency': 'USDT',
-                },
-                0,
-                1500,
-                True,
-                12_000,
-        ),
-        (
-                FEE_METHOD_TYPES.TRANSFER,
-                {
-                    'from_address': fake_address(),
-                    'to_address': fake_address(),
-                    'amount': decimal.Decimal(15.1),
-                    'currency': 'USDT',
-                },
-                0,
-                0,
-                True,
-                12_000,
-        ),
         # TODO: Add when new ones appear
     ]
 )
@@ -281,8 +288,8 @@ class TestTransfer:
         )]
     )
     async def test_valid(self, body: schemas.BodyCreateTransfer, fee: decimal.Decimal,
-                                         native_balance: decimal.Decimal, token_balance: decimal.Decimal,
-                                         exception: Optional[Exception], mocker):
+                         native_balance: decimal.Decimal, token_balance: decimal.Decimal,
+                         exception: Optional[Exception], mocker):
         mocker.patch(
             'tronpy.async_tron.AsyncTron.get_account_balance',
             return_value=native_balance,
