@@ -113,6 +113,8 @@ class BodyCreateTransferFrom(CurrencyMixin, BaseModel):
     to_address: TAddress
     amount: decimal.Decimal
 
+    currency: str
+
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
 
