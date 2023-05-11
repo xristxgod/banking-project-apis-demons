@@ -195,7 +195,18 @@ class CreateTransferFrom(BaseCreateTransaction):
 
     @classmethod
     async def valid(cls, body: schemas.BodyCreateTransferFrom, fee: decimal.Decimal, **kwargs):
-        pass
+        native_balance = await node.client.get_account_balance(body.owner_address)
+        allowance_balance = await allowance(schemas.BodyAllowance(
+            owner_address=body.from_address,
+            spender_address=body.owner_address,
+            currency=body.currency,
+        ))
+
+        has_native = (native_balance - fee) > 0
+        has_allowance = (allowance_balance.amount > body.amount)
+
+        if not all([has_native, has_allowance]):
+            raise InvalidCreateTransaction('Invalid create approve')
 
     @classmethod
     async def _create(cls, body: schemas.BodyCreateTransferFrom) -> dict:
@@ -222,7 +233,7 @@ class CreateTransferFrom(BaseCreateTransaction):
             amount=body.amount,
         )
 
-        await cls.valid(body, fee=commission['fee'])
+        await cls.valid(body, fee=commission['fee'], amount=body.amount)
 
         created_transaction_dict = await cls._create(body=body)
 
