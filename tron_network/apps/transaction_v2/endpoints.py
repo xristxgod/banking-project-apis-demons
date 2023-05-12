@@ -26,3 +26,11 @@ async def create_transfer(body: schemas.BodyCreateTransfer):
 )
 async def create_approve(body: schemas.BodyCreateApprove):
     return await _create_transaction(body)
+
+
+@router.post(
+    '/transfer-from/create',
+    response_model=schemas.ResponseCreateTransaction,
+)
+async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
+    return await _create_transaction(body)

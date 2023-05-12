@@ -40,7 +40,7 @@ async def wallet_balance(body: schemas.BodyWalletBalance) -> schemas.ResponseWal
 async def allowance(body: schemas.BodyAllowance) -> schemas.ResponseAllowance:
     amount = await body.contract.allowance(
         owner_address=body.owner_address,
-        spender_address=body.spender_address,
+        sender_address=body.sender_address,
     )
     return schemas.ResponseAllowance(
         amount=amount,

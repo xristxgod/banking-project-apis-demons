@@ -171,7 +171,7 @@ class Approve(BaseTransaction):
             commission=self.commission_schema,
             amount=getattr(self, 'amount'),
             owner_address=getattr(self, 'owner_address'),
-            spender_address=getattr(self, 'spender_address'),
+            sender_address=getattr(self, 'sender_address'),
             currency=getattr(self, 'currency'),
             type=self.type,
         )
@@ -181,7 +181,7 @@ class Approve(BaseTransaction):
         contract = body.contract
         raw_obj = await contract.approve(
             owner_address=body.owner_address,
-            spender_address=body.spender_address,
+            sender_address=body.sender_address,
             amount=body.amount,
         )
 
@@ -196,13 +196,63 @@ class Approve(BaseTransaction):
                 owner_address=body.owner_address,
                 function_selector=FUNCTION_SELECTOR.APPROVE,
                 parameter=[
-                    body.spender_address,
+                    body.sender_address,
                     contract.to_int(body.amount),
                 ],
                 currency=body.currency,
             ),
             type=body.transaction_type,
             owner_address=body.owner_address,
-            spender_address=body.spender_address,
+            sender_address=body.sender_address,
+            currency=body.currency,
+        )
+
+
+class TransferFrom(BaseTransaction):
+
+    async def _make_response(self) -> schemas.ResponseSendApprove:
+        return schemas.ResponseSendApprove(
+            id=self.id,
+            timestamp=self._raw_transaction['raw_data']['timestamp'],
+            commission=self.commission_schema,
+            amount=getattr(self, 'amount'),
+            owner_address=getattr(self, 'owner_address'),
+            sender_address=getattr(self, 'sender_address'),
+            recipient_address=getattr(self, 'recipient_address'),
+            currency=getattr(self, 'currency'),
+            type=self.type,
+        )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransferFrom) -> BaseTransaction:
+        contract = body.contract
+        raw_obj = await contract.transfer_from(
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
+            recipient_address=body.recipient_address,
+            amount=body.amount,
+        )
+
+        obj = await raw_obj.fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+                owner_address=body.owner_address,
+                function_selector=FUNCTION_SELECTOR.TRANSFER_FROM,
+                parameter=[
+                    body.sender_address,
+                    body.recipient_address,
+                    contract.to_int(body.amount),
+                ],
+                currency=body.currency,
+            ),
+            type=body.transaction_type,
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
+            recipient_address=body.recipient_address,
             currency=body.currency,
         )

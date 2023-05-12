@@ -9,8 +9,8 @@ from core.crypto.contract import Contract
 from apps.common import utils
 
 
-class CurrencyMixin:
-    currency: str
+class WithCurrencySchema(BaseModel):
+    currency: str = Field(default='TRX')
 
     @property
     def is_native(self) -> bool:
@@ -20,6 +20,19 @@ class CurrencyMixin:
     def contract(self) -> Contract:
         if not self.is_native:
             return node.get_contract_by_symbol(self.currency)
+
+    @classmethod
+    def use_native(cls) -> bool:
+        return True
+
+    @validator('currency')
+    def valid_currency(cls, currency: str):
+        currency = currency.upper()
+        if not cls.use_native() and currency == 'TRX':
+            raise ValueError("Don't use native!")
+        elif currency != 'TRX' and not node.has_currency(currency):
+            raise ValueError(f'Currency: {currency} not found')
+        return currency
 
 
 class BodyCreateWallet(BaseModel):
@@ -33,7 +46,7 @@ class ResponseCreateWallet(BodyCreateWallet):
     address: TAddress
 
 
-class BodyWalletBalance(CurrencyMixin, BaseModel):
+class BodyWalletBalance(WithCurrencySchema, BaseModel):
     address: TAddress
     currency: Optional[str] = Field(default='TRX')
 
@@ -53,9 +66,9 @@ class ResponseWalletBalance(BaseModel):
     balance: decimal.Decimal = Field(default=0)
 
 
-class BodyAllowance(CurrencyMixin, BaseModel):
+class BodyAllowance(WithCurrencySchema, BaseModel):
     owner_address: TAddress
-    spender_address: TAddress
+    sender_address: TAddress
     currency: str
 
     @validator('currency')
@@ -65,7 +78,7 @@ class BodyAllowance(CurrencyMixin, BaseModel):
             raise ValueError(f'Currency: {currency} not found')
         return currency
 
-    @validator('owner_address', 'spender_address')
+    @validator('owner_address', 'sender_address')
     def correct_address(cls, address: TAddress):
         return utils.correct_address(address)
 

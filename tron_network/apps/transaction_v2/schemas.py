@@ -1,13 +1,12 @@
 import decimal
 import enum
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from tronpy.tron import PrivateKey, TAddress
 
 import settings
-from core.crypto import node
 from core.crypto.utils import to_sun
-from core.crypto.contract import Contract
+from apps.common.schemas import WithCurrencySchema
 
 
 class TransactionType(int, enum.Enum):
@@ -19,39 +18,13 @@ class TransactionType(int, enum.Enum):
     TRANSFER_FROM = 5
 
 
-class SchemaWithCurrency(BaseModel):
-    currency: str = Field(default='TRX')
-
-    @property
-    def is_native(self) -> bool:
-        return self.currency == 'TRX'
-
-    @property
-    def contract(self) -> Contract:
-        if not self.is_native:
-            return node.get_contract_by_symbol(self.currency)
-
-    @classmethod
-    def use_native(cls) -> bool:
-        return True
-
-    @validator('currency')
-    def valid_currency(cls, currency: str):
-        currency = currency.upper()
-        if not cls.use_native() and currency == 'TRX':
-            raise ValueError("Don't use native!")
-        elif currency != 'TRX' and not node.has_currency(currency):
-            raise ValueError(f'Currency: {currency} not found')
-        return currency
-
-
 class ResponseCommission(BaseModel):
     fee: decimal.Decimal
     bandwidth: int
     energy: int
 
 
-class BaseCreateTransactionSchema(SchemaWithCurrency):
+class BaseCreateTransactionSchema(WithCurrencySchema):
     amount: decimal.Decimal
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
@@ -77,14 +50,24 @@ class BodyCreateTransfer(BaseCreateTransactionSchema):
 
 class BodyCreateApprove(BaseCreateTransactionSchema):
     owner_address: TAddress
-    spender_address: TAddress
+    sender_address: TAddress
 
     @property
     def transaction_type(self) -> TransactionType:
         return TransactionType.APPROVE
 
 
-class ResponseCreateTransaction(SchemaWithCurrency):
+class BodyCreateTransferFrom(BaseCreateTransactionSchema):
+    owner_address: TAddress
+    sender_address: TAddress
+    recipient_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.TRANSFER_FROM
+
+
+class ResponseCreateTransaction(WithCurrencySchema):
     id: str
     commission: ResponseCommission
 
@@ -106,11 +89,11 @@ class BaseResponseSendTransactionSchema(BaseModel):
     type: TransactionType
 
 
-class ResponseSendTransfer(BaseResponseSendTransactionSchema, SchemaWithCurrency):
+class ResponseSendTransfer(BaseResponseSendTransactionSchema, WithCurrencySchema):
     from_address: TAddress
     to_address: TAddress
 
 
-class ResponseSendApprove(BaseResponseSendTransactionSchema, SchemaWithCurrency):
+class ResponseSendApprove(BaseResponseSendTransactionSchema, WithCurrencySchema):
     owner_address: TAddress
-    spender_address: TAddress
+    sender_address: TAddress

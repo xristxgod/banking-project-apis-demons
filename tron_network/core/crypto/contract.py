@@ -12,8 +12,8 @@ class ReadContractMixin:
         amount = await self.contract.functions.balanceOf(address)
         return self.from_int(amount)
 
-    async def allowance(self, owner_address: TAddress, spender_address: TAddress) -> decimal.Decimal:
-        amount = await self.contract.functions.allowance(owner_address, spender_address)
+    async def allowance(self, owner_address: TAddress, sender_address: TAddress) -> decimal.Decimal:
+        amount = await self.contract.functions.allowance(owner_address, sender_address)
         return self.from_int(amount)
 
 
@@ -27,19 +27,19 @@ class WriteContractMixin:
             from_address
         )
 
-    async def approve(self, owner_address: TAddress, spender_address: str,
+    async def approve(self, owner_address: TAddress, sender_address: str,
                       amount: decimal.Decimal) -> AsyncTransactionBuilder:
         transaction = await self.contract.functions.approve(
-            spender_address, self.to_int(amount),
+            sender_address, self.to_int(amount),
         )
         return transaction.with_owner(
             owner_address
         )
 
-    async def transfer_from(self, owner_address: TAddress, from_address: TAddress, to_address: TAddress,
+    async def transfer_from(self, owner_address: TAddress, sender_address: TAddress, recipient_address: TAddress,
                             amount: decimal.Decimal) -> AsyncTransactionBuilder:
         transaction = await self.contract.functions.transferFrom(
-            from_address, to_address, self.to_int(amount),
+            sender_address, recipient_address, self.to_int(amount),
         )
         return transaction.with_owner(
             owner_address

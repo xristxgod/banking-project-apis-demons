@@ -4,6 +4,7 @@ import enum
 import asyncio
 
 from apps.transaction_v2 import schemas
+from apps.transaction_v2.schemas import TransactionType
 from apps.transaction_v2 import services
 
 __all__ = (
@@ -16,9 +17,10 @@ lock = asyncio.Lock()
 class TransactionStorage:
 
     objs: dict[schemas.TransactionType, services.BaseTransaction] = {
-        schemas.TransactionType.TRANSFER_NATIVE: services.NativeTransfer,
-        schemas.TransactionType.TRANSFER: services.Transfer,
-        schemas.TransactionType.APPROVE: services.Approve,
+        TransactionType.TRANSFER_NATIVE: services.NativeTransfer,
+        TransactionType.TRANSFER: services.Transfer,
+        TransactionType.APPROVE: services.Approve,
+        TransactionType.TRANSFER_FROM: services.TransferFrom,
     }
 
     class TransactionNotFound(Exception):

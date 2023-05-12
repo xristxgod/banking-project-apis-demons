@@ -71,7 +71,7 @@ async def test_allowance(currency: str, amount: decimal.Decimal, mocker):
 
     body = schemas.BodyAllowance(
         owner_address=fake_address(),
-        spender_address=fake_address(),
+        sender_address=fake_address(),
         currency=currency,
     )
 
