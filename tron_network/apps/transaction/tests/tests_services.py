@@ -85,7 +85,7 @@ class TestNativeTransfer(BaseTestTransaction):
             commission=schemas.ResponseCommission(**commission)
         )
 
-    async def test_send(self, mocker):
+    async def test_send(self):
         expected_commission = dict(
             fee=decimal.Decimal(0),
             bandwidth=265,
