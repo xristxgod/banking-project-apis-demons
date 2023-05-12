@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+import decimal
+
+from tronpy.tron import TAddress
+from tronpy.abi import trx_abi
+from tronpy.async_tron import AsyncTron, AsyncContract, AsyncTransactionBuilder
+
+
+class ReadContractMixin:
+    async def balance_of(self, address: TAddress) -> decimal.Decimal:
+        amount = await self.contract.functions.balanceOf(address)
+        return self.from_int(amount)
+
+    async def allowance(self, owner_address: TAddress, sender_address: TAddress) -> decimal.Decimal:
+        amount = await self.contract.functions.allowance(owner_address, sender_address)
+        return self.from_int(amount)
+
+
+class WriteContractMixin:
+    async def transfer(self, from_address: TAddress, to_address: str,
+                       amount: decimal.Decimal) -> AsyncTransactionBuilder:
+        transaction = await self.contract.functions.transfer(
+            to_address, self.to_int(amount),
+        )
+        return transaction.with_owner(
+            from_address
+        )
+
+    async def approve(self, owner_address: TAddress, sender_address: str,
+                      amount: decimal.Decimal) -> AsyncTransactionBuilder:
+        transaction = await self.contract.functions.approve(
+            sender_address, self.to_int(amount),
+        )
+        return transaction.with_owner(
+            owner_address
+        )
+
+    async def transfer_from(self, owner_address: TAddress, sender_address: TAddress, recipient_address: TAddress,
+                            amount: decimal.Decimal) -> AsyncTransactionBuilder:
+        transaction = await self.contract.functions.transferFrom(
+            sender_address, recipient_address, self.to_int(amount),
+        )
+        return transaction.with_owner(
+            owner_address
+        )
+
+
+class ContractMethodMixin(ReadContractMixin, WriteContractMixin):
+    pass
+
+
+class Contract(ContractMethodMixin):
+
+    class FunctionSelector:
+        # name      function selector, parameter
+        TRANSFER = 'transfer(address,uint256)', '(address,uint256)'
+        APPROVE = 'approve(address,uint256)', '(address,uint256)'
+        TRANSFER_FROM = 'transferFrom(address,address,uint256)', '(address,address,uint256)'
+
+    def __init__(self, contract: AsyncContract, client: AsyncTron, **kwargs):
+        self.contract = contract
+        self.client = client
+
+        self._address = self.contract.address
+        self._name = self.contract.name or kwargs.pop('name')
+        self._symbol = kwargs.pop('symbol')
+        self._decimal_place = kwargs.pop('decimal_place')
+
+        self.context = decimal.Context(prec=self._decimal_place)
+
+    def __str__(self):
+        return f'Contract: {self._symbol}'
+
+    @property
+    def symbol(self) -> str:
+        return self._symbol
+
+    @property
+    def address(self) -> TAddress:
+        return self._address
+
+    @property
+    def decimals(self) -> int:
+        return 10 ** self._decimal_place
+
+    def to_int(self, amount: decimal.Decimal) -> int:
+        return int(amount * self.decimals)
+
+    def from_int(self, amount: int) -> decimal.Decimal:
+        if amount > 0:
+            amount = self.context.create_decimal(amount / self.decimals)
+        return amount
+
+    async def energy_used(self, owner_address: TAddress, function_selector: FunctionSelector, parameter: list) -> int:
+        function_selector_view, parameter_view = function_selector
+
+        def get_parameter_hex():
+            return trx_abi.encode_single(parameter_view, parameter).hex()
+
+        response = await self.client.provider.make_request(
+            "wallet/triggerconstantcontract",
+            {
+                "owner_address": owner_address,
+                "contract_address": self.address,
+                "function_selector": function_selector_view,
+                "parameter": get_parameter_hex(),
+                "visible": True,
+            }
+        )
+
+        return response['energy_used']
+
+
+FUNCTION_SELECTOR = Contract.FunctionSelector

@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+pythonpath = [
+  '.', 'apps', 'core', 'daemon'
+]
+asyncio_mode='auto'
+python_files='tests*.py'
+filterwarnings = [
+  'ignore::DeprecationWarning:'
+]
+env='NETWORK=TEST'
