@@ -57,9 +57,7 @@ class BodyCreateApprove(BaseCreateTransactionSchema):
         return TransactionType.APPROVE
 
 
-class BodyCreateTransferFrom(BaseCreateTransactionSchema):
-    owner_address: TAddress
-    sender_address: TAddress
+class BodyCreateTransferFrom(BodyCreateApprove):
     recipient_address: TAddress
 
     @property
@@ -97,3 +95,7 @@ class ResponseSendTransfer(BaseResponseSendTransactionSchema, WithCurrencySchema
 class ResponseSendApprove(BaseResponseSendTransactionSchema, WithCurrencySchema):
     owner_address: TAddress
     sender_address: TAddress
+
+
+class ResponseSendTransferFrom(ResponseSendApprove):
+    recipient_address: TAddress

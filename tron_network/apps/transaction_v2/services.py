@@ -61,14 +61,15 @@ class BaseTransaction:
         self._is_signed = True
 
     async def send(self) -> schemas.BaseResponseSendTransactionSchema:
-        async with lock:
-            if not self._is_signed:
-                raise self.TransactionNotSign()
-            if not self.obj.is_expired:
-                await self.obj.update()
+        if not self._is_signed:
+            raise self.TransactionNotSign()
+        if not self.obj.is_expired:
+            await self.obj.update()
 
+        async with lock:
             self._raw_transaction = await self.obj.broadcast()
             self._transaction_info = await self._raw_transaction.wait()
+
         await self._post_send()
         return await self._make_response()
 
@@ -210,8 +211,8 @@ class Approve(BaseTransaction):
 
 class TransferFrom(BaseTransaction):
 
-    async def _make_response(self) -> schemas.ResponseSendApprove:
-        return schemas.ResponseSendApprove(
+    async def _make_response(self) -> schemas.ResponseSendTransferFrom:
+        return schemas.ResponseSendTransferFrom(
             id=self.id,
             timestamp=self._raw_transaction['raw_data']['timestamp'],
             commission=self.commission_schema,
