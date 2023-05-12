@@ -35,6 +35,9 @@ class FakeTransaction(AsyncTransaction):
         self._raw_data = {}
         self._private_key = None
         self._is_expired = True
+        self._signed = False
+        self._raw_transaction = kwargs.get('raw_transaction')
+        self._transaction_info = kwargs.get('transaction_info')
 
     @property
     def txid(self):
@@ -43,23 +46,34 @@ class FakeTransaction(AsyncTransaction):
     def sign(self, priv_key):
         assert isinstance(priv_key, PrivateKey)
         self._private_key = priv_key
+        self._signed = True
         return self
+
+    def assert_sign(self, private_key):
+        assert self._private_key == private_key
+        assert self._signed
 
     @property
     def is_expired(self):
         return self._is_expired
 
+    @is_expired.setter
+    def is_expired(self, value):
+        self._is_expired = value
+
     async def update(self):
         self._is_expired = True
 
     async def broadcast(self):
-        return FakeTransactionRet()
+        return FakeTransactionRet(self._raw_transaction, self._transaction_info)
 
 
-class FakeTransactionRet(AsyncTransactionRet):
-    def __init__(self):
-        pass
+class FakeTransactionRet(dict):
+    def __init__(self, iterable, info):
+        super().__init__(iterable)
+
+        self._info = info
 
     async def wait(self):
-        pass
+        return self._info
 
