@@ -75,6 +75,15 @@ class BodyCreateTransfer(BaseCreateTransactionSchema):
         return TransactionType.TRANSFER
 
 
+class BodyCreateApprove(BaseCreateTransactionSchema):
+    owner_address: TAddress
+    spender_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.APPROVE
+
+
 class ResponseCreateTransaction(SchemaWithCurrency):
     id: str
     commission: ResponseCommission
@@ -98,5 +107,10 @@ class BaseResponseSendTransactionSchema(BaseModel):
 
 
 class ResponseSendTransfer(BaseResponseSendTransactionSchema, SchemaWithCurrency):
-    from_address: str
-    to_address: str
+    from_address: TAddress
+    to_address: TAddress
+
+
+class ResponseSendApprove(BaseResponseSendTransactionSchema, SchemaWithCurrency):
+    owner_address: TAddress
+    spender_address: TAddress
