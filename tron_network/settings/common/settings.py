@@ -9,6 +9,8 @@ CONFIG_DIR = ROOT_DIR / 'config'
 NODE_URL = os.getenv('NODE_URL')
 
 DEFAULT_FEE_LIMIT = 40_000_000
+# With what frequency the buffer will be cleared. In minutes.
+TRANSACTION_BUFFER_CLEAR_TIME = 20
 
 APPS_MODELS = (
     'core.crypto.models',

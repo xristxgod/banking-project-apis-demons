@@ -6,6 +6,7 @@ from tronpy.tron import PrivateKey, TAddress
 
 import settings
 from core.crypto import node
+from core.crypto.utils import to_sun
 from core.crypto.contract import Contract
 
 
@@ -55,6 +56,10 @@ class BaseCreateTransactionSchema(SchemaWithCurrency):
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
     @property
+    def amount_sun(self) -> int:
+        return to_sun(self.amount)
+
+    @property
     def transaction_type(self) -> TransactionType:
         raise NotImplementedError()
 
@@ -84,8 +89,14 @@ class BodySendTransaction(BaseModel):
         return PrivateKey(bytes.fromhex(self.private_key))
 
 
-class BaseResponseSendTransactionSchema(SchemaWithCurrency):
+class BaseResponseSendTransactionSchema(BaseModel):
     id: str
+    timestamp: int
     commission: ResponseCommission
     amount: decimal.Decimal
     type: TransactionType
+
+
+class ResponseSendTransfer(BaseResponseSendTransactionSchema, SchemaWithCurrency):
+    from_address: str
+    to_address: str

@@ -6,17 +6,21 @@ import asyncio
 from apps.transaction_v2 import schemas
 from apps.transaction_v2 import services
 
+__all__ = (
+    'TransactionStorage',
+)
+
 lock = asyncio.Lock()
 
 
 class TransactionStorage:
 
     objs: dict[schemas.TransactionType, services.BaseTransaction] = {
-
+        schemas.TransactionType.TRANSFER_NATIVE: services.NativeTransfer,
     }
 
-    class Method(enum.Enum):
-        TRANSFER = 'transfer'
+    class TransactionNotFound(Exception):
+        pass
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
@@ -27,6 +31,9 @@ class TransactionStorage:
         self.transactions: dict[str, services.BaseTransaction] = {}
 
     async def clear_buffer(self):
+        """
+        Clears the buffer of unused transactions every `settings.TRANSACTION_BUFFER_CLEAR_TIME` minutes.
+        """
         async with lock:
             for key, transaction in self.transactions.items():
                 if not transaction.is_expired:
@@ -43,5 +50,13 @@ class TransactionStorage:
                 })
         return transaction
 
-    async def get(self, transaction_id: str):
-        pass
+    async def get(self, transaction_id: str, delete: bool = True) -> services.BaseTransaction:
+        if delete:
+            obj = self.transactions.pop(transaction_id, None)
+        else:
+            obj = self.transactions.get(transaction_id)
+
+        if not obj:
+            raise self.TransactionNotFound(f'{transaction_id} not found!')
+
+        return obj

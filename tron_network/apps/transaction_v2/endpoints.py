@@ -13,4 +13,4 @@ storage = TransactionStorage()
 )
 async def create_transfer(body: schemas.BodyCreateTransfer):
     obj = await storage.create(body)
-    return obj.to_schemas()
+    return obj.to_schema
