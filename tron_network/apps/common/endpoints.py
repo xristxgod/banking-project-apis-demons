@@ -1,7 +1,5 @@
-from fastapi import APIRouter, status
-from fastapi.exceptions import HTTPException
+from fastapi import APIRouter
 
-from core.crypto.calculator import FEE_METHOD_TYPES
 from apps.common import schemas
 from apps.common import services
 

@@ -3,7 +3,7 @@ from typing import Optional
 import faker
 from tronpy.tron import TAddress
 
-from apps.common.tests.utils import TronProvider
+from .utils import TronProvider
 
 
 fake = faker.Faker()

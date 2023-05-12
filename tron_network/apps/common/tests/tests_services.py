@@ -2,9 +2,9 @@ import decimal
 
 import pytest
 
+from core.crypto.tests.factories import fake_address, create_fake_contract
 from apps.common import schemas
 from apps.common import services
-from .factories import fake_address, create_fake_contract
 
 
 @pytest.mark.asyncio

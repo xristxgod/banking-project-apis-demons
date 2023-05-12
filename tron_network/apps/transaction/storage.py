@@ -3,9 +3,9 @@ from __future__ import annotations
 import enum
 import asyncio
 
-from apps.transaction_v2 import schemas
-from apps.transaction_v2.schemas import TransactionType
-from apps.transaction_v2 import services
+from apps.transaction import schemas
+from apps.transaction.schemas import TransactionType
+from apps.transaction import services
 
 __all__ = (
     'TransactionStorage',
