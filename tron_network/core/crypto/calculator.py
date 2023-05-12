@@ -4,7 +4,7 @@ import decimal
 from typing import Optional
 
 import trontxsize
-from tronpy.tron import TAddress
+from tronpy.tron import TAddress, keys
 
 from core.crypto.utils import from_sun
 from core.crypto.contract import FUNCTION_SELECTOR
@@ -61,7 +61,24 @@ class FeeCalculator:
 
         self.resource = Resource(node)
 
+    async def _pre_calculate(self, raw_data: dict):
+        if raw_data['contract'][0]['type'] != 'TransferContract':
+            return
+        to_address = keys.to_base58check_address(raw_data['contract'][0]['parameter']['value']['to_address'])
+        if await self.node.is_active_address(to_address):
+            return
+        return dict(
+            fee=decimal.Decimal(1.1),
+            bandwidth=100,
+            energy=0,
+        )
+
     async def calculate(self, raw_data: dict, signature: Optional[str] = None, **kwargs) -> dict:
+        # If transaction native and account isn't activate
+        result = await self._pre_calculate(raw_data)
+        if result:
+            return result
+
         bandwidth = await self.resource.get_transaction_bandwidth_cost(raw_data, signature=signature)
 
         energy = 0
