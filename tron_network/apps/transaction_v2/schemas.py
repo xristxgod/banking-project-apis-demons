@@ -2,7 +2,7 @@ import decimal
 import enum
 
 from pydantic import BaseModel, Field, validator
-from tronpy.tron import PrivateKey
+from tronpy.tron import PrivateKey, TAddress
 
 import settings
 from core.crypto import node
@@ -53,6 +53,11 @@ class ResponseCommission(BaseModel):
 class BaseCreateTransactionSchema(SchemaWithCurrency):
     amount: decimal.Decimal
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+
+
+class BodyCreateTransfer(BaseCreateTransactionSchema):
+    from_address: TAddress
+    to_address: TAddress
 
 
 class ResponseCreateTransaction(SchemaWithCurrency):
