@@ -1,17 +1,20 @@
 from typing import Optional
 
 import faker
-from tronpy.tron import TAddress
+from tronpy.tron import TAddress, keys
 
-from apps.common.tests.utils import TronProvider
+from .utils import TronProvider
 
 
 fake = faker.Faker()
 fake.add_provider(TronProvider)
 
 
-def fake_address():
-    return fake.unique.tron_address()
+def fake_address(is_hex: bool = False):
+    address = fake.unique.tron_address()
+    if is_hex:
+        address = keys.to_hex_address(address)
+    return address
 
 
 def fake_private_key():

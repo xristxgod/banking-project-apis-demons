@@ -1,123 +1,101 @@
-import json
 import decimal
-from typing import Optional
+import enum
 
-from tronpy.tron import TAddress, PrivateKey
-from tronpy.async_tron import AsyncTransaction
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
+from tronpy.tron import PrivateKey, TAddress
 
 import settings
-from core.crypto import node
 from core.crypto.utils import to_sun
-from apps.common import utils
-from apps.common.schemas import CurrencyMixin
+from apps.common.schemas import WithCurrencySchema
 
 
-class BodyCreateTransfer(CurrencyMixin, BaseModel):
-    from_address: TAddress
-    to_address: TAddress
-    amount: decimal.Decimal
-
-    currency: str = Field(default='TRX')
-
-    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
-
-    @property
-    def sun_amount(self) -> int:
-        # Amount to Sun amount
-        return to_sun(self.amount)
-
-    @validator('from_address', 'to_address')
-    def correct_address(cls, address: TAddress):
-        return utils.correct_address(address)
-
-
-class BodyCreateApprove(CurrencyMixin, BaseModel):
-    owner_address: TAddress
-    spender_address: TAddress
-    amount: decimal.Decimal
-
-    currency: str
-
-    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
-
-
-class BodyCreateTransferFrom(CurrencyMixin, BaseModel):
-    owner_address: TAddress
-    from_address: TAddress
-    to_address: TAddress
-    amount: decimal.Decimal
-
-    currency: str
-
-    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+class TransactionType(int, enum.Enum):
+    TRANSFER_NATIVE = 0
+    FREEZE = 1
+    UNFREEZE = 2
+    TRANSFER = 3
+    APPROVE = 4
+    TRANSFER_FROM = 5
 
 
 class ResponseCommission(BaseModel):
-    fee: decimal.Decimal = Field(default=0)
-    energy: int = Field(default=0)
-    bandwidth: int = Field(default=0)
+    fee: decimal.Decimal
+    bandwidth: int
+    energy: int
+
+
+class BaseCreateTransactionSchema(WithCurrencySchema):
+    amount: decimal.Decimal
+    fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
+
+    @property
+    def amount_sun(self) -> int:
+        return to_sun(self.amount)
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        raise NotImplementedError()
+
+
+class BodyCreateTransfer(BaseCreateTransactionSchema):
+    from_address: TAddress
+    to_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        if self.is_native:
+            return TransactionType.TRANSFER_NATIVE
+        return TransactionType.TRANSFER
+
+
+class BodyCreateApprove(BaseCreateTransactionSchema):
+    owner_address: TAddress
+    sender_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.APPROVE
+
+
+class BodyCreateTransferFrom(BodyCreateApprove):
+    recipient_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.TRANSFER_FROM
 
 
 class ResponseCreateTransaction(BaseModel):
-    payload: str
+    id: str
     commission: ResponseCommission
-
-    @property
-    def payload_dict(self) -> dict:
-        return json.loads(self.payload)
 
 
 class BodySendTransaction(BaseModel):
-    payload: str
+    id: str
     private_key: str
 
     @property
-    def payload_dict(self) -> dict:
-        return json.loads(self.payload)
-
-    async def create_transaction_obj(self) -> AsyncTransaction:
-        data = self.payload_dict.get('data')
-        return await AsyncTransaction.from_json(data, client=node.client)
-
-    @property
-    def private_key_obj(self):
-        return PrivateKey(private_key_bytes=bytes.fromhex(self.private_key))
-
-    @property
-    def extra(self) -> dict:
-        return self.payload_dict.get('extra')
+    def private_key_obj(self) -> PrivateKey:
+        return PrivateKey(bytes.fromhex(self.private_key))
 
 
-class ResponseSendTransactionExtra(BaseModel):
-    type: str
-    owner_address: Optional[TAddress] = None
-
-
-class ResponseSendTransaction(BaseModel):
-    transaction_id: str
+class BaseResponseSendTransactionSchema(BaseModel):
+    id: str
     timestamp: int
+    commission: ResponseCommission
     amount: decimal.Decimal
-    fee: decimal.Decimal
+    type: TransactionType
+
+
+class ResponseSendTransfer(BaseResponseSendTransactionSchema, WithCurrencySchema):
     from_address: TAddress
     to_address: TAddress
-    currency: str = Field(default='TRX')
-    extra: ResponseSendTransactionExtra
 
 
-class BodyCommission(BaseModel):
-    """
-    Parameter schemas:
-        Transfer:
-            from_address
-            to_address
-            amount
-            currency
-        Approve:
-            owner_address
-            spender_address
-            amount
-            currency
-    """
+class ResponseSendApprove(BaseResponseSendTransactionSchema, WithCurrencySchema):
+    owner_address: TAddress
+    sender_address: TAddress
 
-    parameter: dict
+
+class ResponseSendTransferFrom(ResponseSendApprove):
+    recipient_address: TAddress

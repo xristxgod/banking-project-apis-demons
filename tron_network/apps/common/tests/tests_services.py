@@ -2,9 +2,9 @@ import decimal
 
 import pytest
 
+from core.crypto.tests.factories import fake_address, create_fake_contract
 from apps.common import schemas
 from apps.common import services
-from .factories import fake_address, create_fake_contract
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ async def test_allowance(currency: str, amount: decimal.Decimal, mocker):
 
     body = schemas.BodyAllowance(
         owner_address=fake_address(),
-        spender_address=fake_address(),
+        sender_address=fake_address(),
         currency=currency,
     )
 

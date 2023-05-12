@@ -1,260 +1,265 @@
+from __future__ import annotations
 
-import abc
-import enum
-import json
+import asyncio
 import decimal
+from typing import NoReturn, Optional
 
-import pydantic
-from tronpy.keys import PrivateKey
-from tronpy.async_tron import AsyncTransaction
+from tronpy.async_tron import AsyncTransaction, PrivateKey
 
 from core.crypto import node
-from core.crypto.utils import from_sun
-from core.crypto.calculator import FEE_METHOD_TYPES
+from core.crypto.contract import FUNCTION_SELECTOR
 from apps.transaction import schemas
-from apps.common.services import allowance
-from apps.common.schemas import BodyAllowance
+
+lock = asyncio.Lock()
 
 
-class InvalidCreateTransaction(Exception):
-    pass
+class BaseTransaction:
 
+    class TransactionNotSign(Exception):
+        pass
 
-class TransactionType(enum.Enum):
-    TRANSFER = 'transfer'
-    APPROVE = 'approve'
-    TRANSFER_FROM = 'transfer_from'
+    class TransactionSent(Exception):
+        pass
 
+    def __init__(self, obj: AsyncTransaction, expected_commission: dict, type: schemas.TransactionType, **kwargs):
+        self.obj = obj
+        self.type = type
 
-class BaseCreateTransaction(abc.ABC):
-    @abc.abstractclassmethod
-    async def valid(cls, body: pydantic.BaseModel, fee: decimal.Decimal, **kwargs): ...
+        self._expected_commission = expected_commission
+        self._commission: Optional[dict] = None
 
-    @abc.abstractclassmethod
-    async def _create(cls, body: pydantic.BaseModel) -> dict: ...
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-    @abc.abstractclassmethod
-    async def create(cls, body: pydantic.BaseModel) -> pydantic.BaseModel: ...
+        self._is_signed = False
+        self._is_send = False
 
+        self._raw_transaction: Optional[dict] = None
+        self._transaction_info: Optional[dict] = None
 
-class CreateTransfer(BaseCreateTransaction):
+    @property
+    def id(self) -> str:
+        return self.obj.txid
 
-    @classmethod
-    async def valid(cls, body: schemas.BodyCreateTransfer, fee: decimal.Decimal, **kwargs):
-        native_balance = await node.client.get_account_balance(body.from_address)
+    @property
+    def expected_commission_schema(self) -> schemas.ResponseCommission:
+        return schemas.ResponseCommission(**self._expected_commission)
 
-        if body.is_native:
-            balance = native_balance
-            has_native = has_amount = (balance - (body.amount + fee)) >= 0
-        else:
-            balance = await body.contract.balance_of(body.from_address)
-            has_native = (native_balance - fee) > 0
-            has_amount = (balance - body.amount) >= 0
+    @property
+    def commission_schema(self) -> schemas.ResponseCommission:
+        return schemas.ResponseCommission(**self._commission)
 
-        if not all([has_amount, has_native]):
-            raise InvalidCreateTransaction('Invalid create transfer')
-
-    @classmethod
-    async def _create(cls, body: schemas.BodyCreateTransfer) -> dict:
-        if body.is_native:
-            transaction = node.client.trx.transfer(
-                body.from_address,
-                to=body.to_address,
-                amount=body.sun_amount
-            )
-        else:
-            transaction = await body.contract.transfer(
-                body.from_address,
-                to_address=body.to_address,
-                amount=body.amount,
-            )
-
-        transaction = transaction.fee_limit(
-            body.fee_limit
+    @property
+    def to_schema(self) -> schemas.ResponseCreateTransaction:
+        return schemas.ResponseCreateTransaction(
+            id=self.id,
+            commission=self.expected_commission_schema,
         )
-        created_transaction = await transaction.build()
-        return created_transaction.to_json()
+
+    @property
+    def is_expired(self) -> bool:
+        return self.obj.is_expired
+
+    async def sign(self, private_key: PrivateKey) -> NoReturn:
+        self.obj = self.obj.sign(private_key)
+        self._is_signed = True
+
+    async def send(self) -> schemas.BaseResponseSendTransactionSchema:
+        if self._is_send:
+            raise self.TransactionSent(f'{self.id} has already been sent!')
+        if not self._is_signed:
+            raise self.TransactionNotSign()
+        if not self.obj.is_expired:
+            await self.obj.update()
+
+        async with lock:
+            self._raw_transaction = await self.obj.broadcast()
+            self._transaction_info = await self._raw_transaction.wait()
+
+        await self._post_send()
+        return await self._make_response()
+
+    async def _post_send(self) -> NoReturn:
+        self._commission = dict(
+            fee=decimal.Decimal(self._transaction_info.get('fee', 0)),
+            bandwidth=self._transaction_info.get('receipt', {}).get('net_usage', 0),
+            energy=self._transaction_info.get('receipt', {}).get('energy_usage_total', 0),
+        )
+
+    async def _make_response(self) -> schemas.BaseResponseSendTransactionSchema:
+        raise NotImplementedError()
 
     @classmethod
-    async def create(cls, body: schemas.BodyCreateTransfer) -> schemas.ResponseCreateTransaction:
-        commission = await node.calculator.calculate(
-            method=node.calculator.Method.TRANSFER,
+    async def create(cls, body: schemas.BaseCreateTransactionSchema) -> BaseTransaction:
+        raise NotImplementedError()
+
+
+class NativeTransfer(BaseTransaction):
+
+    async def _make_response(self) -> schemas.ResponseSendTransfer:
+        return schemas.ResponseSendTransfer(
+            id=self.id,
+            timestamp=self._raw_transaction['raw_data']['timestamp'],
+            commission=self.commission_schema,
+            amount=getattr(self, 'amount'),
+            from_address=getattr(self, 'from_address'),
+            to_address=getattr(self, 'to_address'),
+            currency=getattr(self, 'currency'),
+            type=self.type,
+        )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransfer) -> BaseTransaction:
+        obj = await node.client.trx.transfer(
+            body.from_address,
+            body.to_address,
+            body.amount_sun,
+        ).fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+            ),
+            type=body.transaction_type,
             from_address=body.from_address,
             to_address=body.to_address,
             currency=body.currency,
-            amount=body.amount,
-        )
-
-        await cls.valid(body, commission['fee'])
-
-        created_transaction_dict = await cls._create(body=body)
-
-        payload = {
-            'data': created_transaction_dict,
-            'extra': {
-                'amount': body.amount,
-                'from_address': body.from_address,
-                'to_address': body.to_address,
-                'currency': body.currency,
-                'type': TransactionType.TRANSFER.value,
-            }
-        }
-
-        return schemas.ResponseCreateTransaction(
-            payload=json.dumps(payload, default=str),
-            commission=schemas.ResponseCommission(**commission),
         )
 
 
-class CreateApprove(BaseCreateTransaction):
+class Transfer(NativeTransfer):
+    """
+    Method: transfer(address recipient, uint256 amount)
+    MethodID: a9059cbb
+    """
 
     @classmethod
-    async def valid(cls, body: schemas.BodyCreateApprove, fee: decimal.Decimal, **kwargs):
-        native_balance = await node.client.get_account_balance(body.spender_address)
+    async def create(cls, body: schemas.BodyCreateTransfer) -> BaseTransaction:
+        contract = body.contract
 
-        has_native = (native_balance - fee) > 0
-
-        if not all([has_native]):
-            raise InvalidCreateTransaction('Invalid create approve')
-
-    @classmethod
-    async def _create(cls, body: schemas.BodyCreateApprove) -> dict:
-        transaction = await body.contract.approve(
-            owner_address=body.owner_address,
-            spender_address=body.spender_address,
-            amount=body.amount,
-        )
-        transaction = transaction.fee_limit(
-            body.fee_limit
-        )
-        created_transaction = await transaction.build()
-        return created_transaction.to_json()
-
-    @classmethod
-    async def create(cls, body: schemas.BodyCreateApprove) -> schemas.ResponseCreateTransaction:
-        commission = await node.calculator.calculate(
-            method=node.calculator.Method.APPROVE,
-            owner_address=body.owner_address,
-            spender_address=body.spender_address,
-            currency=body.currency,
-            amount=body.amount,
-        )
-
-        await cls.valid(body, fee=commission['fee'])
-
-        created_transaction_dict = await cls._create(body=body)
-
-        payload = {
-            'data': created_transaction_dict,
-            'extra': {
-                'amount': body.amount,
-                'from_address': body.owner_address,
-                'to_address': body.spender_address,
-                'currency': body.currency,
-                'type': TransactionType.APPROVE.value,
-            }
-        }
-        return schemas.ResponseCreateTransaction(
-            payload=json.dumps(payload, default=str),
-            commission=schemas.ResponseCommission(**commission),
-        )
-
-
-class CreateTransferFrom(BaseCreateTransaction):
-
-    @classmethod
-    async def valid(cls, body: schemas.BodyCreateTransferFrom, fee: decimal.Decimal, **kwargs):
-        native_balance = await node.client.get_account_balance(body.owner_address)
-        allowance_balance = await allowance(BodyAllowance(
-            owner_address=body.from_address,
-            spender_address=body.owner_address,
-            currency=body.currency,
-        ))
-
-        has_native = (native_balance - fee) > 0
-        has_allowance = (allowance_balance.amount > body.amount)
-
-        if not all([has_native, has_allowance]):
-            raise InvalidCreateTransaction('Invalid create approve')
-
-    @classmethod
-    async def _create(cls, body: schemas.BodyCreateTransferFrom) -> dict:
-        transaction = await body.contract.transfer_from(
-            owner_address=body.owner_address,
+        raw_obj = await contract.transfer(
             from_address=body.from_address,
             to_address=body.to_address,
             amount=body.amount,
         )
-        transaction = transaction.fee_limit(
-            body.fee_limit
-        )
-        created_transaction = await transaction.build()
-        return created_transaction.to_json()
 
-    @classmethod
-    async def create(cls, body: schemas.BodyCreateTransferFrom) -> schemas.ResponseCreateTransaction:
-        commission = await node.calculator.calculate(
-            method=node.calculator.Method.TRANSFER_FROM,
-            owner_address=body.owner_address,
+        obj = await raw_obj.fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+                owner_address=body.from_address,
+                function_selector=FUNCTION_SELECTOR.TRANSFER,
+                parameter=[
+                    body.to_address,
+                    contract.to_int(body.amount),
+                ],
+                currency=body.currency,
+            ),
+            type=body.transaction_type,
             from_address=body.from_address,
             to_address=body.to_address,
             currency=body.currency,
+        )
+
+
+class Approve(BaseTransaction):
+
+    async def _make_response(self) -> schemas.ResponseSendApprove:
+        return schemas.ResponseSendApprove(
+            id=self.id,
+            timestamp=self._raw_transaction['raw_data']['timestamp'],
+            commission=self.commission_schema,
+            amount=getattr(self, 'amount'),
+            owner_address=getattr(self, 'owner_address'),
+            sender_address=getattr(self, 'sender_address'),
+            currency=getattr(self, 'currency'),
+            type=self.type,
+        )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateApprove) -> BaseTransaction:
+        contract = body.contract
+        raw_obj = await contract.approve(
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
             amount=body.amount,
         )
 
-        await cls.valid(body, fee=commission['fee'], amount=body.amount)
+        obj = await raw_obj.fee_limit(
+            body.fee_limit,
+        ).build()
 
-        created_transaction_dict = await cls._create(body=body)
-
-        payload = {
-            'data': created_transaction_dict,
-            'extra': {
-                'amount': body.amount,
-                'from_address': body.from_address,
-                'to_address': body.to_address,
-                'currency': body.currency,
-                'owner_address': body.owner_address,
-                'type': TransactionType.TRANSFER_FROM.value,
-            }
-        }
-        return schemas.ResponseCreateTransaction(
-            payload=json.dumps(payload, default=str),
-            commission=schemas.ResponseCommission(**commission),
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+                owner_address=body.owner_address,
+                function_selector=FUNCTION_SELECTOR.APPROVE,
+                parameter=[
+                    body.sender_address,
+                    contract.to_int(body.amount),
+                ],
+                currency=body.currency,
+            ),
+            type=body.transaction_type,
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
+            currency=body.currency,
         )
 
 
-class SendTransaction:
-    @classmethod
-    async def _send_transaction(cls, private_key_obj: PrivateKey, transaction: AsyncTransaction) -> dict:
-        signed_transaction = transaction.sign(priv_key=private_key_obj)
-        transaction = await signed_transaction.broadcast()
-        return await transaction.wait()
+class TransferFrom(BaseTransaction):
 
-    @classmethod
-    async def send_transaction(cls, body: schemas.BodySendTransaction) -> schemas.ResponseSendTransaction:
-        created_transaction = await body.create_transaction_obj()
-
-        transaction_info = await cls._send_transaction(body.private_key_obj, created_transaction)
-
-        fee = transaction_info.get('fee', decimal.Decimal(0))
-        if fee > 0:
-            fee = from_sun(fee)
-
-        return schemas.ResponseSendTransaction(
-            transaction_id=transaction_info['id'],
-            timestamp=transaction_info['blockTimeStamp'],
-            fee=fee,
-            amount=decimal.Decimal(body.extra.get('amount')),
-            from_address=body.extra.get('from_address'),
-            to_address=body.extra.get('to_address'),
-            currency=body.extra.get('currency'),
-            extra=schemas.ResponseSendTransactionExtra(
-                type=body.extra.get('type'),
-                owner_address=body.extra.get('owner_address'),
-            )
+    async def _make_response(self) -> schemas.ResponseSendTransferFrom:
+        return schemas.ResponseSendTransferFrom(
+            id=self.id,
+            timestamp=self._raw_transaction['raw_data']['timestamp'],
+            commission=self.commission_schema,
+            amount=getattr(self, 'amount'),
+            owner_address=getattr(self, 'owner_address'),
+            sender_address=getattr(self, 'sender_address'),
+            recipient_address=getattr(self, 'recipient_address'),
+            currency=getattr(self, 'currency'),
+            type=self.type,
         )
 
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransferFrom) -> BaseTransaction:
+        contract = body.contract
+        raw_obj = await contract.transfer_from(
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
+            recipient_address=body.recipient_address,
+            amount=body.amount,
+        )
 
-async def fee_calculator(body: schemas.BodyCommission, method: FEE_METHOD_TYPES) -> schemas.ResponseCommission:
-    result = await node.fee_calculator.calculate(method=method, **body.parameter)
-    return schemas.ResponseCommission(**result)
+        obj = await raw_obj.fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+                owner_address=body.owner_address,
+                function_selector=FUNCTION_SELECTOR.TRANSFER_FROM,
+                parameter=[
+                    body.sender_address,
+                    body.recipient_address,
+                    contract.to_int(body.amount),
+                ],
+                currency=body.currency,
+            ),
+            type=body.transaction_type,
+            owner_address=body.owner_address,
+            sender_address=body.sender_address,
+            recipient_address=body.recipient_address,
+            currency=body.currency,
+        )
