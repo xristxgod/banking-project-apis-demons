@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import enum
+import copy
 import asyncio
 
 from apps.transaction import schemas
@@ -39,7 +39,7 @@ class TransactionStorage:
         Clears the buffer of unused transactions every `settings.TRANSACTION_BUFFER_CLEAR_TIME` minutes.
         """
         async with lock:
-            for key, transaction in self.transactions.items():
+            for key, transaction in copy.copy(self.transactions).items():
                 if not transaction.is_expired:
                     del self.transactions[key]
 
@@ -54,7 +54,7 @@ class TransactionStorage:
                 })
         return transaction
 
-    async def get(self, transaction_id: str, delete: bool = True) -> services.BaseTransaction:
+    def get(self, transaction_id: str, delete: bool = True) -> services.BaseTransaction:
         if delete:
             obj = self.transactions.pop(transaction_id, None)
         else:

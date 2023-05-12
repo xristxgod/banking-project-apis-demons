@@ -20,7 +20,7 @@ async def _create_transaction(body: schemas.BaseCreateTransactionSchema,
 async def _send_transaction(body: schemas.BodySendTransaction,
                             delete: bool = True) -> schemas.BaseResponseSendTransactionSchema:
     try:
-        obj = await storage.get(body.id, delete=delete)
+        obj = storage.get(body.id, delete=delete)
         await obj.sign(private_key=body.private_key_obj)
         return await obj.send()
     except storage.TransactionNotFound as err:
