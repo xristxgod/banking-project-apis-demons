@@ -54,10 +54,20 @@ class BaseCreateTransactionSchema(SchemaWithCurrency):
     amount: decimal.Decimal
     fee_limit: int = Field(default=settings.DEFAULT_FEE_LIMIT)
 
+    @property
+    def transaction_type(self) -> TransactionType:
+        raise NotImplementedError()
+
 
 class BodyCreateTransfer(BaseCreateTransactionSchema):
     from_address: TAddress
     to_address: TAddress
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        if self.is_native:
+            return TransactionType.TRANSFER_NATIVE
+        return TransactionType.TRANSFER
 
 
 class ResponseCreateTransaction(SchemaWithCurrency):

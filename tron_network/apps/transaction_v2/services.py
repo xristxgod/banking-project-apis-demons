@@ -62,7 +62,7 @@ class BaseTransaction:
     async def _make_response(self) -> schemas.BaseResponseSendTransactionSchema:
         raise NotImplementedError()
 
-    async def to_schemas(self) -> schemas.ResponseCreateTransaction:
+    def to_schemas(self) -> schemas.ResponseCreateTransaction:
         return schemas.ResponseCreateTransaction(
             id=self.id,
             fee=self.fee,

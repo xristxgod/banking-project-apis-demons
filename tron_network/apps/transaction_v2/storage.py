@@ -32,9 +32,9 @@ class TransactionStorage:
                 if not transaction.is_expired:
                     del self.transactions[key]
 
-    async def create(self, method: schemas.TransactionType, body: schemas.BaseCreateTransactionSchema,
+    async def create(self, body: schemas.BaseCreateTransactionSchema,
                      save: bool = True) -> services.BaseTransaction:
-        obj = self.objs[method]
+        obj = self.objs[body.transaction_type]
         transaction = await obj.create(body)
         if save:
             async with lock:
