@@ -18,6 +18,9 @@ class BaseTransaction:
     class TransactionNotSign(Exception):
         pass
 
+    class TransactionSent(Exception):
+        pass
+
     def __init__(self, obj: AsyncTransaction, expected_commission: dict, type: schemas.TransactionType, **kwargs):
         self.obj = obj
         self.type = type
@@ -29,6 +32,7 @@ class BaseTransaction:
             setattr(self, key, value)
 
         self._is_signed = False
+        self._is_send = False
 
         self._raw_transaction: Optional[dict] = None
         self._transaction_info: Optional[dict] = None
@@ -49,7 +53,7 @@ class BaseTransaction:
     def to_schema(self) -> schemas.ResponseCreateTransaction:
         return schemas.ResponseCreateTransaction(
             id=self.id,
-            fee=self.expected_commission_schema,
+            commission=self.expected_commission_schema,
         )
 
     @property
@@ -57,10 +61,12 @@ class BaseTransaction:
         return self.obj.is_expired
 
     async def sign(self, private_key: PrivateKey) -> NoReturn:
-        self.obj.sign(private_key)
+        self.obj = self.obj.sign(private_key)
         self._is_signed = True
 
     async def send(self) -> schemas.BaseResponseSendTransactionSchema:
+        if self._is_send:
+            raise self.TransactionSent(f'{self.id} has already been sent!')
         if not self._is_signed:
             raise self.TransactionNotSign()
         if not self.obj.is_expired:

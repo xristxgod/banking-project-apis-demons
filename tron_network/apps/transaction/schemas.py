@@ -65,7 +65,7 @@ class BodyCreateTransferFrom(BodyCreateApprove):
         return TransactionType.TRANSFER_FROM
 
 
-class ResponseCreateTransaction(WithCurrencySchema):
+class ResponseCreateTransaction(BaseModel):
     id: str
     commission: ResponseCommission
 
