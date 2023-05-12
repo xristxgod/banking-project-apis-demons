@@ -10,23 +10,18 @@ from tronpy.async_tron import AsyncTron, AsyncContract, AsyncTransactionBuilder
 class ReadContractMixin:
     async def balance_of(self, address: TAddress) -> decimal.Decimal:
         amount = await self.contract.functions.balanceOf(address)
-        if amount > 0:
-            amount = amount / self.decimals
-        return decimal.Decimal(amount, context=self.context)
+        return self.from_int(amount)
 
     async def allowance(self, owner_address: TAddress, spender_address: TAddress) -> decimal.Decimal:
         amount = await self.contract.functions.allowance(owner_address, spender_address)
-        if amount > 0:
-            amount = amount / self.decimals
-        return decimal.Decimal(amount, context=self.context)
+        return self.from_int(amount)
 
 
 class WriteContractMixin:
     async def transfer(self, from_address: TAddress, to_address: str,
                        amount: decimal.Decimal) -> AsyncTransactionBuilder:
-        amount = int(amount * self.decimals)
         transaction = await self.contract.functions.transfer(
-            to_address, amount,
+            to_address, self.to_int(amount),
         )
         return transaction.with_owner(
             from_address
@@ -34,9 +29,8 @@ class WriteContractMixin:
 
     async def approve(self, owner_address: TAddress, spender_address: str,
                       amount: decimal.Decimal) -> AsyncTransactionBuilder:
-        amount = int(amount * self.decimals)
         transaction = await self.contract.functions.approve(
-            spender_address, amount,
+            spender_address, self.to_int(amount),
         )
         return transaction.with_owner(
             owner_address
@@ -44,9 +38,8 @@ class WriteContractMixin:
 
     async def transfer_from(self, owner_address: TAddress, from_address: TAddress, to_address: TAddress,
                             amount: decimal.Decimal) -> AsyncTransactionBuilder:
-        amount = int(amount * self.decimals)
         transaction = await self.contract.functions.transferFrom(
-            from_address, to_address, amount,
+            from_address, to_address, self.to_int(amount),
         )
         return transaction.with_owner(
             owner_address
@@ -91,6 +84,14 @@ class Contract(ContractMethodMixin):
     def decimals(self) -> int:
         return 10 ** self._decimal_place
 
+    def to_int(self, amount: decimal.Decimal) -> int:
+        return int(amount * self.decimals)
+
+    def from_int(self, amount: int) -> decimal.Decimal:
+        if amount > 0:
+            amount = self.context.create_decimal(amount / self.decimals)
+        return amount
+
     async def energy_used(self, owner_address: TAddress, function_selector: FunctionSelector, parameter: list) -> int:
         function_selector_view, parameter_view = function_selector
 
@@ -109,3 +110,6 @@ class Contract(ContractMethodMixin):
         )
 
         return response['energy_used']
+
+
+FUNCTION_SELECTOR = Contract.FunctionSelector

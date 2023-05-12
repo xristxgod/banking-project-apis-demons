@@ -7,6 +7,7 @@ from typing import NoReturn, Optional
 from tronpy.async_tron import AsyncTransaction, PrivateKey
 
 from core.crypto import node
+from core.crypto.contract import FUNCTION_SELECTOR
 from apps.transaction_v2 import schemas
 
 lock = asyncio.Lock()
@@ -78,13 +79,17 @@ class BaseTransaction:
         raise NotImplementedError()
 
 
-class NativeTransfer(BaseTransaction):
+class Transfer(BaseTransaction):
+    """
+    Method: transfer(address recipient, uint256 amount)
+    MethodID: a9059cbb
+    """
 
     async def _make_response(self) -> schemas.ResponseSendTransfer:
         self._commission = dict(
             fee=decimal.Decimal(self._transaction_info.get('fee', 0)),
             bandwidth=self._transaction_info.get('receipt', {}).get('net_usage', 0),
-            energy=0,
+            energy=self._transaction_info.get('receipt', {}).get('energy_usage_total', 0),
         )
 
         return schemas.ResponseSendTransfer(
@@ -97,6 +102,41 @@ class NativeTransfer(BaseTransaction):
             currency=getattr(self, 'currency'),
             type=self.type,
         )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateTransfer) -> BaseTransaction:
+        contract = body.contract
+
+        raw_obj = await contract.transfer(
+            from_address=body.from_address,
+            to_address=body.to_address,
+            amount=body.amount,
+        )
+
+        obj = await raw_obj.fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+                owner_address=body.from_address,
+                function_selector=FUNCTION_SELECTOR.TRANSFER,
+                parameter=[
+                    body.to_address,
+                    contract.to_int(body.amount),
+                ],
+                currency=body.currency,
+            ),
+            type=body.transaction_type,
+            from_address=body.from_address,
+            to_address=body.to_address,
+            currency=body.currency,
+        )
+
+
+class NativeTransfer(Transfer):
 
     @classmethod
     async def create(cls, body: schemas.BodyCreateTransfer) -> BaseTransaction:
