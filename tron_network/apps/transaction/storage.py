@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import asyncio
 
+from core import meta
 from apps.transaction import schemas
 from apps.transaction.schemas import TransactionType
 from apps.transaction import services
@@ -14,7 +15,7 @@ __all__ = (
 lock = asyncio.Lock()
 
 
-class TransactionStorage:
+class TransactionStorage(metaclass=meta.Singleton):
 
     objs: dict[schemas.TransactionType, services.BaseTransaction] = {
         TransactionType.TRANSFER_NATIVE: services.NativeTransfer,
