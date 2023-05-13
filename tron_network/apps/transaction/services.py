@@ -60,17 +60,23 @@ class BaseTransaction:
     def is_expired(self) -> bool:
         return self.obj.is_expired
 
+    async def update(self) -> NoReturn:
+        await self.obj.update()
+
     async def sign(self, private_key: PrivateKey) -> NoReturn:
         self.obj = self.obj.sign(private_key)
         self._is_signed = True
 
-    async def send(self) -> schemas.BaseResponseSendTransactionSchema:
+    async def _valid_send(self) -> NoReturn:
         if self._is_send:
             raise self.TransactionSent(f'{self.id} has already been sent!')
         if not self._is_signed:
             raise self.TransactionNotSign()
         if not self.obj.is_expired:
-            await self.obj.update()
+            await self.update()
+
+    async def send(self) -> schemas.BaseResponseSendTransactionSchema:
+        await self._valid_send()
 
         async with lock:
             self._raw_transaction = await self.obj.broadcast()
@@ -86,7 +92,7 @@ class BaseTransaction:
             energy=self._transaction_info.get('receipt', {}).get('energy_usage_total', 0),
         )
 
-    async def _make_response(self) -> schemas.BaseResponseSendTransactionSchema:
+    async def _make_response(self, **kwargs) -> schemas.BaseResponseSendTransactionSchema:
         raise NotImplementedError()
 
     @classmethod
@@ -96,7 +102,7 @@ class BaseTransaction:
 
 class NativeTransfer(BaseTransaction):
 
-    async def _make_response(self) -> schemas.ResponseSendTransfer:
+    async def _make_response(self, **kwargs) -> schemas.ResponseSendTransfer:
         return schemas.ResponseSendTransfer(
             id=self.id,
             timestamp=self._raw_transaction['raw_data']['timestamp'],
@@ -127,6 +133,7 @@ class NativeTransfer(BaseTransaction):
             from_address=body.from_address,
             to_address=body.to_address,
             currency=body.currency,
+            amount=body.amount,
         )
 
 
@@ -166,12 +173,13 @@ class Transfer(NativeTransfer):
             from_address=body.from_address,
             to_address=body.to_address,
             currency=body.currency,
+            amount=body.amount,
         )
 
 
 class Approve(BaseTransaction):
 
-    async def _make_response(self) -> schemas.ResponseSendApprove:
+    async def _make_response(self, **kwargs) -> schemas.ResponseSendApprove:
         return schemas.ResponseSendApprove(
             id=self.id,
             timestamp=self._raw_transaction['raw_data']['timestamp'],
@@ -212,12 +220,13 @@ class Approve(BaseTransaction):
             owner_address=body.owner_address,
             sender_address=body.sender_address,
             currency=body.currency,
+            amount=body.amount,
         )
 
 
 class TransferFrom(BaseTransaction):
 
-    async def _make_response(self) -> schemas.ResponseSendTransferFrom:
+    async def _make_response(self, **kwargs) -> schemas.ResponseSendTransferFrom:
         return schemas.ResponseSendTransferFrom(
             id=self.id,
             timestamp=self._raw_transaction['raw_data']['timestamp'],
@@ -262,4 +271,159 @@ class TransferFrom(BaseTransaction):
             sender_address=body.sender_address,
             recipient_address=body.recipient_address,
             currency=body.currency,
+            amount=body.amount,
+        )
+
+
+class Delegate(BaseTransaction):
+
+    async def _make_response(self, **kwargs) -> schemas.FieldFreeze:
+        return schemas.FieldFreeze(
+            id=self.id,
+            timestamp=self._raw_transaction['raw_data']['timestamp'],
+            commission=self.commission_schema,
+            amount=getattr(self, 'amount'),
+            from_address=getattr(self, 'from_address'),
+            to_address=getattr(self, 'to_address'),
+            type=self.type,
+        )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyFreeze) -> BaseTransaction:
+        obj = await node.client.trx.delegate_resource(
+            owner=body.owner_address,
+            receiver=body.recipient_address,
+            balance=body.amount,
+            resource=body.resource,
+        ).fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj=obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+            ),
+            type=body.sub_transaction_type,
+            from_address=body.owner_address,
+            to_address=body.recipient_address,
+            amount=body.amount,
+            resource=body.resource,
+        )
+
+
+class Freeze(BaseTransaction):
+
+    def __init__(self, sub_obj: Optional[BaseTransaction] = None, **kwargs):
+        super(Freeze, self).__init__(**kwargs)
+
+        self.sub_obj: BaseTransaction = sub_obj
+
+    @property
+    def is_expired(self) -> bool:
+        if self.sub_obj:
+            return self.obj.is_expired and self.sub_obj.is_expired
+        return self.obj.is_expired
+
+    @property
+    def to_schema(self) -> schemas.ResponseCreateFreeze:
+        return schemas.ResponseCreateFreeze(
+            id=self.id,
+            commission=self.expected_commission_schema,
+            general_commission=self.expected_general_commission_schema,
+        )
+
+    @property
+    def expected_general_commission_schema(self) -> schemas.ResponseCommission:
+        fee = self._expected_commission
+        if self.sub_obj:
+            sub_expected_commission = self.sub_obj._expected_commission
+            fee = dict(
+                fee=fee['fee'] + sub_expected_commission['fee'],
+                bandwidth=fee['bandwidth'] + sub_expected_commission['bandwidth'],
+                energy=fee['energy'] + sub_expected_commission['energy'],
+            )
+        return schemas.ResponseCommission(**fee)
+
+    @property
+    def general_commission_schema(self) -> schemas.ResponseCommission:
+        fee = self._commission
+        if self.sub_obj:
+            sub_commission = self.sub_obj._commission
+            fee = dict(
+                fee=fee['fee'] + sub_commission['fee'],
+                bandwidth=fee['bandwidth'] + sub_commission['bandwidth'],
+                energy=fee['energy'] + sub_commission['energy'],
+            )
+        return schemas.ResponseCommission(**fee)
+
+    async def update(self) -> NoReturn:
+        if self.sub_obj:
+            await self.sub_obj.obj.update()
+        await super(Freeze, self).update()
+
+    async def sign(self, private_key: PrivateKey) -> NoReturn:
+        if self.sub_obj:
+            await self.sub_obj.sign(private_key)
+        await super(Freeze, self).sign(private_key)
+
+    async def send(self) -> schemas.ResponseSendFreeze:
+        await self._valid_send()
+
+        async with lock:
+            self._raw_transaction = await self.obj.broadcast()
+            self._transaction_info = await self._raw_transaction.wait()
+
+        sub_schema = None
+        if self.sub_obj:
+            sub_schema = await self.send()
+
+        await self._post_send()
+        return await self._make_response(sub_schema=sub_schema)
+
+    async def _make_response(self, **kwargs) -> schemas.ResponseSendFreeze:
+        return schemas.ResponseSendFreeze(
+            freeze=schemas.FieldFreeze(
+                id=self.id,
+                timestamp=self._raw_transaction['raw_data']['timestamp'],
+                commission=self.commission_schema,
+                amount=getattr(self, 'amount'),
+                from_address=getattr(self, 'owner_address'),
+                to_address=getattr(self, 'owner_address'),
+                type=self.type,
+            ),
+            delegate=kwargs.get('sub_schema', None),
+            general_commission=self.general_commission_schema,
+        )
+
+    @classmethod
+    async def create(cls, body: schemas.BodyFreeze) -> BaseTransaction:
+        obj = None
+        if not body.use_free_frozen_balance:
+            obj = await node.client.trx.freeze_balance(
+                owner=body.owner_address,
+                amount=body.amount_sun,
+                resource=body.resource,
+            ).fee_limit(
+                body.fee_limit,
+            ).build()
+
+        delegate_obj = None
+        if body.with_delegate:
+            delegate_obj = await Delegate.create(body=body)
+
+        if not obj:
+            return delegate_obj
+
+        return cls(
+            sub_obj=delegate_obj,
+            obj=obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+            ),
+            type=body.transaction_type,
+            owner_address=body.owner_address,
+            recipient_address=body.recipient_address,
+            amount=body.amount,
+            resource=body.resource,
         )

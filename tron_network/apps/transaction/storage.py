@@ -21,6 +21,7 @@ class TransactionStorage:
         TransactionType.TRANSFER: services.Transfer,
         TransactionType.APPROVE: services.Approve,
         TransactionType.TRANSFER_FROM: services.TransferFrom,
+        TransactionType.FREEZE: services.Freeze,
     }
 
     class TransactionNotFound(Exception):

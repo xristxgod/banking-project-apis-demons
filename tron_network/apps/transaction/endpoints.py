@@ -60,6 +60,14 @@ async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
     return await _create_transaction(body)
 
 
+@router.post(
+    '/freeze/create',
+    response_model=schemas.ResponseCreateFreeze,
+)
+async def create_freeze(body: schemas.BodyFreeze):
+    return await _create_transaction(body)
+
+
 @router.put(
     '/transaction/send',
     response_model=Union[

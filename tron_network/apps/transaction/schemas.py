@@ -1,5 +1,6 @@
-import decimal
 import enum
+import decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from tronpy.tron import PrivateKey, TAddress
@@ -16,6 +17,12 @@ class TransactionType(int, enum.Enum):
     TRANSFER = 3
     APPROVE = 4
     TRANSFER_FROM = 5
+    DELEGATE = 6
+
+
+class ResourceType(str, enum.Enum):
+    ENERGY = 'ENERGY'
+    BANDWIDTH = 'BANDWIDTH'
 
 
 class ResponseCommission(BaseModel):
@@ -65,9 +72,38 @@ class BodyCreateTransferFrom(BodyCreateApprove):
         return TransactionType.TRANSFER_FROM
 
 
+class BodyFreeze(BaseCreateTransactionSchema):
+    owner_address: TAddress
+    recipient_address: Optional[TAddress] = Field(default=None)
+    resource: ResourceType
+
+    use_free_frozen_balance: bool = Field(default=False, description='Use a free frozen balance')
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.FREEZE
+
+    @property
+    def sub_transaction_type(self) -> TransactionType:
+        return TransactionType.DELEGATE
+
+    @property
+    def with_delegate(self) -> bool:
+        return self.recipient_address is not None
+
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
 class ResponseCreateTransaction(BaseModel):
     id: str
     commission: ResponseCommission
+
+
+class ResponseCreateFreeze(BaseModel):
+    general_commission: ResponseCommission
 
 
 class BodySendTransaction(BaseModel):
@@ -79,7 +115,7 @@ class BodySendTransaction(BaseModel):
         return PrivateKey(bytes.fromhex(self.private_key))
 
 
-class BaseResponseSendTransactionSchema(BaseModel):
+class BaseResponseSendTransactionSchema(WithCurrencySchema):
     id: str
     timestamp: int
     commission: ResponseCommission
@@ -87,15 +123,34 @@ class BaseResponseSendTransactionSchema(BaseModel):
     type: TransactionType
 
 
-class ResponseSendTransfer(BaseResponseSendTransactionSchema, WithCurrencySchema):
+class ResponseSendTransfer(WithCurrencySchema):
     from_address: TAddress
     to_address: TAddress
 
 
-class ResponseSendApprove(BaseResponseSendTransactionSchema, WithCurrencySchema):
+class ResponseSendApprove(WithCurrencySchema):
     owner_address: TAddress
     sender_address: TAddress
 
 
 class ResponseSendTransferFrom(ResponseSendApprove):
     recipient_address: TAddress
+
+
+class FieldFreeze(ResponseSendTransfer):
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
+class ResponseSendFreeze(BaseModel):
+    freeze: FieldFreeze
+    delegate: Optional[FieldFreeze] = None
+
+    general_commission: ResponseCommission
+
+    class Config:
+        exclude = (
+            'currency',
+        )
