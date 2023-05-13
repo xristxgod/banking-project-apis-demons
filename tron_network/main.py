@@ -21,7 +21,7 @@ async def startup():
 
 
 @app.exception_handler(AddressNotFound)
-async def unicorn_exception_handler(request: Request, exc: AddressNotFound):
+async def address_not_found_exception_handler(request: Request, exc: AddressNotFound):
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
