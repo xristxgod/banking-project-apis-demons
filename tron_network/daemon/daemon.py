@@ -10,6 +10,10 @@ import settings
 from core.crypto.node import Node
 from apps.transaction.schemas import TransactionType
 
+__all__ = (
+    'TransactionDaemon',
+)
+
 
 class BlockController:
 
