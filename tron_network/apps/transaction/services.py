@@ -289,7 +289,7 @@ class Delegate(BaseTransaction):
         )
 
     @classmethod
-    async def create(cls, body: schemas.BodyFreeze) -> BaseTransaction:
+    async def create(cls, body: schemas.BodyCreateFreeze) -> BaseTransaction:
         obj = await node.client.trx.delegate_resource(
             owner=body.owner_address,
             receiver=body.recipient_address,
@@ -397,7 +397,7 @@ class Freeze(BaseTransaction):
         )
 
     @classmethod
-    async def create(cls, body: schemas.BodyFreeze) -> BaseTransaction:
+    async def create(cls, body: schemas.BodyCreateFreeze) -> BaseTransaction:
         obj = None
         if not body.use_free_frozen_balance:
             obj = await node.client.trx.freeze_balance(

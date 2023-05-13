@@ -64,7 +64,7 @@ async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
     '/freeze/create',
     response_model=schemas.ResponseCreateFreeze,
 )
-async def create_freeze(body: schemas.BodyFreeze):
+async def create_freeze(body: schemas.BodyCreateFreeze):
     return await _create_transaction(body)
 
 

@@ -72,7 +72,7 @@ class BodyCreateTransferFrom(BodyCreateApprove):
         return TransactionType.TRANSFER_FROM
 
 
-class BodyFreeze(BaseCreateTransactionSchema):
+class BodyCreateFreeze(BaseCreateTransactionSchema):
     owner_address: TAddress
     recipient_address: Optional[TAddress] = Field(default=None)
     resource: ResourceType
