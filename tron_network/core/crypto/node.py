@@ -3,19 +3,15 @@ from tronpy.exceptions import AddressNotFound
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
+from core import meta
 from core.crypto import models
 from core.crypto.contract import Contract
 from core.crypto.calculator import FeeCalculator
 
 
-class Node:
+class Node(metaclass=meta.Singleton):
     class ContractNotFound(Exception):
         pass
-
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, 'instance'):
-            setattr(cls, 'instance', super().__new__(cls))
-        return getattr(cls, 'instance')
 
     def __init__(self):
         self.provider = AsyncHTTPProvider(endpoint_uri=settings.NODE_URL)
