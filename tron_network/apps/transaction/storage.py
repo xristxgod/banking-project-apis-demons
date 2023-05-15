@@ -23,6 +23,7 @@ class TransactionStorage(metaclass=meta.Singleton):
         TransactionType.APPROVE: services.Approve,
         TransactionType.TRANSFER_FROM: services.TransferFrom,
         TransactionType.FREEZE: services.Freeze,
+        TransactionType.DELEGATE: services.Delegate,
     }
 
     class TransactionNotFound(Exception):
