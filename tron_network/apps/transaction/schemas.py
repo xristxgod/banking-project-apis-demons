@@ -124,12 +124,12 @@ class BaseResponseSendTransactionSchema(WithCurrencySchema):
     type: TransactionType
 
 
-class ResponseSendTransfer(WithCurrencySchema):
+class ResponseSendTransfer(BaseResponseSendTransactionSchema):
     from_address: TAddress
     to_address: TAddress
 
 
-class ResponseSendApprove(WithCurrencySchema):
+class ResponseSendApprove(BaseResponseSendTransactionSchema):
     owner_address: TAddress
     sender_address: TAddress
 
