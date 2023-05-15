@@ -1,3 +1,6 @@
+import decimal
+from typing import Optional
+
 from tronpy.tron import TAddress
 from tronpy.exceptions import AddressNotFound
 from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
@@ -5,6 +8,7 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 import settings
 from core import meta
 from core.crypto import models
+from core.crypto.utils import from_sun
 from core.crypto.contract import Contract
 from core.crypto.calculator import FeeCalculator
 
@@ -80,3 +84,20 @@ class Node(metaclass=meta.Singleton):
     async def get_energy_balance(self, address: TAddress) -> int:
         resource = await self.client.get_account_resource(address)
         return resource.get('EnergyLimit', 0) - resource.get('EnergyUsed', 0)
+
+    async def get_delegated_resource(self, owner_address: TAddress, recipient_address: TAddress,
+                                     resource: Optional[str] = None) -> dict[str, decimal.Decimal] | decimal.Decimal:
+        response = await self.client.get_delegated_resource_v2(owner_address, recipient_address)
+        if response == 'ENERGY':
+            return from_sun(response.get('frozen_balance_for_energy', 0))
+        elif response == 'BANDWIDTH':
+            return from_sun(response.get('frozen_balance_for_bandwidth', 0))
+        else:
+            return dict(
+                energy=from_sun(response.get('frozen_balance_for_energy', 0)),
+                bandwidth=from_sun(response.get('frozen_balance_for_bandwidth', 0)),
+            )
+
+    async def has_delegate_resource(self, owner_address: TAddress, recipient_address: TAddress, resource: str) -> bool:
+        delegated_balance = await self.get_delegated_resource(owner_address, recipient_address, resource)
+        return delegated_balance > 0

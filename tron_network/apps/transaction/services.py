@@ -4,6 +4,7 @@ import asyncio
 import decimal
 from typing import NoReturn, Optional
 
+from tronpy.tron import TAddress
 from tronpy.async_tron import AsyncTransaction, PrivateKey
 
 from core.crypto import node
@@ -445,6 +446,85 @@ class Freeze(BaseTransaction):
 
         return cls(
             sub_obj=delegate_obj,
+            obj=obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+            ),
+            type=body.transaction_type,
+            owner_address=body.owner_address,
+            recipient_address=body.recipient_address,
+            amount=body.amount,
+            resource=body.resource,
+        )
+
+
+class Unfreeze(Freeze):
+    class UnDelegateError(Exception):
+        pass
+
+    async def send(self) -> schemas.ResponseSendUnfreeze:
+        await self._valid_send()
+
+        sub_schema = None
+        if self.sub_obj:
+            sub_schema = await self.send()
+
+        async with lock:
+            self._raw_transaction = await self.obj.broadcast()
+            self._transaction_info = await self._raw_transaction.wait()
+
+        await self._post_send()
+        return await self._make_response(sub_schema=sub_schema)
+
+    async def _make_response(self, **kwargs) -> schemas.ResponseSendUnfreeze:
+        return schemas.ResponseSendUnfreeze(
+            unfreeze=schemas.FieldStake(
+                id=self.id,
+                timestamp=self._raw_transaction['raw_data']['timestamp'],
+                commission=self.commission_schema,
+                amount=getattr(self, 'amount'),
+                from_address=getattr(self, 'owner_address'),
+                to_address=getattr(self, 'owner_address'),
+                resource=getattr(self, 'resource'),
+                type=self.type,
+            ),
+            un_delegate=kwargs.get('sub_schema', None),
+            general_commission=self.general_commission_schema,
+            resource=getattr(self, 'resource'),
+        )
+
+    @classmethod
+    async def _valid_un_delegate(cls, body: schemas.BodyCreateUnfreeze) -> NoReturn:
+        resource_balance = await node.get_delegated_resource(
+            owner_address=body.owner_address,
+            recipient_address=body.recipient_address,
+            resource=body.resource.value,
+        )
+        if resource_balance > body.amount:
+            raise cls.UnDelegateError()
+
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateUnfreeze) -> BaseTransaction:
+        obj = None
+        if not body.only_un_delegate_balance:
+            obj = await node.client.trx.unfreeze_balance(
+                owner=body.owner_address,
+                unfreeze_balance=body.amount_sun,
+                resource=body.resource.value,
+            ).fee_limit(
+                body.fee_limit,
+            ).build()
+
+        un_delegate_obj = None
+        if body.with_un_delegate:
+            await cls._valid_un_delegate(body)
+            un_delegate_obj = await Delegate.create(body=body)
+
+        if not obj:
+            return un_delegate_obj
+
+        return cls(
+            sub_obj=un_delegate_obj,
             obj=obj,
             expected_commission=await node.calculator.calculate(
                 raw_data=getattr(obj, '_raw_data'),

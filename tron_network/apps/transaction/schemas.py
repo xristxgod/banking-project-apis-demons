@@ -98,6 +98,29 @@ class BodyCreateFreeze(BaseCreateTransactionSchema):
         )
 
 
+class BodyCreateUnfreeze(BodyCreateFreeze):
+    amount: Optional[decimal.Decimal] = Field(default=None)
+    only_un_delegate_balance: bool = Field(default=False)
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.UNFREEZE
+
+    @property
+    def sub_transaction_type(self) -> TransactionType:
+        return TransactionType.UN_DELEGATE
+
+    @property
+    def with_un_delegate(self) -> bool:
+        return self.recipient_address is not None
+
+    class Config:
+        exclude = (
+            'use_free_frozen_balance',
+            'currency',
+        )
+
+
 class ResponseCreateTransaction(BaseModel):
     id: str
     commission: ResponseCommission
@@ -150,6 +173,19 @@ class FieldStake(ResponseSendTransfer):
 class ResponseSendFreeze(BaseModel):
     freeze: FieldStake
     delegate: Optional[FieldStake] = None
+
+    general_commission: ResponseCommission
+    resource: str
+
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
+class ResponseSendUnfreeze(BaseModel):
+    unfreeze: FieldStake
+    un_delegate: Optional[FieldStake] = None
 
     general_commission: ResponseCommission
     resource: str
