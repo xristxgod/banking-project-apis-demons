@@ -7,7 +7,7 @@ from core.crypto.utils import from_sun
 from apps.transaction import schemas
 
 
-def build_transaction(
+def build_raw_transaction(
         transaction: dict, transaction_type: schemas.TransactionType
 ) -> schemas.BaseResponseSendTransactionSchema:
     transaction_id = transaction['txID']

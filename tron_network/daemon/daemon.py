@@ -12,7 +12,7 @@ import settings
 from core import celery
 from core.crypto.node import Node
 from apps.transaction.schemas import TransactionType, BaseResponseSendTransactionSchema
-from apps.transaction.utils import build_transaction as build_message
+from apps.transaction.utils import build_raw_transaction as build_message
 
 __all__ = (
     'TransactionDaemon',
@@ -43,6 +43,15 @@ class TransactionDaemon:
         'DelegateResourceContract',
         'UnDelegateResourceContract',
     ]
+
+    stake_v2_type = {
+        'FreezeBalanceV2Contract': TransactionType.FREEZE,
+        'UnfreezeBalanceV2Contract': TransactionType.UNFREEZE,
+    }
+    delegate_type = {
+        'DelegateResourceContract': TransactionType.DELEGATE,
+        'UnDelegateResourceContract': TransactionType.UN_DELEGATE,
+    }
 
     find_smart_contract_type = {
         'a9059cbb': TransactionType.TRANSFER,
@@ -142,15 +151,17 @@ class TransactionDaemon:
 
         return smart_contract_type, addresses
 
-    async def _get_addresses_in_transaction(self,
-                                            transaction_value: dict) -> tuple[Optional[TransactionType], list[TAddress]]:
-        if transaction_value.get('to_address'):
-            return TransactionType.TRANSFER_NATIVE, [transaction_value['to_address']]
-        elif transaction_value.get('receiver_address'):
-            # TODO add freeze, unfreeze & delegate & un delegate
-            return None, [transaction_value['receiver_address']]
-        else:
-            return await self._get_addresses_in_data(transaction_value['data'])
+    async def _get_addresses_in_transaction(self, transaction_value: dict,
+                                            type: str) -> tuple[Optional[TransactionType], list[TAddress]]:
+        match type:
+            case 'TransferContract':
+                return TransactionType.TRANSFER_NATIVE, [transaction_value['to_address']]
+            case 'TriggerSmartContract':
+                return await self._get_addresses_in_data(transaction_value['data'])
+            case self.stake_v2_type.keys():
+                return self.stake_v2_type[type], []
+            case self.delegate_type.keys():
+                return self.delegate_type[type], [transaction_value['receiver_address']]
 
     async def pre_valid_transaction(self, transaction: dict) -> bool:
         if transaction["ret"][0]["contractRet"] != "SUCCESS":
@@ -180,7 +191,10 @@ class TransactionDaemon:
         transaction_value = transaction["raw_data"]["contract"][0]["parameter"]["value"]
 
         from_address = transaction_value["owner_address"]
-        transaction_type, to_addresses = self._get_addresses_in_transaction(transaction_value)
+        transaction_type, to_addresses = self._get_addresses_in_transaction(
+            transaction_value=transaction_value,
+            type=transaction["raw_data"]["contract"][0]["type"],
+        )
 
         if not self.post_valid_transaction([from_address, *to_addresses], addresses):
             return True
@@ -192,10 +206,10 @@ class TransactionDaemon:
 
     async def _make_request_to_internal(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
         if (
-            self.balancer_on and
-            message.type in self.from_balancer_valid_type and
-            getattr(message, 'from_address') not in self.central_wallet_address and
-            getattr(message, 'to_address') in kwargs['addresses']
+                self.balancer_on and
+                message.type in self.from_balancer_valid_type and
+                getattr(message, 'from_address') not in self.central_wallet_address and
+                getattr(message, 'to_address') in kwargs['addresses']
         ):
             celery.app.send_task(
                 'core.celery.tasks.balancer',
