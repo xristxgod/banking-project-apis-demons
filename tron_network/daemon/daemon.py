@@ -147,6 +147,7 @@ class TransactionDaemon:
         if transaction_value.get('to_address'):
             return TransactionType.TRANSFER_NATIVE, [transaction_value['to_address']]
         elif transaction_value.get('receiver_address'):
+            # TODO add freeze, unfreeze & delegate & un delegate
             return None, [transaction_value['receiver_address']]
         else:
             return await self._get_addresses_in_data(transaction_value['data'])
@@ -200,6 +201,7 @@ class TransactionDaemon:
                 'core.celery.tasks.balancer',
                 kwargs=dict(
                     address=getattr(message, 'to_address'),
+                    amount=message.amount,
                     currency=getattr(message, 'currency', 'TRX'),
                 )
             )
