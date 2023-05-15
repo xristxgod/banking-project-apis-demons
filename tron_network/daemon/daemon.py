@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Optional
@@ -7,8 +9,10 @@ from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
 
 import settings
+from core import celery
 from core.crypto.node import Node
-from apps.transaction.schemas import TransactionType
+from apps.transaction.schemas import TransactionType, BaseResponseSendTransactionSchema
+from apps.transaction.utils import build_transaction as build_message
 
 __all__ = (
     'TransactionDaemon',
@@ -46,14 +50,25 @@ class TransactionDaemon:
         '23b872dd': TransactionType.TRANSFER_FROM,
     }
 
+    from_balancer_valid_type = (
+        TransactionType.TRANSFER,
+        TransactionType.TRANSFER_NATIVE,
+    )
+
+    central_wallet_address = settings.CENTRAL_WALLET_CONFIG['address']
+
     @classmethod
     def _get_logger(cls) -> logging.Logger:
         pass
 
     def __init__(self, node: Node, **kwargs):
         self.node = node
+
         self.addresses = kwargs['addresses']
         self.block_controller = BlockController(redis_url=kwargs.get('redis_url'))
+
+        self.balancer_on = kwargs.get('balancer_on', True)
+        self.external_on = kwargs.get('external_on', True)
 
         self.logger = kwargs.get('logger') or self._get_logger()
 
@@ -106,51 +121,91 @@ class TransactionDaemon:
 
         return all(success)
 
-    async def _get_addresses_in_data(self, data: str) -> list[TAddress]:
+    async def _get_addresses_in_data(self, data: str) -> tuple[TransactionType, list[TAddress]]:
         smart_contract_type = self.find_smart_contract_type.get(data[:8])
 
         match smart_contract_type:
             case TransactionType.TRANSFER:
-                return [to_base58check_address(f'41{data[32:72]}')]
+                addresses = [to_base58check_address(f'41{data[32:72]}')]
             case TransactionType.APPROVE:
                 # TODO
-                pass
+                addresses = []
             case TransactionType.TRANSFER_FROM:
                 # TODO
-                pass
+                addresses = []
             case _:
-                return []
+                addresses = []
 
-    async def _get_addresses_in_transaction(self, transaction_value: dict) -> list[TAddress]:
+        return smart_contract_type, addresses
+
+    async def _get_addresses_in_transaction(self,
+                                            transaction_value: dict) -> tuple[Optional[TransactionType], list[TAddress]]:
         if transaction_value.get('to_address'):
-            return [transaction_value['to_address']]
+            return TransactionType.TRANSFER_NATIVE, [transaction_value['to_address']]
         elif transaction_value.get('receiver_address'):
-            return [transaction_value['receiver_address']]
+            return None, [transaction_value['receiver_address']]
         else:
             return await self._get_addresses_in_data(transaction_value['data'])
 
-    async def parsing_transaction(self, transaction: dict, addresses: list[TAddress]) -> bool:
+    async def pre_valid_transaction(self, transaction: dict) -> bool:
         if transaction["ret"][0]["contractRet"] != "SUCCESS":
-            return True
+            return False
 
         if transaction["raw_data"]["contract"][0]["type"] not in self.find_type:
+            # Valid transaction type
+            return False
+
+        contract_address = transaction["raw_data"]["contract"][0]["parameter"]["value"].get('contract_address')
+        if contract_address and not self.node.has_contract_address(contract_address):
+            # If smart contract transaction, check validity of contract
+            return False
+
+    @staticmethod
+    async def post_valid_transaction(addresses_in_transaction: list[TAddress], addresses: list[TAddress]) -> bool:
+        for address in addresses_in_transaction:
+            if address in addresses:
+                return True
+        else:
+            return False
+
+    async def parsing_transaction(self, transaction: dict, addresses: list[TAddress]) -> bool:
+        if not await self.pre_valid_transaction(transaction):
             return True
 
         transaction_value = transaction["raw_data"]["contract"][0]["parameter"]["value"]
-        addresses_in_transaction = (
-            transaction_value["owner_address"],
-            *self._get_addresses_in_transaction(transaction_value),
+
+        from_address = transaction_value["owner_address"]
+        transaction_type, to_addresses = self._get_addresses_in_transaction(transaction_value)
+
+        if not self.post_valid_transaction([from_address, *to_addresses], addresses):
+            return True
+
+        return await self.make_request(
+            message=build_message(transaction, transaction_type),
+            addresses=addresses,
         )
 
-        valid_transaction = False
-        for address in addresses_in_transaction:
-            if address in addresses:
-                valid_transaction = True
-                break
+    async def _make_request_to_internal(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
+        if (
+            self.balancer_on and
+            message.type in self.from_balancer_valid_type and
+            getattr(message, 'from_address') not in self.central_wallet_address and
+            getattr(message, 'to_address') in kwargs['addresses']
+        ):
+            celery.app.send_task(
+                'core.celery.tasks.balancer',
+                kwargs=dict(
+                    address=getattr(message, 'to_address'),
+                    currency=getattr(message, 'currency', 'TRX'),
+                )
+            )
 
-        return await self.set_tasks(transaction) if valid_transaction else True
-
-    async def set_tasks(self, transaction: dict) -> bool:
-        # TODO send to balancer
-        # TODO send to parser
+    async def _make_request_to_external(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
+        # TODO
         pass
+
+    async def make_request(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
+        return all([asyncio.gather(
+            self._make_request_to_internal(message, **kwargs),
+            self._make_request_to_external(message, **kwargs),
+        )])

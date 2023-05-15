@@ -30,3 +30,11 @@ DATABASE_CONFIG = {
     },
     'timezone': 'UTC',
 }
+
+CENTRAL_WALLET_CONFIG = {
+    'address': os.getenv('CENTRAL_WALLET_ADDRESS'),
+    'private_key': os.getenv('CENTRAL_WALLET_PRIVATE_KEY')
+}
+
+REDIS_URL = os.getenv('INTERNAL_REDIS_URL')
+RABBITMQ_URL = os.getenv('INTERNAL_RABBITMQ_URL')
