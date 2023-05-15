@@ -54,15 +54,26 @@ def build_raw_transaction(
         case schemas.TransactionType.TRANSFER_FROM:
             # TODO
             pass
-        case schemas.TransactionType.FREEZE:
-            # TODO
-            pass
-        case schemas.TransactionType.UNFREEZE:
-            # TODO
-            pass
-        case schemas.TransactionType.DELEGATE:
-            # TODO
-            pass
-        case schemas.TransactionType.UN_DELEGATE:
-            # TODO
-            pass
+        case schemas.TransactionType.FREEZE | schemas.TransactionType.UNFREEZE:
+            amount = transaction_value.get('unfreeze_balance') or transaction_value.get('frozen_balance')
+            return schemas.FieldStake(
+                id=transaction_id,
+                timestamp=timestamp,
+                commission=commission,
+                type=transaction_type,
+                amount=from_sun(amount),
+                from_address=owner_address,
+                to_addres=owner_address,
+                resource=transaction_value['resource'],
+            )
+        case schemas.TransactionType.DELEGATE | schemas.TransactionType.DELEGATE:
+            return schemas.FieldStake(
+                id=transaction_id,
+                timestamp=timestamp,
+                commission=commission,
+                type=transaction_type,
+                amount=from_sun(transaction_value['balance']),
+                from_address=owner_address,
+                to_addres=transaction_value['receiver_address'],
+                resource=transaction_value['resource'],
+            )
