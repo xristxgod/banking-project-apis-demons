@@ -18,6 +18,7 @@ class TransactionType(int, enum.Enum):
     APPROVE = 4
     TRANSFER_FROM = 5
     DELEGATE = 6
+    UN_DELEGATE = 7
 
 
 class ResourceType(str, enum.Enum):
