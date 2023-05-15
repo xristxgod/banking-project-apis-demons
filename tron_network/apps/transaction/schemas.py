@@ -138,7 +138,9 @@ class ResponseSendTransferFrom(ResponseSendApprove):
     recipient_address: TAddress
 
 
-class FieldFreeze(ResponseSendTransfer):
+class FieldStake(ResponseSendTransfer):
+    resource: str
+
     class Config:
         exclude = (
             'currency',
@@ -146,10 +148,11 @@ class FieldFreeze(ResponseSendTransfer):
 
 
 class ResponseSendFreeze(BaseModel):
-    freeze: FieldFreeze
-    delegate: Optional[FieldFreeze] = None
+    freeze: FieldStake
+    delegate: Optional[FieldStake] = None
 
     general_commission: ResponseCommission
+    resource: str
 
     class Config:
         exclude = (

@@ -277,14 +277,15 @@ class TransferFrom(BaseTransaction):
 
 class Delegate(BaseTransaction):
 
-    async def _make_response(self, **kwargs) -> schemas.FieldFreeze:
-        return schemas.FieldFreeze(
+    async def _make_response(self, **kwargs) -> schemas.FieldStake:
+        return schemas.FieldStake(
             id=self.id,
             timestamp=self._raw_transaction['raw_data']['timestamp'],
             commission=self.commission_schema,
             amount=getattr(self, 'amount'),
             from_address=getattr(self, 'from_address'),
             to_address=getattr(self, 'to_address'),
+            resource=getattr(self, 'resource'),
             type=self.type,
         )
 
@@ -383,17 +384,19 @@ class Freeze(BaseTransaction):
 
     async def _make_response(self, **kwargs) -> schemas.ResponseSendFreeze:
         return schemas.ResponseSendFreeze(
-            freeze=schemas.FieldFreeze(
+            freeze=schemas.FieldStake(
                 id=self.id,
                 timestamp=self._raw_transaction['raw_data']['timestamp'],
                 commission=self.commission_schema,
                 amount=getattr(self, 'amount'),
                 from_address=getattr(self, 'owner_address'),
                 to_address=getattr(self, 'owner_address'),
+                resource=getattr(self, 'resource'),
                 type=self.type,
             ),
             delegate=kwargs.get('sub_schema', None),
             general_commission=self.general_commission_schema,
+            resource=getattr(self, 'resource'),
         )
 
     @classmethod
