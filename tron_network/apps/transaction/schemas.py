@@ -16,6 +16,8 @@ class TransactionType(int, enum.Enum):
     TRANSFER = 3
     APPROVE = 4
     TRANSFER_FROM = 5
+    DELEGATE = 6
+    UN_DELEGATE = 7
 
 
 class ResponseCommission(BaseModel):

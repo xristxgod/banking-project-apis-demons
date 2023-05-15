@@ -10,6 +10,7 @@ app = celery.Celery(
     broker=settings.RABBITMQ_URL,
 
     tasks={
+        'core.celery.tasks.balancer': main_queue,
         'core.celery.tasks.send_to_central_wallet': main_queue,
         'core.celery.tasks.approve_to_central_wallet': main_queue,
         'core.celery.tasks.freeze_central_balance': main_queue,

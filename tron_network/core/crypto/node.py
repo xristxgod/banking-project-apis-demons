@@ -20,6 +20,7 @@ class Node(metaclass=meta.Singleton):
         )
 
         self.contracts: dict[str, Contract] = {}
+        self.pointers_to_contracts: dict[TAddress, str] = {}
 
         self.fee_calculator = FeeCalculator(self)
 
@@ -39,6 +40,9 @@ class Node(metaclass=meta.Singleton):
                     decimal_place=contract.decimal_place,
                 )
             })
+            self.pointers_to_contracts.update({
+                contract.address: contract.symbol,
+            })
 
     def get_contract_by_symbol(self, symbol: str) -> Contract:
         contract = self.contracts.get(symbol)
@@ -46,8 +50,17 @@ class Node(metaclass=meta.Singleton):
             raise self.ContractNotFound()
         return contract
 
+    def get_contract_by_contract_address(self, contract_address: TAddress) -> Contract:
+        pointer = self.pointers_to_contracts.get(contract_address)
+        if not pointer:
+            raise self.ContractNotFound()
+        return self.contracts[pointer]
+
     def has_currency(self, currency: str) -> bool:
         return self.contracts.get(currency) is not None
+
+    def has_contract_address(self, contract_address: TAddress) -> bool:
+        return self.pointers_to_contracts.get(contract_address) is not None
 
     async def is_active_address(self, address: TAddress) -> bool:
         try:
