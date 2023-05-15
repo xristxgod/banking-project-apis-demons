@@ -295,7 +295,32 @@ class Delegate(BaseTransaction):
             owner=body.owner_address,
             receiver=body.recipient_address,
             balance=body.amount,
+            resource=body.resource.value,
+        ).fee_limit(
+            body.fee_limit,
+        ).build()
+
+        return cls(
+            obj=obj,
+            expected_commission=await node.calculator.calculate(
+                raw_data=getattr(obj, '_raw_data'),
+            ),
+            type=body.sub_transaction_type,
+            from_address=body.owner_address,
+            to_address=body.recipient_address,
+            amount=body.amount,
             resource=body.resource,
+        )
+
+
+class UnDelegate(Delegate):
+    @classmethod
+    async def create(cls, body: schemas.BodyCreateFreeze) -> BaseTransaction:
+        obj = await node.client.trx.undelegate_resource(
+            owner=body.owner_address,
+            receiver=body.recipient_address,
+            balance=body.amount,
+            resource=body.resource.value,
         ).fee_limit(
             body.fee_limit,
         ).build()
@@ -406,7 +431,7 @@ class Freeze(BaseTransaction):
             obj = await node.client.trx.freeze_balance(
                 owner=body.owner_address,
                 amount=body.amount_sun,
-                resource=body.resource,
+                resource=body.resource.value,
             ).fee_limit(
                 body.fee_limit,
             ).build()
