@@ -184,7 +184,9 @@ class TestFreeze(BaseTestTransaction):
     cls_response_sent = schemas.ResponseSendFreeze
 
     async def test_create(self, mocker):
+        # TODO
         pass
 
     async def test_send(self):
+        # TODO
         pass
