@@ -353,8 +353,8 @@ class Freeze(BaseTransaction):
         return self.obj.is_expired
 
     @property
-    def to_schema(self) -> schemas.ResponseCreateFreeze:
-        return schemas.ResponseCreateFreeze(
+    def to_schema(self) -> schemas.ResponseCreateStake:
+        return schemas.ResponseCreateStake(
             id=self.id,
             commission=self.expected_commission_schema,
             general_commission=self.expected_general_commission_schema,

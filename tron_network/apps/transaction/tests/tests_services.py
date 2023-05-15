@@ -179,7 +179,7 @@ class TestFreeze(BaseTestTransaction):
     cls_obj = services.NativeTransfer
 
     cls_body_create = schemas.BodyCreateFreeze
-    cls_response_create = schemas.ResponseCreateFreeze
+    cls_response_create = schemas.ResponseCreateStake
 
     cls_response_sent = schemas.ResponseSendFreeze
 

@@ -126,7 +126,7 @@ class ResponseCreateTransaction(BaseModel):
     commission: ResponseCommission
 
 
-class ResponseCreateFreeze(BaseModel):
+class ResponseCreateStake(ResponseCreateTransaction):
     general_commission: ResponseCommission
 
 

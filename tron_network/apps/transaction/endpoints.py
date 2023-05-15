@@ -62,9 +62,17 @@ async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
 
 @router.post(
     '/freeze/create',
-    response_model=schemas.ResponseCreateFreeze,
+    response_model=schemas.ResponseCreateStake,
 )
 async def create_freeze(body: schemas.BodyCreateFreeze):
+    return await _create_transaction(body)
+
+
+@router.post(
+    '/unfreeze/create',
+    response_model=schemas.ResponseCreateStake,
+)
+async def create_unfreeze(body: schemas.BodyCreateUnfreeze):
     return await _create_transaction(body)
 
 
@@ -74,6 +82,8 @@ async def create_freeze(body: schemas.BodyCreateFreeze):
         schemas.ResponseSendTransfer,
         schemas.ResponseSendApprove,
         schemas.ResponseSendTransferFrom,
+        schemas.ResponseSendFreeze,
+        schemas.ResponseSendUnfreeze,
     ]
 )
 async def send_transaction(body: schemas.BodySendTransaction):
