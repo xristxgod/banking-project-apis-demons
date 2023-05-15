@@ -102,8 +102,12 @@ class TransactionDaemon:
                 self.logger.error(f'Block: {start} :: Error')
 
     async def start_in_range(self, start: Optional[int] = None, end: Optional[int] = None, **kwargs):
-        # TODO
-        pass
+        start = start or await self.node.client.get_latest_block_number() - 1
+        end = end or await self.node.client.get_latest_block_number()
+
+        for number in range(start, end + 1):
+            self.logger.info(f'Parsing block: {number}')
+            await self.parsing_block(number, await self.addresses.all())
 
     async def parsing_block(self, number: int, addresses: list[TAddress]) -> bool:
         block = await self.node.client.get_block(number)
@@ -205,6 +209,7 @@ class TransactionDaemon:
         pass
 
     async def make_request(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
+        self.logger.info(f'Send message: {message.dict()}')
         return all([asyncio.gather(
             self._make_request_to_internal(message, **kwargs),
             self._make_request_to_external(message, **kwargs),
