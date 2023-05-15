@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Optional
 
+import aio_pika
 import aioredis
 from tronpy.tron import TAddress
 from tronpy.keys import to_base58check_address
@@ -17,6 +18,17 @@ from apps.transaction.utils import build_raw_transaction as build_message
 __all__ = (
     'TransactionDaemon',
 )
+
+
+async def send_to_rabbitmq(url: str, routing_key: str, message: aio_pika.Message) -> bool:
+    connection = await aio_pika.connect_robust(url)
+    async with connection:
+        channel = await connection.channel()
+        await channel.default_exchange.publish(
+            message,
+            routing_key=routing_key
+        )
+    return True
 
 
 class BlockController:
@@ -78,6 +90,7 @@ class TransactionDaemon:
 
         self.balancer_on = kwargs.get('balancer_on', True)
         self.external_on = kwargs.get('external_on', True)
+        self.rabbitmq_config = kwargs.get('external_rabbitmq_config', settings.EXTERNAL_RABBITMQ_CONFIG)
 
         self.logger = kwargs.get('logger') or self._get_logger()
 
@@ -221,8 +234,13 @@ class TransactionDaemon:
             )
 
     async def _make_request_to_external(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
-        # TODO
-        pass
+        return await send_to_rabbitmq(
+            url=self.rabbitmq_config['url'],
+            routing_key=self.rabbitmq_config['queues']['main'],
+            message=aio_pika.Message(
+                message.json().encode()
+            ),
+        )
 
     async def make_request(self, message: BaseResponseSendTransactionSchema, **kwargs) -> bool:
         self.logger.info(f'Send message: {message.dict()}')
