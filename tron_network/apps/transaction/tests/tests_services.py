@@ -1,3 +1,4 @@
+import abc
 import time
 import uuid
 import decimal
@@ -13,7 +14,7 @@ from apps.transaction import services
 from apps.transaction import schemas
 
 
-class BaseTestTransaction:
+class BaseTestTransaction(abc.ABC):
     type: schemas.TransactionType
 
     cls_obj: services.BaseTransaction
@@ -23,6 +24,12 @@ class BaseTestTransaction:
 
     cls_body_send: schemas.BodySendTransaction = schemas.BodySendTransaction
     cls_response_sent: schemas.BaseResponseSendTransactionSchema
+
+    @abc.abstractmethod
+    async def test_create(self, **kwargs): ...
+
+    @abc.abstractmethod
+    async def test_send(self): ...
 
 
 @pytest.mark.asyncio
@@ -163,3 +170,23 @@ class TestNativeTransfer(BaseTestTransaction):
             currency='TRX',
             type=self.type,
         )
+
+
+@pytest.mark.asyncio
+class TestFreeze(BaseTestTransaction):
+    type = schemas.TransactionType.TRANSFER_NATIVE
+
+    cls_obj = services.NativeTransfer
+
+    cls_body_create = schemas.BodyCreateFreeze
+    cls_response_create = schemas.ResponseCreateStake
+
+    cls_response_sent = schemas.ResponseSendFreeze
+
+    async def test_create(self, mocker):
+        # TODO
+        pass
+
+    async def test_send(self):
+        # TODO
+        pass

@@ -1,5 +1,6 @@
-import decimal
 import enum
+import decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from tronpy.tron import PrivateKey, TAddress
@@ -18,6 +19,11 @@ class TransactionType(int, enum.Enum):
     TRANSFER_FROM = 5
     DELEGATE = 6
     UN_DELEGATE = 7
+
+
+class ResourceType(str, enum.Enum):
+    ENERGY = 'ENERGY'
+    BANDWIDTH = 'BANDWIDTH'
 
 
 class ResponseCommission(BaseModel):
@@ -67,9 +73,61 @@ class BodyCreateTransferFrom(BodyCreateApprove):
         return TransactionType.TRANSFER_FROM
 
 
+class BodyCreateFreeze(BaseCreateTransactionSchema):
+    owner_address: TAddress
+    recipient_address: Optional[TAddress] = Field(default=None)
+    resource: ResourceType
+
+    use_free_frozen_balance: bool = Field(default=False, description='Use a free frozen balance')
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.FREEZE
+
+    @property
+    def sub_transaction_type(self) -> TransactionType:
+        return TransactionType.DELEGATE
+
+    @property
+    def with_delegate(self) -> bool:
+        return self.recipient_address is not None
+
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
+class BodyCreateUnfreeze(BodyCreateFreeze):
+    amount: Optional[decimal.Decimal] = Field(default=None)
+    only_un_delegate_balance: bool = Field(default=False)
+
+    @property
+    def transaction_type(self) -> TransactionType:
+        return TransactionType.UNFREEZE
+
+    @property
+    def sub_transaction_type(self) -> TransactionType:
+        return TransactionType.UN_DELEGATE
+
+    @property
+    def with_un_delegate(self) -> bool:
+        return self.recipient_address is not None
+
+    class Config:
+        exclude = (
+            'use_free_frozen_balance',
+            'currency',
+        )
+
+
 class ResponseCreateTransaction(BaseModel):
     id: str
     commission: ResponseCommission
+
+
+class ResponseCreateStake(ResponseCreateTransaction):
+    general_commission: ResponseCommission
 
 
 class BodySendTransaction(BaseModel):
@@ -81,7 +139,7 @@ class BodySendTransaction(BaseModel):
         return PrivateKey(bytes.fromhex(self.private_key))
 
 
-class BaseResponseSendTransactionSchema(BaseModel):
+class BaseResponseSendTransactionSchema(WithCurrencySchema):
     id: str
     timestamp: int
     commission: ResponseCommission
@@ -89,15 +147,50 @@ class BaseResponseSendTransactionSchema(BaseModel):
     type: TransactionType
 
 
-class ResponseSendTransfer(BaseResponseSendTransactionSchema, WithCurrencySchema):
+class ResponseSendTransfer(BaseResponseSendTransactionSchema):
     from_address: TAddress
     to_address: TAddress
 
 
-class ResponseSendApprove(BaseResponseSendTransactionSchema, WithCurrencySchema):
+class ResponseSendApprove(BaseResponseSendTransactionSchema):
     owner_address: TAddress
     sender_address: TAddress
 
 
 class ResponseSendTransferFrom(ResponseSendApprove):
     recipient_address: TAddress
+
+
+class FieldStake(ResponseSendTransfer):
+    resource: str
+
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
+class ResponseSendFreeze(BaseModel):
+    freeze: FieldStake
+    delegate: Optional[FieldStake] = None
+
+    general_commission: ResponseCommission
+    resource: str
+
+    class Config:
+        exclude = (
+            'currency',
+        )
+
+
+class ResponseSendUnfreeze(BaseModel):
+    unfreeze: FieldStake
+    un_delegate: Optional[FieldStake] = None
+
+    general_commission: ResponseCommission
+    resource: str
+
+    class Config:
+        exclude = (
+            'currency',
+        )
