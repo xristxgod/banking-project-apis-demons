@@ -2,15 +2,17 @@ from typing import Union
 
 from fastapi import APIRouter
 
+from apps.transaction.endpoints import transaction
 from apps.transaction.schemas import (
     ResponseCreateTransaction, ResponseCreateStake,
     ResponseSendTransfer, ResponseSendTransferFrom,
     ResponseSendFreeze, ResponseSendUnfreeze,
 )
-from apps.transaction.endpoints import transaction
 from apps.admin import schemas
+from apps.admin.services import Admin
 
 router = APIRouter()
+admin = Admin(transaction)
 
 
 @router.post(
@@ -18,7 +20,7 @@ router = APIRouter()
     response_model=ResponseCreateTransaction,
 )
 async def admin_create_transfer(body: schemas.BodyCreateTransfer):
-    return await transaction.create(body)
+    return await admin.transaction.create(body)
 
 
 @router.post(
@@ -26,7 +28,7 @@ async def admin_create_transfer(body: schemas.BodyCreateTransfer):
     response_model=ResponseCreateTransaction,
 )
 async def admin_create_transfer_from(body: schemas.BodyAdminCreateTransferFrom):
-    return await transaction.create(body)
+    return await admin.transaction.create(body)
 
 
 @router.post(
@@ -34,7 +36,7 @@ async def admin_create_transfer_from(body: schemas.BodyAdminCreateTransferFrom):
     response_model=ResponseCreateStake,
 )
 async def admin_create_freeze(body: schemas.BodyAdminCreateFreeze):
-    return await transaction.create(body)
+    return await admin.transaction.create(body)
 
 
 @router.post(
@@ -42,7 +44,7 @@ async def admin_create_freeze(body: schemas.BodyAdminCreateFreeze):
     response_model=ResponseCreateStake,
 )
 async def admin_create_unfreeze(body: schemas.BodyAdminCreateUnfreeze):
-    return await transaction.create(body)
+    return await admin.transaction.create(body)
 
 
 @router.put(
@@ -55,4 +57,4 @@ async def admin_create_unfreeze(body: schemas.BodyAdminCreateUnfreeze):
     ]
 )
 async def admin_send_transaction(body: schemas.BodySendTransaction):
-    return await transaction.send(body)
+    return await admin.transaction.send(body)

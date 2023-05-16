@@ -1,16 +1,16 @@
 import decimal
+from typing import Type
 
 from tronpy.keys import PrivateKey
 
 import settings
 from core.crypto import node
-from core.crypto.utils import is_native
 from apps.transaction.endpoints import transaction
 
 
 class Admin:
 
-    def __init__(self, transaction_obj: transaction):
+    def __init__(self, transaction_obj: Type[transaction]):
         self.address = settings.CENTRAL_WALLET_CONFIG['address']
 
         self._private_key = settings.CENTRAL_WALLET_CONFIG['private_key']
@@ -22,23 +22,23 @@ class Admin:
         self._node = node
 
     @property
-    def transaction(self) -> transaction:
+    def transaction(self) -> Type[transaction]:
         return self._transaction
 
     async def balance(self, currency: str = 'TRX') -> decimal.Decimal:
         return await self._node.get_account_balance(self.address, currency=currency)
 
     async def energy_balance(self) -> int:
-        pass
+        return await self._node.get_energy_balance(self.address)
 
     async def bandwidth_balance(self) -> bool:
-        pass
+        return await self._node.get_bandwidth_balance(self.address)
 
     async def has_energy_balance(self) -> bool:
-        pass
+        return await self.energy_balance() > settings.CENTRAL_WALLET_CONFIG['min_balance']['energy']
 
     async def has_bandwidth_balance(self) -> bool:
-        pass
+        return await self.bandwidth_balance() > settings.CENTRAL_WALLET_CONFIG['min_balance']['bandwidth']
 
     async def has_native_balance(self) -> bool:
-        pass
+        return await self.balance('TRX') > settings.CENTRAL_WALLET_CONFIG['min_balance']['energy']
