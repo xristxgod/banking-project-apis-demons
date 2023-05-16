@@ -4,6 +4,7 @@ from tronpy.keys import PrivateKey
 
 import settings
 from core.crypto import node
+from core.crypto.utils import is_native
 from apps.transaction.endpoints import transaction
 
 
@@ -25,7 +26,7 @@ class Admin:
         return self._transaction
 
     async def balance(self, currency: str = 'TRX') -> decimal.Decimal:
-        pass
+        return await self._node.get_account_balance(self.address, currency=currency)
 
     async def energy_balance(self) -> int:
         pass

@@ -17,12 +17,8 @@ async def create_wallet(body: schemas.BodyCreateWallet) -> schemas.ResponseCreat
 
 
 async def wallet_balance(body: schemas.BodyWalletBalance) -> schemas.ResponseWalletBalance:
-    if body.currency == 'TRX':
-        balance = await node.client.get_account_balance(body.address)
-    else:
-        balance = await body.contract.balance_of(body.address)
     return schemas.ResponseWalletBalance(
-        balance=balance,
+        balance=await node.get_account_balance(body.address, currency=body.currency),
     )
 
 

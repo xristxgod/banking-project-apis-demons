@@ -8,9 +8,9 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 import settings
 from core import meta
 from core.crypto import models
-from core.crypto.utils import from_sun
 from core.crypto.contract import Contract
 from core.crypto.calculator import FeeCalculator
+from core.crypto.utils import from_sun, is_native
 
 
 class Node(metaclass=meta.Singleton):
@@ -73,6 +73,12 @@ class Node(metaclass=meta.Singleton):
             return False
         else:
             return True
+
+    async def get_account_balance(self, address: TAddress, currency: str) -> decimal.Decimal:
+        if is_native(currency):
+            return await self.client.get_account_balance(address)
+        contract = self.get_contract_by_symbol(currency)
+        return await contract.balance_of(address)
 
     async def get_bandwidth_balance(self, address: TAddress) -> int:
         resource = await self.client.get_account_resource(address)
