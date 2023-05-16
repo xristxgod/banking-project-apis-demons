@@ -1,6 +1,10 @@
+from typing import Optional
+
 from tronpy.tron import TAddress
+from pydantic import BaseModel, Field
 
 import settings
+from apps.common.schemas import ResponseCreateWallet
 from apps.transaction.schemas import (
     BodyCreateTransfer, BodyCreateTransferFrom,
     BodyCreateFreeze, BodyCreateUnfreeze,
@@ -8,6 +12,20 @@ from apps.transaction.schemas import (
 )
 
 ADMIN_ADDRESS = settings.CENTRAL_WALLET_CONFIG['address']
+
+
+class BodyAdminCreateWallet(BaseModel):
+    index: Optional[int] = Field(default=None)
+
+
+class ResponseAdminCreateWallet(ResponseCreateWallet):
+    index: int
+
+    class Config:
+        exclude = (
+            'mnemonic',
+            'passphrase',
+        )
 
 
 class BaseAdminPropertyMixin:
