@@ -16,6 +16,14 @@ admin = Admin(transaction)
 
 
 @router.post(
+    '/create-sub-wallet',
+    response_model=schemas.ResponseAdminCreateWallet,
+)
+async def admin_create_sub_wallet(body: schemas.BodyAdminCreateWallet):
+    return await admin.create_sub_wallet(body)
+
+
+@router.post(
     '/transfer/create',
     response_model=ResponseCreateTransaction,
 )
