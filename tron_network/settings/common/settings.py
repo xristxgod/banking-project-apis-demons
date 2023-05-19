@@ -69,3 +69,7 @@ DAEMON_CONFIG = {
         'USDC': decimal.Decimal(os.getenv('DAEMON_CONFIG_MIN_USDC_AMOUNT')),
     }
 }
+
+ADMIN_HEADER_X_TOKEN = os.getenv('ADMIN_HEADER_X_TOKEN')
+
+ADMIN_HOST_IPS = ()
