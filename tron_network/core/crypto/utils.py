@@ -41,3 +41,7 @@ def to_sun(amount: decimal.Decimal) -> int:
         raise ValueError("Resulting wei value must be between 1 and 2**256 - 1")
 
     return int(result)
+
+
+def is_native(currency: str) -> bool:
+    return currency.upper() == 'TRX'

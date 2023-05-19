@@ -34,7 +34,14 @@ DATABASE_CONFIG = {
 
 CENTRAL_WALLET_CONFIG = {
     'address': os.getenv('CENTRAL_WALLET_ADDRESS'),
-    'private_key': os.getenv('CENTRAL_WALLET_PRIVATE_KEY')
+    'private_key': os.getenv('CENTRAL_WALLET_PRIVATE_KEY'),
+    'mnemonic': os.getenv('CENTRAL_WALLET_MNEMONIC'),
+
+    'min_balance': {
+        'native': decimal.Decimal(os.getenv('CENTRAL_WALLET_MIN_BALANCE_NATIVE')),
+        'energy': decimal.Decimal(os.getenv('CENTRAL_WALLET_MIN_BALANCE_ENERGY')),
+        'bandwidth': decimal.Decimal(os.getenv('CENTRAL_WALLET_MIN_BALANCE_BANDWIDTH')),
+    }
 }
 
 REDIS_URL = os.getenv('INTERNAL_REDIS_URL')

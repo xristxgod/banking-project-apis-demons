@@ -11,23 +11,23 @@ router = APIRouter()
 storage = TransactionStorage()
 
 
-async def _create_transaction(body: schemas.BaseCreateTransactionSchema,
-                              save: bool = True) -> schemas.ResponseCreateTransaction:
-    obj = await storage.create(body, save=save)
-    return obj.to_schema
+class transaction:
+    @staticmethod
+    async def create(body: schemas.BaseCreateTransactionSchema, save: bool = True) -> schemas.ResponseCreateTransaction:
+        obj = await storage.create(body, save=save)
+        return obj.to_schema
 
-
-async def _send_transaction(body: schemas.BodySendTransaction,
-                            delete: bool = True) -> schemas.BaseResponseSendTransactionSchema:
-    try:
-        obj = storage.get(body.id, delete=delete)
-        await obj.sign(private_key=body.private_key_obj)
-        return await obj.send()
-    except storage.TransactionNotFound as err:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(err),
-        )
+    @staticmethod
+    async def send(body: schemas.BodySendTransaction, delete: bool = True) -> schemas.BaseResponseSendTransactionSchema:
+        try:
+            obj = storage.get(body.id, delete=delete)
+            await obj.sign(private_key=body.private_key_obj)
+            return await obj.send()
+        except storage.TransactionNotFound as err:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(err),
+            )
 
 
 @router.on_event('startup')
@@ -41,7 +41,7 @@ async def clear_buffer_event():
     response_model=schemas.ResponseCreateTransaction,
 )
 async def create_transfer(body: schemas.BodyCreateTransfer):
-    return await _create_transaction(body)
+    return await transaction.create(body)
 
 
 @router.post(
@@ -49,7 +49,7 @@ async def create_transfer(body: schemas.BodyCreateTransfer):
     response_model=schemas.ResponseCreateTransaction,
 )
 async def create_approve(body: schemas.BodyCreateApprove):
-    return await _create_transaction(body)
+    return await transaction.create(body)
 
 
 @router.post(
@@ -57,7 +57,7 @@ async def create_approve(body: schemas.BodyCreateApprove):
     response_model=schemas.ResponseCreateTransaction,
 )
 async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
-    return await _create_transaction(body)
+    return await transaction.create(body)
 
 
 @router.post(
@@ -65,7 +65,7 @@ async def create_transfer_from(body: schemas.BodyCreateTransferFrom):
     response_model=schemas.ResponseCreateStake,
 )
 async def create_freeze(body: schemas.BodyCreateFreeze):
-    return await _create_transaction(body)
+    return await transaction.create(body)
 
 
 @router.post(
@@ -73,7 +73,7 @@ async def create_freeze(body: schemas.BodyCreateFreeze):
     response_model=schemas.ResponseCreateStake,
 )
 async def create_unfreeze(body: schemas.BodyCreateUnfreeze):
-    return await _create_transaction(body)
+    return await transaction.create(body)
 
 
 @router.put(
@@ -87,4 +87,4 @@ async def create_unfreeze(body: schemas.BodyCreateUnfreeze):
     ]
 )
 async def send_transaction(body: schemas.BodySendTransaction):
-    return await _send_transaction(body)
+    return await transaction.send(body)

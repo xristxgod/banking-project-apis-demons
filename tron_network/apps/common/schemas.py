@@ -5,6 +5,7 @@ from tronpy.tron import TAddress
 from pydantic import BaseModel, Field, validator
 
 from core.crypto import node
+from core.crypto.utils import is_native
 from core.crypto.contract import Contract
 from apps.common import utils
 
@@ -14,7 +15,7 @@ class WithCurrencySchema(BaseModel):
 
     @property
     def is_native(self) -> bool:
-        return self.currency == 'TRX'
+        return is_native(self.currency)
 
     @property
     def contract(self) -> Contract:
@@ -28,7 +29,7 @@ class WithCurrencySchema(BaseModel):
     @validator('currency')
     def valid_currency(cls, currency: str):
         currency = currency.upper()
-        if not cls.use_native() and currency == 'TRX':
+        if not cls.use_native() and is_native(currency):
             raise ValueError("Don't use native!")
         elif currency != 'TRX' and not node.has_currency(currency):
             raise ValueError(f'Currency: {currency} not found')
@@ -53,7 +54,7 @@ class BodyWalletBalance(WithCurrencySchema, BaseModel):
     @validator('currency')
     def correct_currency(cls, currency: str):
         currency = currency.upper()
-        if currency != 'TRX' and not node.has_currency(currency):
+        if is_native(currency) and not node.has_currency(currency):
             raise ValueError(f'Currency: {currency} not found')
         return currency
 
