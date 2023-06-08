@@ -13,7 +13,7 @@ class StableCoinStorage:
         self.storage_by_symbol = {}
 
     def update(self, items: dict):
-        for key, stable_coin in items.keys():
+        for key, stable_coin in items.items():
             address, symbol = key
             self.storage_by_address.update({
                 address: stable_coin
@@ -23,7 +23,7 @@ class StableCoinStorage:
             })
 
     def get(self, item: tuple | str):
-        if tuple:
+        if isinstance(item, tuple):
             stable_coin = self.storage_by_address.get(item[0])
         elif is_address(item):
             stable_coin = self.storage_by_address.get(item)
@@ -57,7 +57,7 @@ class Node:
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
-            setattr(cls, 'instance', super().__new__())
+            setattr(cls, 'instance', super().__new__(cls))
         return getattr(cls, 'instance')
 
     def __init__(self):

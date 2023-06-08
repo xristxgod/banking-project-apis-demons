@@ -14,7 +14,6 @@ import settings
 from core import schemas
 from core.utils import from_sun
 from core.schemas import TransactionType
-from core.node import node
 
 SMART_CONTRACT_TRANSACTION_TYPES = {
     'a9059cbb': ('transfer', '(address,uint256)', TransactionType.TRANSFER),
@@ -32,7 +31,6 @@ TRANSACTION_TYPES = {
 
 
 class Transaction:
-    node = node
 
     class Status(enum.IntEnum):
         CREATE = 0
@@ -148,6 +146,7 @@ class Transaction:
                 )
             case _:
                 # Smart contract transaction
+                from core.node import node
                 value = parameter['value']
                 parameter, typ = cls.decode_data(parameter['data'])
 
@@ -228,6 +227,6 @@ class Transaction:
                 await self.transaction.wait()
         return self
 
-    def to_obj(self) -> Optional[schemas.TransactionBody]:
+    async def to_obj(self) -> Optional[schemas.TransactionBody]:
         if self.status == self.Status.DONE:
             return await self.make_response(self.transaction, self.client)
