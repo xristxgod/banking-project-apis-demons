@@ -51,17 +51,17 @@ class Transaction:
     @functools.lru_cache(None)
     async def commission(cls, raw_data: dict, signature: str, client: AsyncTron) -> schemas.Commission:
         if raw_data['contract'][0]['type'] == 'TransferContract':
-            try:
-                # Is active account
-                await client.get_account(
+            from core.node import node
+
+            if not node.is_active_address(
                     client.to_base58check_address(raw_data['contract'][0]['parameter']['value']['to_address'])
-                )
-            except AddressNotFound:
+            ):
                 return schemas.Commission(
                     amount=decimal.Decimal(1.1),
                     bandwidth=100,
                     energy=0,
                 )
+
         bandwidth = trontxsize.get_tx_size({
             'raw_data': raw_data,
             'signature': [signature or '0' * 130],

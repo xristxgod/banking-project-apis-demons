@@ -88,9 +88,11 @@ class Node:
             return False
 
     async def get_resources(self, address: str):
+        # TODO
         pass
 
     async def get_delegate_resource(self, owner: str, to: str):
+        # TODO
         pass
 
 
