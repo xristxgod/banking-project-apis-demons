@@ -92,3 +92,6 @@ class Node:
 
     async def get_delegate_resource(self, owner: str, to: str):
         pass
+
+
+node = Node()
