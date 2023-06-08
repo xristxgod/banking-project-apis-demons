@@ -54,21 +54,21 @@ class StableCoinInterface(Native):
         if isinstance(amount, decimal.Decimal):
             amount = self.from_decimal(amount)
 
-        transaction = await self.contract.functions.transfer(to, amount)
+        transaction = self.contract.functions.transfer(to, amount)
         return self._make_transaction(transaction)
 
     def approve(self, sender: str, amount: decimal.Decimal | int):
         if isinstance(amount, decimal.Decimal):
             amount = self.from_decimal(amount)
 
-        transaction = await self.contract.functions.approve(sender, amount)
+        transaction = self.contract.functions.approve(sender, amount)
         return self._make_transaction(transaction)
 
     def transfer_from(self, sender: str, to: str, amount: decimal.Decimal | int):
         if isinstance(amount, decimal.Decimal):
             amount = self.from_decimal(amount)
 
-        transaction = await self.contract.functions.transferFrom(sender, to, amount)
+        transaction = self.contract.functions.transferFrom(sender, to, amount)
         return self._make_transaction(transaction)
 
     # alias
