@@ -31,29 +31,21 @@ TRANSACTION_TYPES = {
 
 
 class Transaction:
-
-    class Status(enum.IntEnum):
-        CREATE = 0
-        BUILD = 1
-        SIGN = 2
-        DONE = 3
-
     class TransactionTypeNotFound(Exception):
         pass
 
     @staticmethod
     @functools.lru_cache(None)
-    def decode_data(data: str) -> tuple:
+    def decode_data(data: str) -> tuple[tuple, str]:
         _, parameter, typ = SMART_CONTRACT_TRANSACTION_TYPES[data[:8]]
         return trx_abi.decode_single(parameter, data[8:]), typ
 
     @classmethod
-    @functools.lru_cache(None)
     async def commission(cls, raw_data: dict, signature: str, client: AsyncTron) -> schemas.Commission:
         if raw_data['contract'][0]['type'] == 'TransferContract':
             from core.node import node
 
-            if not node.is_active_address(
+            if not await node.is_active_address(
                     client.to_base58check_address(raw_data['contract'][0]['parameter']['value']['to_address'])
             ):
                 return schemas.Commission(
@@ -187,46 +179,31 @@ class Transaction:
         self.client = client
         self.transaction = transaction
 
-        if asyncio.iscoroutinefunction(self.transaction) or isinstance(self.transaction, AsyncTransactionBuilder):
-            self.status = self.Status.CREATE
-        elif isinstance(self.transaction, AsyncTransaction):
-            self.status = self.Status.BUILD
-        else:
-            self.status = self.Status.DONE
-
     async def build(self, owner: str, **kwargs) -> Self:
-        if self.status == self.Status.CREATE:
-            if asyncio.iscoroutinefunction(self.transaction):
-                self.transaction = await self.transaction
+        if asyncio.iscoroutinefunction(self.transaction):
+            self.transaction = await self.transaction
 
-            self.transaction = await self.transaction.with_owner(
-                owner,
-            ).fee_limit(
-                kwargs.get('fee_limit') or settings.GLOBAL_FEE_LIMIT,
-                ).build()
-
-            self.status = self.Status.BUILD
+        self.transaction = await self.transaction.with_owner(
+            owner,
+        ).fee_limit(
+            kwargs.get('fee_limit') or settings.GLOBAL_FEE_LIMIT,
+            ).build()
 
         return self
 
     def sign(self, private_key: str) -> Self:
-        if self.status == self.Status.BUILD:
-            self.transaction = self.transaction.sign(priv_key=PrivateKey(
-                private_key_bytes=bytes.fromhex(private_key),
-            ))
-            self.status = self.Status.SIGN
+        self.transaction = self.transaction.sign(priv_key=PrivateKey(
+            private_key_bytes=bytes.fromhex(private_key),
+        ))
         return self
 
     async def send(self, wait: bool = True) -> Self:
-        if self.status == self.Status.SIGN:
-            self.transaction: AsyncTransaction
-            if self.transaction.is_expired:
-                await self.transaction.update()
-            self.transaction = await self.transaction.broadcast()
-            if wait:
-                await self.transaction.wait()
+        if self.transaction.is_expired:
+            await self.transaction.update()
+        self.transaction = await self.transaction.broadcast()
+        if wait:
+            await self.transaction.wait()
         return self
 
     async def to_obj(self) -> Optional[schemas.TransactionBody]:
-        if self.status == self.Status.DONE:
-            return await self.make_response(self.transaction, self.client)
+        return await self.make_response(self.transaction, self.client)

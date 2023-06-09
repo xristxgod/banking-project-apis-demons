@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import copy
 import time
 import random
 import decimal
@@ -49,7 +50,7 @@ class FakeRawTransaction:
     ]
     raw_data = {
         "contract": [{
-            "parameter": {"value": None, "type_url": "type.googleapis.com/protocol.{type}"},
+            "parameter": {"value": None, "type_url": None},
             "type": None,
         }],
         "timestamp": int(time.time()),
@@ -59,6 +60,8 @@ class FakeRawTransaction:
         "fee_limit": random.randint(10**8, 10**18),
     }
     raw_data_hex = '---'
+
+    fake_ref_block_id = '000000000317c841285ce88b2d8a9a7dbc7ba35d8eaba2e1e3d101cdf8044e0b'
 
     def __init__(self, owner: str, amount: decimal.Decimal, typ: TransactionType, is_signed: bool = True, **params):
         self.owner = owner
@@ -156,10 +159,15 @@ class FakeRawTransaction:
             case _:
                 raise ValueError()
 
-        raw_data = self.raw_data.copy()
+        raw_data = copy.copy(self.raw_data)
+        type_url = f'type.googleapis.com/protocol.{typ}'
+
         raw_data['contract'][0]['parameter']['value'] = value
-        raw_data['contract'][0]['parameter']['type_url'].format(type=typ)
+        raw_data['contract'][0]['parameter']['type_url'] = type_url
         raw_data['contract'][0]['type'] = typ
+
+        raw_data["ref_block_bytes"] = self.fake_ref_block_id[12:16]
+        raw_data["ref_block_hash"] = self.fake_ref_block_id[16:32]
 
         self._build(raw_data, signature=self.signature if is_signed else [])
 

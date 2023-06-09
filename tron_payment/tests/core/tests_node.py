@@ -3,7 +3,6 @@ import pytest
 from tests.factories import fake_stable_coin
 
 
-# @pytest.mark.asyncio
 def test_stable_coin_storage():
     from core.node import StableCoinStorage
 
