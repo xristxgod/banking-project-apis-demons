@@ -88,7 +88,6 @@ class Transaction:
         )
 
     @classmethod
-    @functools.lru_cache(None)
     async def make_response(cls, raw_transaction: dict, client: AsyncTron) -> schemas.TransactionBody:
 
         parameter = raw_transaction['raw_data']['contract'][0]['parameter']
