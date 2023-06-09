@@ -4,6 +4,7 @@ from tronpy.async_tron import AsyncTron, AsyncHTTPProvider
 
 import settings
 from core.stable_coins import StableCoinInterface
+from core.native import Native
 
 
 class StableCoinStorage:
@@ -65,6 +66,11 @@ class Node:
         self.client = AsyncTron(provider=self.provider)
 
         self.stable_coins = StableCoinStorage()
+        self.native = Native(self.client)
+
+    @property
+    def native_symbol(self) -> str:
+        return self.native.symbol
 
     async def update(self):
         # TODO add func
@@ -74,6 +80,12 @@ class Node:
             self.stable_coins.update({
                 (stable_coin.address, stable_coin.symbol): contract
             })
+
+    def has_currency(self, currency: str) -> bool:
+        return (
+                currency == self.native.symbol or
+                self.stable_coins.get(currency) is not None
+        )
 
     def get_stable_coin(self, addr_or_symbol: str) -> StableCoinInterface:
         try:

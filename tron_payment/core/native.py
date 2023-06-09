@@ -7,6 +7,11 @@ from core.utils import from_sun, to_sun
 
 
 class Native:
+    name = 'Tron'
+    symbol = 'TRX'
+    decimal_place = 6
+    decimals = 10 ** 6
+
     def __init__(self, client: AsyncTron):
         self.client = client
 
