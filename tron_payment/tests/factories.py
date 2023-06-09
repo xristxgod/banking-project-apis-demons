@@ -27,7 +27,7 @@ def fake_private_key() -> str:
 
 def fake_stable_coin():
     """
-    :return: TronProvider._FakeStableCoin
+    :return: TronProvider.FakeStableCoin
     """
     return fake.unique.tron_stable_coin()
 
