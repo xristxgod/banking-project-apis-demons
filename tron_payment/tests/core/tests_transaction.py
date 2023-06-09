@@ -63,3 +63,11 @@ class TestTransaction:
 
         assert isinstance(result, Commission)
         assert from_sun(result.bandwidth * 400 + energy_used * 1000) == result.amount
+
+    @pytest.mark.parametrize('typ, commission', [
+        (TransactionType.TRANSFER, Commission(amount=decimal.Decimal(0), bandwidth=256, energy=0)),
+        (TransactionType.FREEZE, Commission(amount=decimal.Decimal(0), bandwidth=256, energy=0)),
+        (TransactionType.UNFREEZE, Commission(amount=decimal.Decimal(0), bandwidth=256, energy=0)),
+    ])
+    async def test_native_make_response(self, typ, commission, mocker):
+        pass
