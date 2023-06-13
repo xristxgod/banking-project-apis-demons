@@ -51,6 +51,8 @@ class StableCoinStorage:
 
 
 class Node:
+    network: str = 'tron'
+
     cls_stable_coin: StableCoinInterface = StableCoinInterface
 
     class StableCoinNotFound(Exception):
