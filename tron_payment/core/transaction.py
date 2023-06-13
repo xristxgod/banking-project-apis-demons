@@ -114,9 +114,9 @@ class Transaction:
                 value = parameter['value']
 
                 raw_amount = (
-                    value.get('frozen_balance') or
-                    value.get('unfreeze_balance') or
-                    value.get('balance')
+                        value.get('frozen_balance') or
+                        value.get('unfreeze_balance') or
+                        value.get('balance')
                 )
                 amount = from_sun(raw_amount)
 
