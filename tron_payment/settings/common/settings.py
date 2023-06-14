@@ -1,3 +1,0 @@
-NODE_URI = ''
-
-GLOBAL_FEE_LIMIT = 10
