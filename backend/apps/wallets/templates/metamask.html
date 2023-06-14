@@ -6,27 +6,26 @@
 </head>
 <body>
 
-<button type="button" onclick="web3Login()">
+<button type="button" onclick="metamaskLogin()">
     Connect
 </button>
 
 <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
 <script>
-    function web3Login() {
+    function metamaskLogin() {
         try {
             window.ethereum.enable().then(function () {
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 provider.getNetwork().then(function (result) {
-                    console.log(result);
                     chainId = result['chainId'];
-                    console.log(chainId);
-                    provider.listAccounts().then(function (result) {
-                        accountAddress = result[0];
-                        signer = provider.getSigner();
-                        signer.signMessage("Sign to auth").then((signature) => {web3LoginBackend(
-                            accountAddress, chainId, signature
-                        )});
-                    })
+
+                    if (!(chainId in {{ chainIds }})) {
+                        console.log('False')
+                    }
+
+                    provider.listAccounts().then((result) => {metamaskLoginBackend(
+                        result[0], chainId
+                    )});
                 })
             })
         } catch {
@@ -34,7 +33,7 @@
         }
     }
 
-    function web3LoginBackend(accountAddress, chainId, signature) {
+    function metamaskLoginBackend(accountAddress, chainId) {
         var form = document.createElement('form')
         form.action = '{{ url_for("connect", typ=typ.METAMASK) }}';
         form.method = 'POST';
@@ -43,12 +42,6 @@
         input.type = 'hidden';
         input.name = 'address';
         input.value = accountAddress;
-        form.appendChild(input);
-
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'signature';
-        input.value = signature;
         form.appendChild(input);
 
         var input = document.createElement('input');

@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 import settings
-from apps.wallets.schemas import WalletType
+from apps.wallets.schemas import WalletType, MetamaskChainId
 
 WALLET_DIR = settings.APPS_DIR / 'wallets'
 
@@ -20,17 +20,17 @@ templates = Jinja2Templates(directory=WALLET_DIR / 'templates')
 async def wallet_selector(request: Request, typ: WalletType):
     context = {
         'request': request,
+        'typ': WalletType,
     }
     match typ:
         case WalletType.METAMASK:
             template = 'metamask.html'
             context.update({
                 'title': 'Metamask',
-            })
-        case WalletType.TRON_LINK:
-            template = 'tronlink.html'
-            context.update({
-                'title': 'TronLink',
+                'chainIds': [
+                    MetamaskChainId.ETH.value,
+                    MetamaskChainId.BSC.value,
+                ]
             })
         case _:
             raise HTTPException(
@@ -45,8 +45,17 @@ async def wallet_selector(request: Request, typ: WalletType):
 
 
 @router.post(
-    '/connect/{type}',
+    '/connect/{typ}',
     response_class=HTMLResponse,
 )
-async def connect_wallet(request: Request, typ: WalletType):
-    pass
+async def connect(
+        request: Request, typ: WalletType,
+        chain_id: int = Form(...),
+        address: str = Form(...),
+):
+    return templates.TemplateResponse(
+        'success.html',
+        context={
+            'request': request,
+        },
+    )
