@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+
+<button type="button" onclick="web3Login()">
+    Connect
+</button>
+
+<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+<script>
+    function web3Login() {
+        try {
+            window.ethereum.enable().then(function () {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider.getNetwork().then(function (result) {
+                    console.log(result);
+                    chainId = result['chainId'];
+                    console.log(chainId);
+                    provider.listAccounts().then(function (result) {
+                        accountAddress = result[0];
+                        signer = provider.getSigner();
+                        signer.signMessage("Sign to auth").then((signature) => {web3LoginBackend(
+                            accountAddress, chainId, signature
+                        )});
+                    })
+                })
+            })
+        } catch {
+            alert('Please install MetaMask for your browser.')
+        }
+    }
+
+    function web3LoginBackend(accountAddress, chainId, signature) {
+        var form = document.createElement('form')
+        form.action = '{{ url_for("connect", typ=typ.METAMASK) }}';
+        form.method = 'POST';
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'address';
+        input.value = accountAddress;
+        form.appendChild(input);
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'signature';
+        input.value = signature;
+        form.appendChild(input);
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'chain_id';
+        input.value = chainId;
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+</script>
+
+</body>
+</html>
