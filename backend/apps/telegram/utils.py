@@ -6,19 +6,16 @@ from apps.telegram.models import Language, TelegramAppsType, TelegramText
 
 
 class Text:
-    def __init__(self, objs: QuerySet[TelegramText]):
+    def __init__(self, objs: list[TelegramText]):
         self.objs = objs
 
     async def get(self, pk: str, lang: Optional[Language] = None):
         if not lang:
             lang = await Language.default()
 
-        return await self.objs.get(
-            pk=pk
-        ).values_list(
-            f'text_{lang.tag}',
-            flat=True,
-        )
+        for obj in self.objs:
+            if obj.pk == pk:
+                return getattr(obj, f'text_{lang.tag}')
 
 
 class TelegramTextFactory:
