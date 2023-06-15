@@ -2,6 +2,7 @@ from aiogram import types
 
 from apps.telegram.utils import Text
 from apps.telegram.models import Language
+from apps.telegram.bot_apps.start import callbacks
 
 
 # TODO add callback data
@@ -10,7 +11,7 @@ async def get_registration_keyboard(obj: Text):
     keyboard.add(
         types.InlineKeyboardButton(
             text=await obj.get('registration_button'),
-            callback_data='',
+            callback_data=callbacks.registration_cb,
         )
     )
     return keyboard
