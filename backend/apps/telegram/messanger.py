@@ -2,11 +2,11 @@ from typing import Optional
 
 from aiogram import types
 
-from apps.telegram.bot import app as bot
+import apps.telegram.bot as bot
 
 
 async def send_message(chat_id: int, text: str, keyboard: Optional[types.KeyboardButton] = None):
-    return await bot.send_message(
+    return await bot.app.send_message(
         chat_id,
         text=text,
         reply_markup=keyboard,

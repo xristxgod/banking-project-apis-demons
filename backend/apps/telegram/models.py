@@ -37,7 +37,7 @@ class User(models.Model):
         table = 'telegram_user'
 
     @transactions.atomic()
-    def change_language(self, language: Language):
+    async def change_language(self, language: Language):
         self.language = language
         await self.save()
 
@@ -62,3 +62,6 @@ class TelegramText(models.Model):
 
     text_ru = fields.CharField(max_length=500, default='пусто')
     text_eng = fields.CharField(max_length=500, default='empty')
+
+    class Meta:
+        table = 'telegram_text'

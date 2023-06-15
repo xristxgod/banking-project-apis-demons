@@ -5,7 +5,7 @@ class Network(models.Model):
     name = fields.CharField(max_length=255, pk=True)
 
     class Meta:
-        table = 'network'
+        table = 'cryptocurrencies_network'
 
 
 class Currency(models.Model):
@@ -20,4 +20,4 @@ class Currency(models.Model):
         return self.address is not None
 
     class Meta:
-        table = 'currency'
+        table = 'cryptocurrencies_currency'
