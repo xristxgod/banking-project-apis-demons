@@ -16,6 +16,7 @@ APPS_MODELS = [
     'apps.cryptocurrencies.models',
     'apps.telegram.models',
     'apps.wallets.models',
+    'apps.orders.models',
 ]
 
 DATABASE_URL = ''
