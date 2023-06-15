@@ -18,6 +18,7 @@ templates = Jinja2Templates(directory=WALLET_DIR / 'templates')
     response_class=HTMLResponse,
 )
 async def wallet_selector(request: Request, typ: WalletType):
+    # TODO добавить в куки сессию с юзером который обращается и потом передать ее дальше что бы добавить юзера
     context = {
         'request': request,
         'typ': WalletType,
