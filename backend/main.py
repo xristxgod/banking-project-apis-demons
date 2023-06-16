@@ -7,7 +7,8 @@ from apps import wallets, telegram
 app = FastAPI()
 
 app.include_router(wallets.router, prefix='/wallet')
-app.include_router(telegram.router, prefix='/telegram-bot')
+# TODO Пока разрабатываем другой функционал
+# app.include_router(telegram.router, prefix='/telegram-bot')
 
 
 @app.on_event('startup')

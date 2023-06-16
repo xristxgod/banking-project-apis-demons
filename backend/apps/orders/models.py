@@ -4,6 +4,17 @@ import enum
 from tortoise import models, fields
 
 
+class ApprovedTransaction(models.Model):
+    id = fields.CharField(max_length=255, pk=True)
+    timestamp = fields.BigIntField()
+    amount = fields.DecimalField(max_digits=25, decimal_places=25, default=0)
+    currency = fields.ForeignKeyField('models.Currency', related_name='orders', on_delete=fields.RESTRICT)
+    user = fields.ForeignKeyField('models.User', related_name='orders', on_delete=fields.RESTRICT)
+
+    class Meta:
+        table = 'telegram_approved_transaction'
+
+
 class Order(models.Model):
     class Status(enum.IntEnum):
         CREATED = 0

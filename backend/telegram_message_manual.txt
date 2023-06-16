@@ -1,0 +1,7 @@
+registration - при регистрации
+menu - меню
+
+registration_button - регистарциия
+choose_lang_button - изменить язык
+show_balance_button - показать баланс
+deposit_button - внести деньги на счет
