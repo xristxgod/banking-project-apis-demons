@@ -1,10 +1,7 @@
-import decimal
-
 from django.db import transaction
 from django.core.management.base import BaseCommand
 
-from apps.orders.models import Order, ConvertTransactionAmount, UserDeposit
-from apps.cryptocurrencies.models import Network, InternalWallet
+from apps.orders.models import Order
 
 
 class Command(BaseCommand):
