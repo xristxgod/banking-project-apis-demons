@@ -26,6 +26,8 @@ class Order(models.Model):
     created = models.DateTimeField(_('Created'), auto_now=True)
     updated = models.DateTimeField(_('Updated'), auto_now_add=True)
 
+    message_id = models.IntegerField(_('Telegram message id'))
+
     lifetime = timedelta(hours=24*30)
 
     class Meta:
