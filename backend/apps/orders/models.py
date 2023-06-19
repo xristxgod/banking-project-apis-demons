@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 
 from apps.telegram.models import User
-from apps.cryptocurrencies.models import Currency, ExternalWallet, InternalWallet, AbstractWallet
+from apps.cryptocurrencies.models import Currency
 
 
 class Order(models.Model):
@@ -21,9 +21,6 @@ class Order(models.Model):
     currency = models.ForeignKey(Currency, _('Currency'), related_name='orders', on_delete=models.PROTECT)
     user = models.ForeignKey(User, verbose_name=_('User'), related_name='orders',
                              on_delete=models.PROTECT)
-    wallet = models.ForeignKey(ExternalWallet, verbose_name=_('External Wallet'), related_name='orders',
-                               on_delete=models.PROTECT, blank=True, null=True)
-
     status = models.IntegerField(_('Status'), choices=Status.choices, default=Status.CREATE)
 
     created = models.DateTimeField(_('Created'), auto_now=True)
@@ -46,10 +43,6 @@ class Order(models.Model):
     @classmethod
     def expired_qs(cls):
         return cls.objects.filter(created__lt=timezone.now() - cls.lifetime, status=cls.Status.CREATE)
-
-    @property
-    def is_external(self) -> bool:
-        return self.wallet is not None
 
 
 class Transaction(models.Model):
@@ -75,22 +68,10 @@ class Transaction(models.Model):
     def currency(self) -> Currency:
         return self.order.currency
 
-    @property
-    def wallet(self) -> AbstractWallet:
-        if self.order.is_external:
-            return self.order.wallet
-
-        return InternalWallet.objects.get(pk=self.to_address)
-
-    @property
-    def is_external(self) -> bool:
-        return self.order.is_external
-
 
 class UserDeposit(models.Model):
     order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True,
                                  related_name='user_deposit', on_delete=models.PROTECT)
-
     amount = models.DecimalField(_('Amount'), max_digits=25, decimal_places=2)
     commission = models.DecimalField(_('Commission'), max_length=25, decimal_places=2)
 

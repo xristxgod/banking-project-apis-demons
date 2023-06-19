@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 
 from apps.telegram.models import User
 from apps.orders.models import Order, Transaction
-from apps.cryptocurrencies.models import Network, InternalWallet
+from apps.cryptocurrencies.models import Network
 
 
 class Command(BaseCommand):
@@ -44,24 +44,8 @@ class Command(BaseCommand):
 
     @transaction.atomic()
     def create_internal_transaction(self, message: dict) -> Order:
-        network = Network.objects.get(pk=message['network_id'])
-
-        if message.get('contract_address'):
-            currency = network.currencies.get(address=message['contract_address'])
-        else:
-            currency = network.native_currency
-
-        wallet = InternalWallet.objects.get(address=message['to_address'])
-
-        order = Order.objects.create(
-            amount=message['amount'],
-            currency=currency,
-            user=wallet.user,
-            wallet=wallet,
-            status=Order.Status.PROCESSED,
-        )
-        self.create_transaction(message, order=order)
-        return order
+        # TODO
+        pass
 
     @transaction.atomic()
     def create_external_transaction(self, message: dict) -> Order:
