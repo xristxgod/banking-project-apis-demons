@@ -21,3 +21,7 @@ class Balance(models.Model):
     class Meta:
         verbose_name = _('Balance')
         verbose_name_plural = _('Balances')
+
+    @property
+    def verbose_telegram_amount(self) -> str:
+        return f'${self.amount}'

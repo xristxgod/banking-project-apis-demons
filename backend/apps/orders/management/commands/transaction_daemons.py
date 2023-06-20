@@ -70,7 +70,7 @@ class AbstractDaemon(metaclass=abc.ABCMeta):
     def setup(self):
         self.contracts.update({
             contract.address: contract.decimal_place
-            for contract in Currency.objects.filter(network_id=self.network_id, address__isnull=False)
+            for contract in Currency.only_stable_coins_qs().filter(network_id=self.network_id)
         })
 
     update = setup

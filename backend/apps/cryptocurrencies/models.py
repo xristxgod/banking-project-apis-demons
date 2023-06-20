@@ -11,6 +11,8 @@ class Network(models.Model):
     chain_id = models.IntegerField(_('Chain id'), blank=True, null=True)
     url = models.URLField(_('Node url'), blank=True, null=True)
 
+    active = models.BooleanField(_('Active Network'), default=True)
+
     class Meta:
         verbose_name = _('Network')
         verbose_name_plural = _('Networks')
@@ -27,9 +29,23 @@ class Currency(models.Model):
     address = models.CharField(_('Contract address'), max_length=50, blank=True, null=True)
     network = models.ForeignKey(Network, verbose_name=_('Network'), related_name='currencies', on_delete=models.CASCADE)
 
+    active = models.BooleanField(_('Active Currency'), default=True)
+
     class Meta:
         verbose_name = _('Currency')
         verbose_name_plural = _('Currencies')
+
+    @classmethod
+    def only_stable_coins_qs(cls, active: bool = True):
+        return cls.objects.filter(
+            address__isnull=False,
+            active=True,
+        )
+
+    @property
+    def verbose_telegram_name(self) -> str:
+        # TODO
+        return self.symbol
 
     @property
     def is_native(self) -> str:

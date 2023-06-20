@@ -105,6 +105,8 @@ class UserDeposit(models.Model):
 
 
 class ConvertTransactionAmount(models.Model):
+    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True,
+                                 related_name='convert', on_delete=models.PROTECT)
     usd_exchange_rate = models.DecimalField(_('Amount'), max_digits=25, decimal_places=2)
     deposit = models.OneToOneField(UserDeposit, verbose_name=_('Order'),
                                    related_name='user_deposit', on_delete=models.PROTECT)
