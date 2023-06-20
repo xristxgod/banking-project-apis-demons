@@ -11,7 +11,7 @@ from apps.users.models import User
 class OrderFileterManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(
-            deleted__isnull=False,
+            deleted__isnull=True,
         )
 
     def expired(self):
@@ -62,6 +62,12 @@ class Order(models.Model):
     def is_done(self) -> bool:
         return self.status == OrderStatus.DONE
 
+    @property
+    def verbose_currency(self):
+        if self.currency.is_native:
+            return f'{self.currency.symbol}'
+        return f'{self.currency.network.name}:{self.currency.symbol}'
+
 
 class Transaction(models.Model):
     order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='transaction',
@@ -77,3 +83,7 @@ class Transaction(models.Model):
     class Meta:
         verbose_name = _('Transaction')
         verbose_name_plural = _('Transactions')
+
+    @property
+    def hash(self) -> str:
+        return self.transaction_hash
