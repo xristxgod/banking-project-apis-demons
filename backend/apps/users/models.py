@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
-    id = models.BigIntegerField(_('Chat id'), primary_key=True)
+    chat_id = models.BigIntegerField(_('Chat id'), blank=True, null=True, default=None)
 
     balance = models.DecimalField(_('Balance'), max_digits=25, decimal_places=25, default=0)
 
