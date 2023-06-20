@@ -9,6 +9,11 @@ from apps.users.models import User
 
 
 class OrderFileterManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            deleted__isnull=False,
+        )
+
     def expired(self):
         return self.filter(
             created__lt=timezone.now() - timedelta(hours=24 * 30),
