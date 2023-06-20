@@ -4,8 +4,8 @@ from django.views.generic import TemplateView
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 
-from apps.orders.models import Order
-from apps.orders.services import update_order
+from old_apps.orders.models import Order
+from old_apps.orders.services import update_order
 
 
 class ApproveCreateView(TemplateView):

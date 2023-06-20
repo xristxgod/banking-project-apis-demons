@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.core.management.base import BaseCommand
 
-from apps.orders.models import Order
+from old_apps.orders.models import Order
 
 
 class Command(BaseCommand):

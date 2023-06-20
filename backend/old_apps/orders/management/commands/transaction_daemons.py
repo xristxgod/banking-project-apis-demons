@@ -11,7 +11,7 @@ from django.db import transaction
 from django.core.management.base import BaseCommand
 
 import settings
-from apps.cryptocurrencies.models import Currency, Wallet
+from old_apps.cryptocurrencies.models import Currency, Wallet
 
 
 @dataclass()

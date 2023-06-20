@@ -5,10 +5,10 @@ from telebot import types
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from apps.telegram.views import bot
-from apps.telegram.models import User
-from apps.telegram.bot_apps.start import callbacks
-from apps.orders.services import orders_to_excel
+from old_apps.telegram.views import bot
+from old_apps.telegram.models import User
+from old_apps.telegram.bot_apps.start import callbacks
+from old_apps.orders.services import orders_to_excel
 
 
 def start_handler(message: types.Message, user: Optional[User] = None):

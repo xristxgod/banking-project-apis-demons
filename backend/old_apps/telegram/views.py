@@ -6,14 +6,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 import settings
-from apps.telegram.bot_middlewares import UserMiddleware
-from apps.telegram.bot_apps import init_apps, init_webhook
+from old_apps.telegram.bot_middlewares import UserMiddleware
+from old_apps.telegram.bot_apps import init_apps, init_webhook
 
 bot = telebot.TeleBot(settings.TELEGRAM_TOKEN)
 bot.add_middleware_handler(UserMiddleware())
 
 init_webhook(bot)       # Set webhook
-init_apps(bot)          # Init bot apps
+init_apps(bot)          # Init bot old_apps
 
 
 class UpdateBot(APIView):

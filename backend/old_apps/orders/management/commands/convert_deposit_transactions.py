@@ -3,8 +3,8 @@ import decimal
 from django.db import transaction
 from django.core.management.base import BaseCommand
 
-from apps.telegram.models import User
-from apps.orders.models import Order, ConvertTransactionAmount, UserDeposit
+from old_apps.telegram.models import User
+from old_apps.orders.models import Order, ConvertTransactionAmount, UserDeposit
 
 SERVICES_COMMISSION_PERCENT = 5         # %
 

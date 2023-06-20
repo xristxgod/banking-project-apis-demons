@@ -1,7 +1,7 @@
 import telebot
 
 import settings
-from apps.telegram.bot_apps import start
+from old_apps.telegram.bot_apps import start
 
 
 def init_webhook(bot: telebot.TeleBot):

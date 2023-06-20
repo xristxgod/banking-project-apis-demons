@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext as _
 
-from apps.telegram.models import User
+from old_apps.telegram.models import User
 
 
 class Network(models.Model):

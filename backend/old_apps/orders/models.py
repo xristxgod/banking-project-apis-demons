@@ -5,8 +5,8 @@ from django.db import models
 from django.utils.translation import gettext as _
 from django.utils import timezone
 
-from apps.telegram.models import User
-from apps.cryptocurrencies.models import Currency
+from old_apps.telegram.models import User
+from old_apps.cryptocurrencies.models import Currency
 
 
 class Order(models.Model):

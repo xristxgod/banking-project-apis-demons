@@ -4,11 +4,11 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 import settings
-from apps.telegram.views import bot
-from apps.telegram.bot_apps.orders import callbacks
-from apps.cryptocurrencies.models import Network, Currency
+from old_apps.telegram.views import bot
+from old_apps.telegram.bot_apps.orders import callbacks
+from old_apps.cryptocurrencies.models import Network, Currency
 
-from apps.orders.services import create_order, get_payment_receipt_url
+from old_apps.orders.services import create_order, get_payment_receipt_url
 
 # TODO добавть хранилище для шагов
 

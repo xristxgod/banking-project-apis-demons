@@ -1,6 +1,6 @@
 import telebot
 
-from apps.telegram.bot_apps.start import handlers
+from old_apps.telegram.bot_apps.start import handlers
 
 
 def init_handlers(bot: telebot.TeleBot):

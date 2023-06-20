@@ -2,9 +2,9 @@ import decimal
 
 from django.db import transaction
 
-from apps.orders.models import Order
-from apps.telegram.models import User
-from apps.cryptocurrencies.models import Currency
+from old_apps.orders.models import Order
+from old_apps.telegram.models import User
+from old_apps.cryptocurrencies.models import Currency
 
 
 class OrderCreated(Exception):

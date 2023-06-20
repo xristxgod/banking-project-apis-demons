@@ -3,7 +3,7 @@ from typing import Optional
 from telebot import types
 from telebot.handler_backends import BaseMiddleware
 
-from apps.telegram.models import User
+from old_apps.telegram.models import User
 
 
 # TODO add cache func
