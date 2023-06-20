@@ -15,7 +15,7 @@ class Network(models.Model):
     name = models.CharField(_('Name'), max_length=255)
     chain_id = models.IntegerField(_('Chain id'), blank=True, null=True)
     url = models.URLField(_('Node url'), blank=True, null=True)
-    active = models.BooleanField(_('Active Network'), default=True)
+    active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
 
@@ -41,7 +41,7 @@ class Currency(models.Model):
     decimal_place = models.IntegerField(_('Decimal place'), default=6)
     address = models.CharField(_('Contract address'), max_length=50, blank=True, null=True)
     network = models.ForeignKey(Network, verbose_name=_('Network'), related_name='currencies', on_delete=models.CASCADE)
-    active = models.BooleanField(_('Active Currency'), default=True)
+    active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
 

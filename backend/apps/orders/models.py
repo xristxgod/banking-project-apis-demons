@@ -35,8 +35,8 @@ class Order(models.Model):
     usd_exchange_rate = models.DecimalField(_('USD rate'), max_digits=25, decimal_places=2)
     commission = models.DecimalField(_('Commission'), max_length=25, decimal_places=2, default=0)
 
-    currency = models.ForeignKey(Currency, _('Currency'), related_name='orders', on_delete=models.PROTECT)
-    user = models.ForeignKey(User, _('User'), related_name='orders', on_delete=models.PROTECT)
+    currency = models.ForeignKey(Currency, verbose_name=_('Currency'), related_name='orders', on_delete=models.PROTECT)
+    user = models.ForeignKey(User, verbose_name=_('User'), related_name='orders', on_delete=models.PROTECT)
 
     status = models.IntegerField(_('Status'), choices=OrderStatus.choices, default=OrderStatus.CREATED)
     type = models.CharField(_('Type'), choices=OrderType.choices, default=OrderType.DEPOSIT)
@@ -59,7 +59,7 @@ class Order(models.Model):
 
 
 class Transaction(models.Model):
-    order = models.OneToOneField(Order, _('Order'), primary_key=True, related_name='transaction',
+    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='transaction',
                                  on_delete=models.PROTECT)
     transaction_hash = models.CharField(_('Transaction hash'), max_length=255)
     timestamp = models.IntegerField(_('Timestamp'))
