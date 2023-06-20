@@ -33,13 +33,13 @@ class OrderType(models.TextChoices):
 class Order(models.Model):
     amount = models.DecimalField(_('Amount'), max_digits=25, decimal_places=25)
     usd_exchange_rate = models.DecimalField(_('USD rate'), max_digits=25, decimal_places=2)
-    commission = models.DecimalField(_('Commission'), max_length=25, decimal_places=2, default=0)
+    commission = models.DecimalField(_('Commission'), max_digits=25, decimal_places=2, default=0)
 
     currency = models.ForeignKey(Currency, verbose_name=_('Currency'), related_name='orders', on_delete=models.PROTECT)
     user = models.ForeignKey(User, verbose_name=_('User'), related_name='orders', on_delete=models.PROTECT)
 
     status = models.IntegerField(_('Status'), choices=OrderStatus.choices, default=OrderStatus.CREATED)
-    type = models.CharField(_('Type'), choices=OrderType.choices, default=OrderType.DEPOSIT)
+    type = models.CharField(_('Type'), max_length=50, choices=OrderType.choices, default=OrderType.DEPOSIT)
 
     created = models.DateTimeField(_('Created'), auto_now=True)
     updated = models.DateTimeField(_('Updated'), auto_now_add=True)
