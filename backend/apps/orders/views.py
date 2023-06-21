@@ -4,6 +4,7 @@ from django.template.response import TemplateResponse
 
 from apps.orders.models import OrderStatus, OrderType, Order
 from apps.orders.services import order_update_status
+from apps.orders.utils import decode_token
 
 
 class DepositView(TemplateView):
@@ -12,8 +13,7 @@ class DepositView(TemplateView):
 
     @staticmethod
     def get_pk_from_token(order_token: str):
-        # TODO
-        return order_token
+        return decode_token(order_token)
 
     def get_order_from_context(self, context: dict) -> Order:
         return get_object_or_404(
