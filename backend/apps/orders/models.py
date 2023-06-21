@@ -20,6 +20,11 @@ class OrderFileterManager(models.Manager):
             status=OrderStatus.CREATED,
         )
 
+    def cancel(self):
+        return self.update(
+            status=OrderStatus.CANCEL,
+        )
+
 
 class OrderStatus(models.IntegerChoices):
     CREATED = 0, _('Created')

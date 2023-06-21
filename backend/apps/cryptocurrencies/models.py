@@ -3,6 +3,8 @@ from __future__ import annotations
 from django.db import models
 from django.utils.translation import gettext as _
 
+from apps.cryptocurrencies import abi
+
 
 class ActiveManager(models.Manager):
     def get_queryset(self):
@@ -52,3 +54,21 @@ class Currency(models.Model):
     @property
     def is_native(self) -> str:
         return self.address is None
+
+    @property
+    def abi(self) -> dict:
+        return abi.ERC20
+
+
+class Provider(models.Model):
+    network = models.OneToOneField(Network, verbose_name=_('Network'), related_name='provider',
+                                   on_delete=models.CASCADE, primary_key=True)
+    address = models.CharField(_('Contract address'), max_length=255)
+
+    class Meta:
+        verbose_name = _('Provider')
+        verbose_name_plural = _('Providers')
+
+    @property
+    def abi(self) -> dict:
+        return abi.PROVIDER
