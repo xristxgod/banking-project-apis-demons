@@ -8,7 +8,7 @@ class User(AbstractUser):
 
     chat_id = models.BigIntegerField(_('Chat id'), blank=True, null=True, default=None)
 
-    balance = models.DecimalField(_('Balance'), max_digits=25, decimal_places=25, default=0)
+    balance = models.DecimalField(_('Balance'), max_digits=25, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = _('User')
