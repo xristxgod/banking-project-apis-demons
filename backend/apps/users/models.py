@@ -13,3 +13,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = _('User')
         verbose_name_plural = _('Users')
+
+    @property
+    def telegram_username(self) -> str:
+        return f'@{self.username}'
