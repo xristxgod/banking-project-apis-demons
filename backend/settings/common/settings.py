@@ -9,6 +9,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = False
 
+DOMAIN_URL = ''
+
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
@@ -22,6 +24,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.cryptocurrencies',
     'apps.orders',
+    'apps.telegram',
 ]
 
 MIDDLEWARE = [
@@ -88,4 +91,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 AUTH_USER_MODEL = 'users.User'
+
+TELEGRAM_BOT_TOKEN = ''
+
+TELEGRAM_BOT_WEBHOOK = DOMAIN_URL + '/telegram/webhook'
