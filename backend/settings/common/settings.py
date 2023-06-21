@@ -95,5 +95,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 TELEGRAM_BOT_TOKEN = ''
-
-TELEGRAM_BOT_WEBHOOK = DOMAIN_URL + '/telegram/webhook'
