@@ -4,8 +4,8 @@ from apps.orders.models import OrderStatus, Order
 
 
 @transaction.atomic()
-def order_sent(order: Order):
-    order.status = OrderStatus.SENT
+def order_update_status(order: Order, status: OrderStatus):
+    order.status = status
     order.save()
 
     if order.message_id:

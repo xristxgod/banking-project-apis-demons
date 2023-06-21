@@ -1,28 +1,23 @@
 {% extends 'base.html' %}
 
-{% block script %}
-
+{% block body_scripts %}
 {% endblock %}
 
 
 {% block content %}
-    <h1>Order #: {{ order.pk }}</h1>
+    <h1 class="text-center">Order #: {{ order.pk }}</h1>
+    <br>
 
     <p>Amount: {{ order.amount }}</p>
     <p>Service commission: {{ order.commission }}</p>
     <p>Currency: {{ order.verbose_currency }}</p>
 
-    {% if order.status == 0 %}
-        <p>From wallet: </p>
+    <br>
 
-        <button> Connect wallet </button>
-        <button> Submit </button>
-        <button> Approve </button>
+    <p id="fromWallet">From wallet: </p>
+    <form method="POST">
+        {% csrf_token %}
+        <button id="loginButton" onclick=""> Connect </button>
+    </form>
 
-    {% else %}
-        <p>Order: {{ order.status }}</p>
-        {% if order.is_done %}
-            <a href="#">Transaction: {{ order.transaction.hash }}</a>
-        {% endif %}
-    {% endif %}
 {% endblock %}

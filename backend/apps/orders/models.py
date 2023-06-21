@@ -51,8 +51,8 @@ class Order(models.Model):
     status = models.IntegerField(_('Status'), choices=OrderStatus.choices, default=OrderStatus.CREATED)
     type = models.CharField(_('Type'), max_length=50, choices=OrderType.choices, default=OrderType.DEPOSIT)
 
-    created = models.DateTimeField(_('Created'), auto_now=True)
-    updated = models.DateTimeField(_('Updated'), auto_now_add=True)
+    created = models.DateTimeField(_('Created'), auto_now_add=True)
+    updated = models.DateTimeField(_('Updated'), auto_now=True)
     deleted = models.DateTimeField(_('Deleted'), blank=True, null=True, default=None)
 
     message_id = models.IntegerField(_('Telegram message id'), blank=True, null=True, default=None)

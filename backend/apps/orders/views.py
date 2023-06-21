@@ -1,33 +1,49 @@
 from django.views.generic import TemplateView
 from django.shortcuts import get_object_or_404
+from django.template.response import TemplateResponse
 
 from apps.orders.models import OrderStatus, OrderType, Order
-from apps.orders.services import order_sent
+from apps.orders.services import order_update_status
 
 
 class DepositView(TemplateView):
     template_name = 'deposit.html'
+    success_template_name = 'success.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    @staticmethod
+    def get_pk_from_token(order_token: str):
+        # TODO
+        return order_token
 
-        order = get_object_or_404(
+    def get_order_from_context(self, context: dict) -> Order:
+        return get_object_or_404(
             Order,
-            pk=context['pk'],
+            pk=self.get_pk_from_token(context['order_token']),
             type=OrderType.DEPOSIT,
+            status=OrderStatus.CREATED,
         )
 
+    def get_context_data(self, **kwargs) -> dict:
+        context = super().get_context_data(**kwargs)
+
         context.update({
-            'order': order,
+            'order': self.get_order_from_context(context)
         })
 
         return context
 
-    @property
-    def order(self) -> Order:
-        raise NotImplementedError()
-
     def post(self, request, *args, **kwargs):
-        order = order_sent(self.order)
-        # TODO
+        context = self.get_context_data(**kwargs)
 
+        context.update({
+            'order': order_update_status(
+                self.get_order_from_context(context),
+                status=OrderStatus.SENT,
+            )
+        })
+
+        return TemplateResponse(
+            request,
+            template=self.success_template_name,
+            context=context
+        )

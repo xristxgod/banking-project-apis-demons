@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block body_scripts %}
+{% endblock %}
+
+
+{% block content %}
+    <h1>Order #: {{ order.pk }} Success</h1>
+    <p>Status: {{ order.get_status_display }}</p>
+{% endblock %}
