@@ -29,7 +29,7 @@ class CurrencyFactory(DjangoModelFactory):
     active = True
 
     class Params:
-        stable_coin = factory.Trait(
+        is_stable_coin = factory.Trait(
             address=factory.Sequence(lambda n: "address#%d" % n),
         )
 
