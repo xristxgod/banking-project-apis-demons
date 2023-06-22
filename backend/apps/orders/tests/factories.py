@@ -1,3 +1,5 @@
+import decimal
+
 import faker
 import factory.fuzzy
 from factory.django import DjangoModelFactory
@@ -13,59 +15,41 @@ class OrderFactory(DjangoModelFactory):
     class Meta:
         model = models.Order
 
-    amount = fake.unique.pydecimal(left_digits=25, right_digits=25, positive=True)
+    amount = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=6)
     currency = factory.SubFactory(CurrencyFactory)
     user = factory.SubFactory(UserFactory)
-    status = factory.fuzzy.FuzzyChoice(choices=models.OrderStatus.choices)
-
-    deposit = factory.RelatedFactory('apps.orders.tests.DepositFactory')
-    transaction = factory.RelatedFactory('apps.orders.tests.TransactionFactory')
-
-    class Params:
-        is_created = factory.Trait(
-            status=models.OrderStatus.CREATED,
-            deposit=factory.RelatedFactory('apps.orders.tests.DepositFactory'),
-            transaction=None,
-        )
-        is_cancel = factory.Trait(
-            status=models.OrderStatus.CANCEL,
-            deposit=factory.RelatedFactory('apps.orders.tests.DepositFactory'),
-            transaction=None,
-        )
-        is_sent = factory.Trait(
-            status=models.OrderStatus.SENT,
-            deposit=factory.RelatedFactory('apps.orders.tests.DepositFactory'),
-            transaction=None,
-        )
-        is_done = factory.Trait(
-            status=models.OrderStatus.DONE,
-            deposit=factory.RelatedFactory('apps.orders.tests.DepositFactory'),
-            transaction=factory.RelatedFactory('apps.orders.tests.TransactionFactory'),
-        )
-        is_error = factory.Trait(
-            status=models.OrderStatus.ERROR,
-            deposit=factory.RelatedFactory('apps.orders.tests.DepositFactory'),
-            transaction=None,
-        )
+    status = factory.fuzzy.FuzzyChoice(choices=models.OrderStatus)
 
 
 class TransactionFactory(DjangoModelFactory):
     class Meta:
         model = models.Transaction
 
-    order = factory.SubFactory(OrderFactory)
+    order = factory.SubFactory(OrderFactory, transaction=None)
     transaction_hash = factory.Sequence(lambda n: "transactionHash#%d" % n)
     timestamp = fake.unique.unix_time()
-    sender_address = factory.SubFactory(lambda n: "senderAddress#%d" % n)
-    recipient_address = factory.SubFactory(lambda n: "recipientAddress#%d" % n)
-    fee = fake.unique.pydecimal(left_digits=2, right_digits=25, positive=True, max_value=10)
+    sender_address = factory.Sequence(lambda n: "senderAddress#%d" % n)
+    recipient_address = factory.Sequence(lambda n: "recipientAddress#%d" % n)
+    fee = fake.unique.pydecimal(left_digits=2, right_digits=6, positive=True, max_value=10)
 
 
 class DepositFactory(DjangoModelFactory):
     class Meta:
         model = models.Deposit
 
-    order = factory.SubFactory(OrderFactory)
-    amount = fake.unique.pydecimal(left_digits=25, right_digits=2, positive=True)
-    usd_exchange_rate = fake.unique.pydecimal(left_digits=2, right_digits=2, positive=True, min_value=60, max_value=99)
-    commission = fake.unique.pydecimal(left_digits=2, right_digits=2, positive=True, min_value=1, max_value=15)
+    order = factory.SubFactory(OrderFactory, deposit=None)
+    amount = factory.fuzzy.FuzzyDecimal(low=10, high=10**3, precision=2)
+    usd_exchange_rate = factory.fuzzy.FuzzyDecimal(low=40, high=99, precision=2)
+    commission = factory.fuzzy.FuzzyDecimal(low=1, high=15, precision=2)
+
+    class Params:
+        is_created = factory.Trait(
+            order__status=models.OrderStatus.CREATED,
+        )
+        is_cancel = factory.Trait(
+            order__status=models.OrderStatus.CANCEL,
+        )
+        is_done = factory.Trait(
+            order__status=models.OrderStatus.DONE,
+            order__transaction=factory.SubFactory(TransactionFactory)
+        )
