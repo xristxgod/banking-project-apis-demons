@@ -14,7 +14,7 @@ class OrderStatus(models.IntegerChoices):
 
 
 class Order(models.Model):
-    amount = models.DecimalField(_('Amount'), max_digits=25, decimal_places=25)
+    amount = models.DecimalField(_('Amount'), max_digits=25, decimal_places=18)
 
     currency = models.ForeignKey(Currency, verbose_name=_('Currency'), related_name='orders', on_delete=models.PROTECT)
     user = models.ForeignKey(User, verbose_name=_('User'), related_name='orders', on_delete=models.PROTECT)
@@ -52,7 +52,7 @@ class Transaction(models.Model):
     sender_address = models.CharField(_('Sender address'), max_length=255)
     recipient_address = models.CharField(_('Recipient address'), max_length=255)
 
-    fee = models.DecimalField(_('Commission'), max_digits=25, decimal_places=25, default=0)
+    fee = models.DecimalField(_('Commission'), max_digits=25, decimal_places=18, default=0)
 
     class Meta:
         verbose_name = _('Transaction')
