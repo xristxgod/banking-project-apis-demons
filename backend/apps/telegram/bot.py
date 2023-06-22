@@ -1,6 +1,6 @@
 import telebot
 
-import settings
+from django.conf import settings
 
 
 def init(_bot: telebot.TeleBot):
