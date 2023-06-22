@@ -14,6 +14,7 @@ class NetworkFactory(DjangoModelFactory):
     name = factory.Sequence(lambda n: "name#%d" % n)
     chain_id = factory.fuzzy.FuzzyInteger(low=1, high=10**2)
     url = fake.unique.url()
+    block_explorer_url = fake.unique.url()
     active = True
 
 

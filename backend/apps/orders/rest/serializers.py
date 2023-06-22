@@ -12,7 +12,7 @@ class PaymentDetailSerializer(serializers.Serializer):
 
 class OrderDetailSerializer(serializers.Serializer):
     create = update = None
-    amount = serializers.DecimalField(max_digits=25, decimal_places=25)
+    amount = serializers.DecimalField(max_digits=25, decimal_places=18)
     networkId = serializers.IntegerField()
     networkName = serializers.CharField()
     currencyId = serializers.IntegerField()
@@ -25,7 +25,7 @@ class TransactionDetailSerializer(serializers.Serializer):
     timestamp = serializers.IntegerField()
     senderAddress = serializers.CharField()
     recipientAddress = serializers.CharField()
-    fee = serializers.DecimalField(max_digits=25, decimal_places=25)
+    fee = serializers.DecimalField(max_digits=25, decimal_places=18)
 
 
 class DepositSerializer(serializers.Serializer):
@@ -54,18 +54,18 @@ class DepositSerializer(serializers.Serializer):
             usdAmount=instance.amount,
             usdCommission=instance.commission,
             usdExchangeRate=instance.usd_exchange_rate,
-        ))
+        )).data
 
     @classmethod
     def _get_order_detail(cls, instance: Deposit):
         order = instance.order
         return OrderDetailSerializer(dict(
             amount=order.amount,
-            networkId=order.currency.network.pk,
+            networkId=order.currency.network_id,
             networkName=order.currency.network.name,
-            currencyId=order.currency.pk,
+            currencyId=order.currency_id,
             currencySymbol=order.currency.symbol,
-        ))
+        )).data
 
     @classmethod
     def _get_transaction_detail(cls, instance: Deposit):
@@ -78,7 +78,7 @@ class DepositSerializer(serializers.Serializer):
             senderAddress=transaction.sender_address,
             recipientAddress=transaction.recipient_address,
             fee=transaction.fee,
-        ))
+        )).data
 
     def to_representation(self, instance: Deposit):
         return dict(
