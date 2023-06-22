@@ -1,5 +1,5 @@
-import factory.fuzzy
 import faker
+import factory.fuzzy
 from factory.django import DjangoModelFactory
 
 from apps.cryptocurrencies import models
