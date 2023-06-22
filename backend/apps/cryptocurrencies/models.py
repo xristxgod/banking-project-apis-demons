@@ -26,6 +26,10 @@ class Network(models.Model):
         verbose_name_plural = _('Networks')
 
     @property
+    def telegram_view(self) -> str:
+        return f'{self.name}'
+
+    @property
     def native_currency(self) -> Currency:
         return self.currencies.get(name=self.name)
 

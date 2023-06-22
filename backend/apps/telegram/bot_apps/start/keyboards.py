@@ -11,4 +11,9 @@ def get_menu_keyboard() -> types.InlineKeyboardMarkup:
         callback_data='balance',
     ))
 
+    keyboard.row(types.InlineKeyboardButton(
+        text=_('Deposit'),
+        callback_data='deposit',
+    ))
+
     return keyboard
