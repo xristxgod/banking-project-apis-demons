@@ -1,10 +1,8 @@
-import json
-
 import pytest
 
 from apps.orders.rest import serializers
 
-from .factories import OrderFactory, DepositFactory
+from .factories import DepositFactory
 
 
 @pytest.mark.django_db

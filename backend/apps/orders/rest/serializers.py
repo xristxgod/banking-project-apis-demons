@@ -71,7 +71,12 @@ class DepositSerializer(serializers.Serializer):
     def _get_transaction_detail(cls, instance: Deposit):
         if instance.order.status != OrderStatus.DONE:
             return
-        transaction = instance.order.transaction
+
+        transaction = getattr(instance.order, 'transaction', None)
+
+        if not transaction:
+            return
+
         return TransactionDetailSerializer(dict(
             transactionHash=transaction.transaction_hash,
             timestamp=transaction.timestamp,
