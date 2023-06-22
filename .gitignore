@@ -4,3 +4,4 @@ backend/.pytest_cache/
 backend/venv/
 backend/db.sqlite3
 *__pycache__*
+frontend/node_modules/
