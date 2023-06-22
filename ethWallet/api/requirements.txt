@@ -1,7 +1,0 @@
-mnemonic==0.20
-bip32utils==0.3.post4
-web3==5.24.0
-python-dotenv==0.19.1
-flask==2.0.2
-hdwallet==2.0.1
-psycopg2==2.9.1

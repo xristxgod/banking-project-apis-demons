@@ -1,2 +1,0 @@
-class BitcoinNodeException(Exception):
-    pass
