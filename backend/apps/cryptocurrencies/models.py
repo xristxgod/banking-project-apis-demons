@@ -15,8 +15,10 @@ class ActiveManager(models.Manager):
 
 class Network(models.Model):
     name = models.CharField(_('Name'), max_length=255)
+
     chain_id = models.IntegerField(_('Chain id'), blank=True, null=True)
     url = models.URLField(_('Node url'), blank=True, null=True)
+    block_explorer_url = models.URLField(_('Block explorer url'), blank=True, null=True)
     active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
