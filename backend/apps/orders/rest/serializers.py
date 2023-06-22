@@ -37,6 +37,7 @@ class DepositSerializer(serializers.Serializer):
 
     chainId = serializers.IntegerField(default=None)
     nodeUrl = serializers.URLField()
+    blockExplorerUrl = serializers.URLField()
 
     paymentDetail = PaymentDetailSerializer()
     orderDetail = OrderDetailSerializer()
@@ -87,6 +88,7 @@ class DepositSerializer(serializers.Serializer):
             verbose_status=instance.order.get_status_display(),
             chainId=instance.order.currency.network.chain_id,
             nodeUrl=instance.order.currency.network.url,
+            blockExplorerUrl=instance.order.currency.network.block_explorer_url,
             paymentDetail=self._get_payment_detail(instance),
             orderDetail=self._get_order_detail(instance),
             transactionDetail=self._get_transaction_detail(instance),
