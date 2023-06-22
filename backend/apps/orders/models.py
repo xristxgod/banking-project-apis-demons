@@ -29,6 +29,10 @@ class Order(models.Model):
         verbose_name_plural = _('Orders')
 
     @property
+    def can_send(self) -> bool:
+        return self.status == OrderStatus.CREATED
+
+    @property
     def is_done(self) -> bool:
         return self.status == OrderStatus.DONE
 

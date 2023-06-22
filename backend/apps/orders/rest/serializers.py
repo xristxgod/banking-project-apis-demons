@@ -42,6 +42,8 @@ class DepositSerializer(serializers.Serializer):
     orderDetail = OrderDetailSerializer()
     transactionDetail = TransactionDetailSerializer(required=False, default=None)
 
+    can_send = serializers.BooleanField()
+
     create = serializers.DateTimeField()
     update = serializers.DateTimeField()
 
@@ -88,6 +90,7 @@ class DepositSerializer(serializers.Serializer):
             paymentDetail=self._get_payment_detail(instance),
             orderDetail=self._get_order_detail(instance),
             transactionDetail=self._get_transaction_detail(instance),
+            can_send=instance.order.can_send,
             create=instance.order.created,
             update=instance.order.updated,
         )
