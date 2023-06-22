@@ -40,3 +40,29 @@ class TestDepositSerializer:
             'create': deposit.order.created,
             'update': deposit.order.updated,
         }
+
+    def test_deposit_cancel(self):
+        deposit = DepositFactory(is_cancel=True)
+
+        data = serializers.DepositSerializer(deposit).data
+
+        assert data['status'] == deposit.order.status
+        assert data['verbose_status'] == deposit.order.get_status_display()
+        assert data['can_send'] is False
+
+    def test_deposit_done(self):
+        deposit = DepositFactory(is_done=True)
+
+        data = serializers.DepositSerializer(deposit).data
+
+        assert data['status'] == deposit.order.status
+        assert data['verbose_status'] == deposit.order.get_status_display()
+        assert data['can_send'] is False
+
+        assert data['transactionDetail'] == {
+            'transactionHash': deposit.order.transaction.transaction_hash,
+            'timestamp': deposit.order.transaction.timestamp,
+            'senderAddress': deposit.order.transaction.sender_address,
+            'recipientAddress': deposit.order.transaction.recipient_address,
+            'fee': str(deposit.order.transaction.fee),
+        }
