@@ -17,7 +17,7 @@ def get_balance(user: User) -> decimal.Decimal:
         Sum('amount')
     )
 
-    balance += deposits_amount
+    balance += deposits_amount['amount__sum'] or 0
 
     with decimal.localcontext() as ctx:
         ctx.prec = 2

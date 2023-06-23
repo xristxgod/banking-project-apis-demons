@@ -48,7 +48,8 @@ def registration(cq: types.CallbackQuery):
         chat_id=user.chat_id,
         text=make_text(
             _(':heart_on_fire: Registration was successful!\n'
-              '{username}, welcome to us!'),
+              '{username}, welcome to us!\n\n'
+              ':upwards_button: Select actions: :downwards_button:'),
             username=user.username,
         ),
         message_id=cq.message.message_id,
@@ -62,7 +63,7 @@ def balance(cq: types.CallbackQuery, data: dict):
         chat_id=user.chat_id,
         text=make_text(
             _('{date_now}\n'
-              ':dollar_banknote: Balance: {balance}'),
+              ':dollar_banknote: Balance: ${balance}'),
             date_now=datetime.now(),
             balance=user.balance,
         ),
