@@ -5,17 +5,9 @@ from django.utils.translation import gettext as _
 
 from apps.telegram.bot import bot
 from apps.users.models import User
+from apps.telegram.bot_apps.start import utils
 from apps.telegram.bot_apps.start import keyboards
 from apps.telegram.bot_apps.start import callbacks
-
-EMPTY_REF_CODE = 'empty'
-
-
-def _get_referral_code(message: types.Message):
-    arr = message.text.split()
-    if len(arr) == 2:
-        return arr[1]
-    return EMPTY_REF_CODE
 
 
 def start(message: types.Message, data: dict):
@@ -27,7 +19,9 @@ def start(message: types.Message, data: dict):
         markup = types.InlineKeyboardMarkup()
         markup.row(types.InlineKeyboardButton(
             text=_('Registration'),
-            callback_data=callbacks.registration.new(referral_code=_get_referral_code(message)),
+            callback_data=callbacks.registration.new(
+                referral_code=utils.get_referral_code(message)
+            ),
         ))
     bot.send_message(
         chat_id=message.from_user.id,
@@ -40,7 +34,7 @@ def start(message: types.Message, data: dict):
 def registration(cq: types.CallbackQuery):
     # TODO Это на потом
     callback_data: dict[str: str] = callbacks.registration.parse(callback_data=cq.data)
-    if callback_data['referral_code'] != EMPTY_REF_CODE:
+    if callback_data['referral_code'] != utils.EMPTY_REF_CODE:
         # TODO когда добавится реферальрая система, то можно делать
         pass
 

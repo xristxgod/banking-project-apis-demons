@@ -6,7 +6,6 @@ from apps.users.models import User
 from apps.orders.models import OrderStatus, Deposit
 
 
-# TODO add cached func
 def get_balance(user: User) -> decimal.Decimal:
     balance = 0
 
