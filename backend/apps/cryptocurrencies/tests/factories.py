@@ -39,5 +39,5 @@ class ProviderFactory(DjangoModelFactory):
     class Meta:
         model = models.Provider
 
-    address = None
-    network = factory.Sequence(lambda n: "address#%d" % n)
+    address = factory.Sequence(lambda n: "address#%d" % n)
+    network = factory.SubFactory(NetworkFactory)

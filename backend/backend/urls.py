@@ -27,5 +27,6 @@ urlpatterns = [
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ] + i18n_patterns(
-    path('api/order/', include('apps.orders.rest.urls')),
+    path('api/orders/', include('apps.orders.rest.urls')),
+    path('api/cryptocurrencies/', include('apps.cryptocurrencies.rest.urls')),
 )
