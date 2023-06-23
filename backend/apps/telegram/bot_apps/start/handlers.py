@@ -68,4 +68,5 @@ def balance(cq: types.CallbackQuery, data: dict):
             balance=user.balance,
         ),
         message_id=cq.message.message_id,
+        reply_markup=keyboards.get_back_keyboard('back_to_menu'),
     )
