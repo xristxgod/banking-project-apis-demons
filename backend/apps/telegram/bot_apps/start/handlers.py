@@ -93,6 +93,7 @@ class BalanceHandler(StartHandler):
         )
 
     def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
+        markup = keyboards.get_back_keyboard('back_to_menu') if cb_data else None
         return dict(
             text=make_text(
                 _('{date_now}\n'
@@ -100,5 +101,5 @@ class BalanceHandler(StartHandler):
                 date_now=datetime.now(),
                 balance=user.balance,
             ),
-            reply_markup=keyboards.get_back_keyboard('back_to_menu'),
+            reply_markup=markup,
         )
