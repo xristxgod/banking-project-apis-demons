@@ -22,7 +22,7 @@ class StartHandler(AbstractHandler):
         )
         self.bot.register_callback_query_handler(
             callback=self,
-            func=lambda call: call.data == 'back_to_menu',
+            func=lambda call: call.data in ['menu', 'start'],
         )
 
     def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
@@ -95,7 +95,7 @@ class BalanceHandler(StartHandler):
     def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
         from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
 
-        markup = get_back_keyboard('back_to_menu') if cb_data else None
+        markup = get_back_keyboard('menu') if cb_data else None
         return dict(
             text=make_text(
                 _('{date_now}\n'
