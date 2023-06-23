@@ -5,5 +5,5 @@ import emoji
 def make_text(text: str, **params):
     return emoji.emojize(
         text.format(**params),
-        language='alias'
+        language='alias',
     )

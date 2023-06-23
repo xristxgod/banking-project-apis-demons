@@ -10,7 +10,7 @@ from apps.telegram.bot_apps.start import callbacks
 
 def get_back_button(pattern: str) -> types.InlineKeyboardButton:
     return types.InlineKeyboardButton(
-        text=make_text(_(':back_arrow: Back')),
+        text=make_text(_(':left_arrow: Back')),
         callback_data=pattern,
     )
 

@@ -5,10 +5,6 @@ from telebot.handler_backends import BaseMiddleware
 
 from apps.users.models import User
 
-__all__ = (
-    'UserMiddleware',
-)
-
 
 class UserData:
     def __init__(self, obj: User):
