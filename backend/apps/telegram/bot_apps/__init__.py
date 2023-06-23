@@ -1,7 +1,6 @@
 import telebot
 
 from . import start
-from . import orders
 from .middlewares import UserMiddleware
 from .filters import ConfigFilter
 
@@ -11,4 +10,3 @@ def init_apps(bot: telebot.TeleBot):
     bot.add_custom_filter(ConfigFilter())
 
     start.init_handlers(bot)
-    orders.init_handlers(bot)

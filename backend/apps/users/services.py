@@ -1,4 +1,5 @@
 import decimal
+from typing import Optional
 
 from django.db.models import Sum
 
@@ -23,3 +24,13 @@ def get_balance(user: User) -> decimal.Decimal:
         balance = ctx.create_decimal(balance)
 
     return balance
+
+
+def get_active_deposit(user: User) -> Optional[Deposit]:
+    qs = Deposit.objects.filter(
+        order__user=user,
+        order__status=OrderStatus.CREATED,
+    )
+
+    if qs.exists():
+        return qs.first()

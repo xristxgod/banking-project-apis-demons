@@ -24,6 +24,7 @@ class UserData:
 
     @property
     def balance(self) -> decimal.Decimal:
+        # TODO: add short cache func
         from apps.users.services import get_balance
         return get_balance(self.obj)
 
