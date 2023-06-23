@@ -16,7 +16,7 @@ def get_menu_keyboard() -> types.InlineKeyboardMarkup:
     ))
 
     keyboard.row(types.InlineKeyboardButton(
-        text=make_text(_(':money_with_wings: Orders')),
+        text=make_text(_(':briefcase: Orders')),
         callback_data='orders',
     ))
 

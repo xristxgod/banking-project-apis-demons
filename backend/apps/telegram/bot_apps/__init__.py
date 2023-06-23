@@ -1,6 +1,7 @@
 import typing
 
 from . import start
+from . import orders
 from .base.handlers import AbstractHandler
 
 from . import middlewares
@@ -14,4 +15,5 @@ __all__ = (
 
 APPS_HANDLERS: list[typing.Type[AbstractHandler]] = [
     *start.HANDLERS,
+    *orders.HANDLERS,
 ]
