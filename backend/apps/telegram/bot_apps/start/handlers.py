@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from apps.telegram.bot_apps.utils import make_text
-from apps.telegram.bot_apps.middlewares import UserData
+from apps.telegram.bot_apps.middlewares import BaseUserData
 from apps.telegram.bot_apps.start import utils
 from apps.telegram.bot_apps.start import keyboards
 from apps.telegram.bot_apps.start import callbacks
@@ -25,13 +25,13 @@ class StartHandler(AbstractHandler):
             func=lambda call: call.data in ['menu', 'start'],
         )
 
-    def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
         return dict(
             text=make_text(_(':upwards_button: Select actions: :downwards_button:')),
             reply_markup=keyboards.get_menu_keyboard(),
         )
 
-    def without_auth_call(self, message: types.Message, from_user: types.User, cb_data: str) -> dict:
+    def call_without_auth(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
         return dict(
             text=make_text(_(
                 ':waving_hand: Welcome!\n'
@@ -49,7 +49,7 @@ class RegistrationHandler(AbstractHandler):
             config=callbacks.registration.filter(),
         )
 
-    def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
         return dict(
             text=make_text(_(':smiling_face_with_halo: You are already registered!\n\n'
                              ':upwards_button: Select actions: :downwards_button:')),
@@ -57,7 +57,7 @@ class RegistrationHandler(AbstractHandler):
         )
 
     @transaction.atomic()
-    def without_auth_call(self, message: types.Message, from_user: types.User, cb_data: str) -> dict:
+    def call_without_auth(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
         from apps.users.models import User
 
         cb_data = callbacks.registration.parse(callback_data=cb_data)
@@ -66,7 +66,7 @@ class RegistrationHandler(AbstractHandler):
             ...
 
         user = User.objects.create(
-            chat_id=from_user.id,
+            id=user.chat_id,
             username=message.from_user.username,
         )
 
@@ -92,7 +92,7 @@ class BalanceHandler(StartHandler):
             func=lambda call: call.data == 'balance',
         )
 
-    def call(self, message: types.Message, user: UserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
         from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
 
         markup = get_back_keyboard('menu') if cb_data else None
