@@ -3,36 +3,69 @@ from typing import Optional
 
 import telebot
 from telebot import types
+from telebot.types import Message, CallbackQuery
 
-from apps.telegram.bot_apps.middlewares import UserData
+from apps.telegram.bot_apps.middlewares import BaseUserData
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):
+    class IncorrectTextParams(Exception):
+        pass
+
+    @classmethod
+    def _has_text_params(cls, call: Message | CallbackQuery):
+        return isinstance(call, Message) and len(call.text.split())
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
         self.registration_handlers()
 
-    def __call__(self, msg_or_cq: types.Message | types.CallbackQuery, data: dict):
-        from_user = msg_or_cq.from_user
+    @abc.abstractmethod
+    def registration_handlers(self): ...
 
-        if isinstance(msg_or_cq, types.Message):
-            message_id, cb_data, message = None, None, msg_or_cq
+    @property
+    def use_text_params(self) -> bool:
+        return False
+
+    @property
+    def use_auth(self) -> bool:
+        return True
+
+    def _pre_call(self, message: Message, user: BaseUserData, **kwargs) -> dict:
+        if self.use_auth and user.is_anonymous:
+            return self.call_without_auth(message, user, kwargs['cb_data'])
+        elif self.use_text_params and kwargs['text_params']:
+            return self.call_with_text_params(message, user, kwargs['text_params'])
         else:
-            message_id, cb_data, message = msg_or_cq.message.message_id, msg_or_cq.data, msg_or_cq.message
+            return self.call(message, user, kwargs['cb_data'])
 
-        if self.has_auth and data['user'] is None:
-            params = self.without_auth_call(message=message, from_user=from_user, cb_data=cb_data)
-        else:
-            params = self.call(message=message, user=data['user'], cb_data=cb_data)
+    def __call__(self, call: Message | CallbackQuery, data: dict):
+        message, cb_data, message_id = getattr(call, 'message', call), getattr(call, 'data', None), None
+        if isinstance(call, CallbackQuery):
+            message_id = message.message_id
 
-        self.notify(
-            chat_id=from_user.id,
-            message_id=message_id,
-            **params,
+        params = self._pre_call(
+            message=message,
+            user=data['user'],
+            cb_data=cb_data,
+            text_params=data.get('text_params'),
         )
 
-    def notify(self, chat_id: int, message_id: Optional[int] = None, **params):
+        self._make_call(
+            chat_id=call.from_user.id,
+            message_id=message_id,
+            **params
+        )
+
+    @abc.abstractmethod
+    def call_without_auth(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict: ...
+
+    @abc.abstractmethod
+    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict: ...
+
+    def call_with_text_params(self, message: types.Message, user: BaseUserData, text_params: list) -> dict: ...
+
+    def _make_call(self, chat_id: int, message_id: Optional[int] = None, **params):
         if message_id:
             self.bot.edit_message_text(
                 chat_id=chat_id,
@@ -44,16 +77,3 @@ class AbstractHandler(metaclass=abc.ABCMeta):
                 chat_id=chat_id,
                 **params,
             )
-
-    @property
-    def has_auth(self) -> bool:
-        return True
-
-    @abc.abstractmethod
-    def registration_handlers(self): ...
-
-    @abc.abstractmethod
-    def call(self, message: types.Message, user: UserData, cb_data: str) -> dict: ...
-
-    @abc.abstractmethod
-    def without_auth_call(self, message: types.Message, from_user: types.User, cb_data: str) -> dict: ...
