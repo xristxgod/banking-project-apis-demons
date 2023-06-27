@@ -20,20 +20,3 @@ def get_orders_keyboard() -> types.InlineKeyboardMarkup:
     ))
 
     return keyboard
-
-
-def get_pre_make_deposit_keyboard() -> types.InlineKeyboardMarkup:
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
-
-    keyboard.row(
-        types.InlineKeyboardButton(
-            text=make_text(_('No')),
-            callback_data=callbacks.pre_make_deposit.new(answer='no'),
-        ),
-        types.InlineKeyboardButton(
-            text=make_text(_('Yes')),
-            callback_data=callbacks.pre_make_deposit.new(answer='yes'),
-        )
-    )
-
-    return keyboard
