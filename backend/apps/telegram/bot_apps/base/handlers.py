@@ -10,9 +10,6 @@ from apps.telegram.bot_apps.middlewares import BaseUserData
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):
-    class IncorrectTextParams(Exception):
-        pass
-
     reg_text_pattern: str = ''
 
     use_auth = True
