@@ -68,7 +68,7 @@ class TextParamsMiddleware(BaseMiddleware):
     def pre_process(self, message: types.Message, data: dict):
         text_params = None
         if len(message.text.split()) > 1:
-            text_params = message.text.split()[1:]
+            text_params = ' '.join(message.text.split()[1:])
 
         data['text_params'] = text_params
 
