@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext as _
 
 from apps.cryptocurrencies.models import Currency
@@ -73,3 +73,8 @@ class Deposit(models.Model):
     class Meta:
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
+
+    @transaction.atomic()
+    def make_cancel(self):
+        self.order.status = OrderStatus.CANCEL
+        self.save()
