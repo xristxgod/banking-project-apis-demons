@@ -1,3 +1,4 @@
+import re
 import abc
 from typing import Optional
 
@@ -12,29 +13,33 @@ class AbstractHandler(metaclass=abc.ABCMeta):
     class IncorrectTextParams(Exception):
         pass
 
+    reg_text_pattern: str = ''
+
+    use_auth = True
+    use_text_params = False
+
     @classmethod
     def _has_text_params(cls, call: Message | CallbackQuery):
         return isinstance(call, Message) and len(call.text.split())
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
+        self.compile = re.compile(self.reg_text_pattern)
         self.registration_handlers()
 
     @abc.abstractmethod
     def registration_handlers(self): ...
 
-    @property
-    def use_text_params(self) -> bool:
-        return False
-
-    @property
-    def use_auth(self) -> bool:
-        return True
+    def _is_correct_pattern(self, text_params: Optional[str] = None) -> bool:
+        return (
+                text_params and
+                self.compile.match(text_params) is not None
+        )
 
     def _pre_call(self, message: Message, user: BaseUserData, **kwargs) -> dict:
         if self.use_auth and user.is_anonymous:
             return self.call_without_auth(message, user, kwargs['cb_data'])
-        elif self.use_text_params and kwargs['text_params']:
+        elif self.use_text_params and self._is_correct_pattern(kwargs['text_params']):
             return self.call_with_text_params(message, user, kwargs['text_params'])
         else:
             return self.call(message, user, kwargs['cb_data'])
@@ -63,17 +68,19 @@ class AbstractHandler(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict: ...
 
-    def call_with_text_params(self, message: types.Message, user: BaseUserData, text_params: list) -> dict: ...
+    def call_with_text_params(self, message: types.Message, user: BaseUserData, text_params: str) -> dict: ...
 
     def _make_call(self, chat_id: int, message_id: Optional[int] = None, **params):
-        if message_id:
+        if message_id or params.get('message_id'):
             self.bot.edit_message_text(
                 chat_id=chat_id,
-                message_id=message_id,
+                message_id=message_id or params.get('message_id'),
+                parse_mode="Markdown",
                 **params,
             )
         else:
             self.bot.send_message(
                 chat_id=chat_id,
+                parse_mode="Markdown",
                 **params,
             )
