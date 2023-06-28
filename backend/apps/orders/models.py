@@ -32,6 +32,11 @@ class Order(models.Model):
     def can_send(self) -> bool:
         return self.status == OrderStatus.CREATED
 
+    @transaction.atomic()
+    def make_cancel(self):
+        self.status = OrderStatus.CANCEL
+        self.save()
+
     @property
     def is_done(self) -> bool:
         return self.status == OrderStatus.DONE
@@ -76,5 +81,5 @@ class Deposit(models.Model):
 
     @transaction.atomic()
     def make_cancel(self):
-        self.order.status = OrderStatus.CANCEL
+        self.order.make_cancel()
         self.save()

@@ -3,6 +3,7 @@ from telebot import types
 from django.utils.translation import gettext as _
 
 from apps.telegram.utils import make_text
+from apps.cryptocurrencies.models import Currency
 from apps.telegram.bot_apps.orders import callbacks
 
 
@@ -27,7 +28,50 @@ def get_create_deposit_keyboard() -> types.InlineKeyboardMarkup:
 
     keyboard.row(types.InlineKeyboardButton(
         text=make_text(_('Create')),
-        callback_data=callbacks.deposit_step.new(step=callbacks.DepositStep.CHOOSE_CURRENCY),
+        callback_data='deposit:create',
+    ))
+
+    return keyboard
+
+
+def get_currencies_keyboard() -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    buttons = []
+    for currency in Currency.objects.all():
+        buttons.append(types.InlineKeyboardButton(
+            text=make_text(currency.verbose_telegram),
+            callback_data=f'deposit:currency:{currency.id}'
+        ))
+
+    keyboard.add(*buttons)
+
+    return keyboard
+
+
+def get_deposit_answer_keyboard() -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text=make_text(_('No')),
+            callback_data=callbacks.deposit_answer.new(answer=callbacks.Answer.NO),
+        ),
+        types.InlineKeyboardButton(
+            text=make_text(_('Yes')),
+            callback_data=callbacks.deposit_answer.new(answer=callbacks.Answer.YES),
+        ),
+    )
+
+    return keyboard
+
+
+def get_deposit_keyboard(deposit_id: int) -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=make_text(_('Cancel')),
+        callback_data=f'deposit:cancel:{deposit_id}',
     ))
 
     return keyboard

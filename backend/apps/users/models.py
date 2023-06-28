@@ -14,3 +14,7 @@ class User(AbstractUser):
     @property
     def telegram_username(self) -> str:
         return f'@{self.username}'
+
+    @property
+    def personal_commission_percent(self) -> int:
+        return 5
