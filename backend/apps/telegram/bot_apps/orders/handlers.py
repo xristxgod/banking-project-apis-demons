@@ -11,9 +11,6 @@ from apps.telegram.bot_apps.middlewares import BaseUserData
 from apps.telegram.bot_apps.orders import keyboards
 
 
-deposit_storage = DepositStorage()
-
-
 class OrderHandler(StartHandler):
     def registration_handlers(self):
         self.bot.register_message_handler(
