@@ -3,7 +3,7 @@ from telebot.callback_data import CallbackDataFilter
 from telebot.custom_filters import AdvancedCustomFilter
 
 
-class ConfigFilter(AdvancedCustomFilter):
+class Filter(AdvancedCustomFilter):
     key = 'config'
 
     def check(self, call: types.CallbackQuery, config: CallbackDataFilter):
