@@ -81,5 +81,8 @@ class Deposit(models.Model):
 
     @transaction.atomic()
     def make_cancel(self):
-        self.order.make_cancel()
-        self.save()
+        if self.order.status == OrderStatus.CREATED:
+            self.order.make_cancel()
+            self.save()
+            return True
+        return False

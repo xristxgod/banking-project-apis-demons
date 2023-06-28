@@ -2,6 +2,7 @@ from telebot import types
 
 from django.utils.translation import gettext as _
 
+from apps.orders.models import OrderStatus, Deposit
 from apps.telegram.utils import make_text
 from apps.cryptocurrencies.models import Currency
 from apps.telegram.bot_apps.orders import callbacks
@@ -27,7 +28,7 @@ def get_create_deposit_keyboard() -> types.InlineKeyboardMarkup:
     keyboard = types.InlineKeyboardMarkup()
 
     keyboard.row(types.InlineKeyboardButton(
-        text=make_text(_('Create')),
+        text=make_text(_(':money_with_wings: Create')),
         callback_data='deposit:create',
     ))
 
@@ -54,11 +55,11 @@ def get_deposit_answer_keyboard() -> types.InlineKeyboardMarkup:
 
     keyboard.row(
         types.InlineKeyboardButton(
-            text=make_text(_('No')),
+            text=make_text(_(':cross_mark_button:')),
             callback_data=callbacks.deposit_answer.new(answer=callbacks.Answer.NO),
         ),
         types.InlineKeyboardButton(
-            text=make_text(_('Yes')),
+            text=make_text(_(':check_mark_button:')),
             callback_data=callbacks.deposit_answer.new(answer=callbacks.Answer.YES),
         ),
     )
@@ -66,12 +67,13 @@ def get_deposit_answer_keyboard() -> types.InlineKeyboardMarkup:
     return keyboard
 
 
-def get_deposit_keyboard(deposit_id: int) -> types.InlineKeyboardMarkup:
+def get_deposit_keyboard(deposit: Deposit) -> types.InlineKeyboardMarkup:
     keyboard = types.InlineKeyboardMarkup()
 
-    keyboard.row(types.InlineKeyboardButton(
-        text=make_text(_('Cancel')),
-        callback_data=f'deposit:cancel:{deposit_id}',
-    ))
+    if deposit.order.status == OrderStatus.CREATED:
+        keyboard.row(types.InlineKeyboardButton(
+            text=make_text(_('Cancel')),
+            callback_data=f'deposit:cancel:{deposit.pk}',
+        ))
 
     return keyboard

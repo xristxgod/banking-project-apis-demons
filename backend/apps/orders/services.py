@@ -46,9 +46,9 @@ def create_deposit_by_telegram(user: User, deposit_info: dict) -> Deposit:
 
 
 @transaction.atomic()
-def cancel_deposit(user: User, pk: int):
+def cancel_deposit(user: User, pk: int) -> bool:
     deposit = Deposit.objects.get(
         order__user=user,
         pk=pk,
     )
-    deposit.make_cancel()
+    return deposit.make_cancel()
