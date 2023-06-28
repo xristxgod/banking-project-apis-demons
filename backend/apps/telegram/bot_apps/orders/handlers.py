@@ -47,7 +47,7 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
     def registration_handlers(self):
         self.bot.register_message_handler(
             callback=self,
-            regexp=r'^/(make)?deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
+            regexp=r'^/deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
         )
         self.bot.register_callback_query_handler(
             callback=self,
@@ -110,7 +110,7 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
         if params := self._pre_call(message, user, extra):
             return params
 
-        if extra['cb_data'] == 'deposit' or len(message.text.split()) == 1:
+        if 'deposit' in (extra['cb_data'], message.text[1:]):
             markup = keyboards.get_create_deposit_keyboard()
             if extra['cb_data']:
                 markup.row(get_back_button(pattern='orders'))
@@ -128,8 +128,7 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
                 text=make_text(_('Not found')),
             )
 
-        cb_data = callbacks.deposit_answer.parse(extra['cb_data'])
-        match cb_data['answer']:
+        match callbacks.deposit_answer.parse(extra['cb_data'])['answer']:
             case callbacks.Answer.NO:
                 del self.storage[user.chat_id]
                 return dict(
