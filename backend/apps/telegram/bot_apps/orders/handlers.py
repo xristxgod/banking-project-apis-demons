@@ -87,12 +87,6 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
             reply_markup=markup,
         )
 
-    @transaction.atomic()
-    def make_deposit(self, user: BaseUserData) -> Deposit:
-        deposit_info = self.storage.pop(user.chat_id)
-        deposit = create_deposit_by_telegram(user.obj, deposit_info)
-        return deposit
-
     @classmethod
     def make_deposit_message(cls, user: BaseUserData, deposit: Deposit):
         markup = keyboards.get_deposit_keyboard(deposit.pk)
@@ -144,7 +138,10 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
             case callbacks.Answer.YES:
                 return self.make_deposit_message(
                     user=user,
-                    deposit=self.make_deposit(user),
+                    deposit=create_deposit_by_telegram(
+                        user=user.obj,
+                        deposit_info=self.storage.pop(user.chat_id),
+                    ),
                 )
 
     def is_step(self, extra: dict) -> bool:
