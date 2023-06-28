@@ -1,11 +1,13 @@
-import datetime
 import decimal
+import datetime
+from typing import Optional
 
 from telebot import types
 
 from django.db import transaction
 from django.utils.translation import gettext as _
 
+from apps.orders.models import Deposit
 from apps.orders.services import calculate_deposit_amount, create_deposit_by_telegram, cancel_deposit
 from apps.cryptocurrencies.models import Currency
 from apps.telegram.bot_apps.base.handlers import AbstractStepsMixin
@@ -86,19 +88,34 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
         )
 
     @transaction.atomic()
-    def make_deposit_message(self, user: BaseUserData):
+    def make_deposit(self, user: BaseUserData) -> Deposit:
         deposit_info = self.storage.pop(user.chat_id)
         deposit = create_deposit_by_telegram(user.obj, deposit_info)
+        return deposit
 
+    @classmethod
+    def make_deposit_message(cls, user: BaseUserData, deposit: Deposit):
         markup = keyboards.get_deposit_keyboard(deposit.pk)
 
         return dict(
             text=make_text(_('Your deposit: {pk}'),
-                           pk=deposit.pk,),
+                           pk=deposit.pk, ),
             reply_markup=markup,
         )
 
+    def _pre_call(self, message: types.Message, user: BaseUserData, extra: dict) -> Optional[dict]:
+        if extra['cb_data'].startswith('deposit:cancel:'):
+            cancel_deposit(user.obj, pk=int(extra['cb_data'].replace('deposit:cancel:', '')))
+            return dict(
+                text=make_text('CANCEL! ' + message.text)
+            )
+        if deposit := user.active_deposit:
+            return self.make_deposit_message(user, deposit)
+
     def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
+        if params := self._pre_call(message, user, extra):
+            return params
+
         if extra['cb_data'] == 'deposit' or len(message.text.split()) == 1:
             markup = keyboards.get_create_deposit_keyboard()
             if extra['cb_data']:
@@ -108,12 +125,10 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
                 text=make_text(_('Do you want create order?\n\n...manual text...')),
                 reply_markup=markup,
             )
-        elif extra['cb_data'].startswith('deposit:cancel:'):
-            cancel_deposit(user.obj, pk=int(extra['cb_data'].replace('deposit:cancel:', '')))
-            return dict(
-                text=make_text('CANCEL! ' + message.text)
-            )
 
+        return self._post_call(message, user, extra)
+
+    def _post_call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         if not self.storage.get(user.chat_id):
             return dict(
                 text=make_text(_('Not found')),
@@ -127,7 +142,10 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
                     text=make_text(_('Deposit cancelled'))
                 )
             case callbacks.Answer.YES:
-                return self.make_deposit_message(user)
+                return self.make_deposit_message(
+                    user=user,
+                    deposit=self.make_deposit(user),
+                )
 
     def is_step(self, extra: dict) -> bool:
         return (
