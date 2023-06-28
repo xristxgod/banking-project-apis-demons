@@ -20,9 +20,9 @@ class OrderHandler(StartHandler):
             func=lambda call: call.data == 'orders',
         )
 
-    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         markup = keyboards.get_orders_keyboard()
-        if cb_data:
+        if extra['cb_data']:
             markup.row(get_back_button(pattern='menu'))
 
         return dict(
@@ -41,5 +41,5 @@ class DepositHandlers(StartHandler):
             regexp=r'^/(make)?deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
         )
 
-    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         pass
