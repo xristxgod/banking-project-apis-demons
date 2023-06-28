@@ -34,14 +34,11 @@ class OrderHandler(StartHandler):
 
 
 class DepositHandlers(StartHandler):
-    reg_text_pattern = r'^[A-z]+:[A-z]+ \d*[.,]?\d+$'
-
-    use_text_params = True
-
     def registration_handlers(self):
         self.bot.register_message_handler(
             callback=self,
-            commands=['deposit', 'makedeposit'],
+            commands=None,
+            regexp=r'^/(make)?deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
         )
 
     def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
