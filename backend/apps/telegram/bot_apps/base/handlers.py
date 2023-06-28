@@ -53,7 +53,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
             text_params=data.get('text_params'),
         )
 
-        self._make_call(
+        self.notify(
             chat_id=call.from_user.id,
             message_id=message_id,
             **params
@@ -67,7 +67,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     def call_with_text_params(self, message: types.Message, user: BaseUserData, text_params: str) -> dict: ...
 
-    def _make_call(self, chat_id: int, message_id: Optional[int] = None, **params):
+    def notify(self, chat_id: int, message_id: Optional[int] = None, **params):
         if message_id or params.get('message_id'):
             self.bot.edit_message_text(
                 chat_id=chat_id,
