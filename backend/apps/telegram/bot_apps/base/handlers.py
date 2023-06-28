@@ -6,7 +6,7 @@ import telebot
 from telebot import types
 from telebot.types import Message, CallbackQuery
 
-from apps.telegram.bot_apps.middlewares import BaseUserData
+from apps.telegram.middlewares.user import BaseUserData
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):

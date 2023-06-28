@@ -1,13 +1,11 @@
 from telebot import types
 
-from django.db import transaction
 from django.utils.translation import gettext as _
 
-from apps.cryptocurrencies.models import Currency
 from apps.telegram.bot_apps.base.keyboards import get_back_button
 from apps.telegram.bot_apps.start.handlers import StartHandler
-from apps.telegram.bot_apps.utils import make_text
-from apps.telegram.bot_apps.middlewares import BaseUserData
+from apps.telegram.utils import make_text
+from apps.telegram.middlewares.user import BaseUserData
 from apps.telegram.bot_apps.orders import keyboards
 
 

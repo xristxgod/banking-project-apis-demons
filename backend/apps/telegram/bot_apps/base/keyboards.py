@@ -3,7 +3,7 @@ from telebot import types
 
 from django.utils.translation import gettext as _
 
-from apps.telegram.bot_apps.utils import make_text
+from apps.telegram.utils import make_text
 
 
 def get_back_button(pattern: str) -> types.InlineKeyboardButton:
