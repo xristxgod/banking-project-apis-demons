@@ -1,1 +1,1 @@
-from .config import Filter as ConfigFilter
+from .cq_filter import Filter as CallbackQueryFilter

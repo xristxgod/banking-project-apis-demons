@@ -8,7 +8,6 @@ from apps.telegram import middlewares
 from apps.telegram import filters
 from apps.telegram.bot_apps import APPS_HANDLERS
 
-
 logger = telebot.logger
 logger.setLevel(logging.ERROR)
 logger.setLevel(logging.INFO)
@@ -19,7 +18,7 @@ bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN, use_class_middlewares=True)
 bot.setup_middleware(middlewares.TextParamsMiddleware())
 bot.setup_middleware(middlewares.UserMiddleware())
 # Setup filters
-bot.add_custom_filter(filters.ConfigFilter())
+bot.add_custom_filter(filters.CallbackQueryFilter())
 # Setup apps
 for handler in APPS_HANDLERS:
     handler(bot)

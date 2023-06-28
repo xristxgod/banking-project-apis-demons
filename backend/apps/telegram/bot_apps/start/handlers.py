@@ -46,7 +46,7 @@ class RegistrationHandler(AbstractHandler):
         self.bot.register_callback_query_handler(
             callback=self,
             func=None,
-            config=callbacks.registration.filter(),
+            cq_filter=callbacks.registration.filter(),
         )
 
     def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
