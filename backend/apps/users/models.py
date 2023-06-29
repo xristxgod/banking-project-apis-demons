@@ -4,9 +4,8 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
+    id = models.BigIntegerField(_('Chat id'), primary_key=True)
     password = models.CharField(_('Password'), max_length=128, blank=True, null=True, default=None)
-
-    chat_id = models.BigIntegerField(_('Chat id'), blank=True, null=True, default=None)
 
     class Meta:
         verbose_name = _('User')
@@ -15,3 +14,7 @@ class User(AbstractUser):
     @property
     def telegram_username(self) -> str:
         return f'@{self.username}'
+
+    @property
+    def personal_commission_percent(self) -> int:
+        return 5

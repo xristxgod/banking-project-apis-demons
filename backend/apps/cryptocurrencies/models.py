@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import decimal
+
 from django.db import models
 from django.utils.translation import gettext as _
 
@@ -42,6 +44,13 @@ class CurrencyFilterManager(ActiveManager):
             address__isnull=False,
         )
 
+    def by_verbose_telegram(self, currency: str):
+        network_name, symbol = currency.split(':')
+        return self.filter(
+            network__name=network_name,
+            symbol=symbol,
+        )
+
 
 class Currency(models.Model):
     name = models.CharField(_('Name'), max_length=255)
@@ -57,6 +66,9 @@ class Currency(models.Model):
         verbose_name = _('Currency')
         verbose_name_plural = _('Currencies')
 
+    def __str__(self):
+        return f'{self.network.name.upper()}:{self.symbol.upper()}'
+
     @property
     def is_native(self) -> str:
         return self.address is None
@@ -64,6 +76,16 @@ class Currency(models.Model):
     @property
     def abi(self) -> dict:
         return abi.ERC20
+
+    @property
+    def verbose_telegram(self) -> str:
+        return str(self)
+
+    def str_to_decimal(self, amount: str) -> decimal.Decimal:
+        with decimal.localcontext() as ctx:
+            ctx.prec = self.decimal_place
+            amount = decimal.Decimal(amount, context=ctx)
+        return amount
 
 
 class Provider(models.Model):

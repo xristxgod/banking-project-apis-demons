@@ -1,14 +1,14 @@
-import telebot
+import typing
 
 from . import start
 from . import orders
-from .middlewares import UserMiddleware
-from .filters import ConfigFilter
+from .base.handlers import AbstractHandler
 
+__all__ = (
+    'APPS_HANDLERS',
+)
 
-def init_apps(bot: telebot.TeleBot):
-    bot.setup_middleware(UserMiddleware())
-    bot.add_custom_filter(ConfigFilter())
-
-    start.init_handlers(bot)
-    orders.init_handlers(bot)
+APPS_HANDLERS: list[typing.Type[AbstractHandler]] = [
+    *start.HANDLERS,
+    *orders.HANDLERS,
+]

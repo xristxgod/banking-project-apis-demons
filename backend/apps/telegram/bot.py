@@ -1,13 +1,24 @@
+import logging
+
 import telebot
 
 from django.conf import settings
 
+from apps.telegram import middlewares
+from apps.telegram import filters
+from apps.telegram.bot_apps import APPS_HANDLERS
 
-def init(_bot: telebot.TeleBot):
-    # Init bot apps
-    from apps.telegram import bot_apps
-    bot_apps.init_apps(_bot)
-
+logger = telebot.logger
+logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 
 bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN, use_class_middlewares=True)
-init(bot)
+
+# Setup middlewares
+bot.setup_middleware(middlewares.UserMiddleware())
+# Setup filters
+bot.add_custom_filter(filters.CallbackQueryFilter())
+bot.add_custom_filter(filters.RegexpFilter())
+# Setup apps
+for handler in APPS_HANDLERS:
+    handler(bot)
