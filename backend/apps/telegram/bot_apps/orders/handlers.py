@@ -1,15 +1,16 @@
-import datetime
 import decimal
+import datetime
+from typing import Optional
 
 from telebot import types
 
-from django.db import transaction
 from django.utils.translation import gettext as _
 
+from apps.orders.models import Deposit
 from apps.orders.services import calculate_deposit_amount, create_deposit_by_telegram, cancel_deposit
 from apps.cryptocurrencies.models import Currency
 from apps.telegram.bot_apps.base.handlers import AbstractStepsMixin
-from apps.telegram.bot_apps.base.keyboards import get_back_button
+from apps.telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from apps.telegram.bot_apps.start.handlers import StartHandler
 from apps.telegram.utils import make_text
 from apps.telegram.middlewares.user import BaseUserData
@@ -34,9 +35,7 @@ class OrderHandler(StartHandler):
             markup.row(get_back_button(pattern='menu'))
 
         return dict(
-            text=make_text(_(':upwards_button: Select actions: :downwards_button:\n\n'
-                             'Quick deposit creation:\n'
-                             '`/makedeposit <network>:<currency> <amount>`')),
+            text=make_text(_(':upwards_button: Select actions: :downwards_button:')),
             reply_markup=markup,
         )
 
@@ -45,7 +44,7 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
     def registration_handlers(self):
         self.bot.register_message_handler(
             callback=self,
-            regexp=r'^/(make)?deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
+            regexp=r'^/deposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
         )
         self.bot.register_callback_query_handler(
             callback=self,
@@ -58,76 +57,99 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
         )
 
     def make_answer_message(self, user: BaseUserData):
-        deposit_info = self.storage[user.chat_id]
-
         self.storage[user.chat_id].update(calculate_deposit_amount(
             user=user.obj,
-            amount=deposit_info['amount'],
-            currency=deposit_info['currency'],
+            **self.storage[user.chat_id],
         ))
-
-        markup = keyboards.get_deposit_answer_keyboard()
 
         return dict(
             text=make_text(
-                _('Deposit: {now}\n\n'
-                  'Crypto amount: {amount} {currency}\n'
-                  'To USD: ${usd_amount}\n'
-                  'Commission: ${usd_commission}\n'
-                  'USD rate: ${usd_rate}\n'),
-                now=datetime.datetime.now(),
-                amount=deposit_info['amount'],
-                currency=deposit_info['currency'].verbose_telegram,
-                usd_amount=deposit_info['usd_amount'],
-                usd_commission=deposit_info['usd_commission'],
-                usd_rate=deposit_info['usd_rate'],
+                _(':round_pushpin: Deposit info:\n\n'
+                  ':money_with_wings: You give: {amount} {currency}\n'
+                  ':money_bag: You get: $ {usd_amount}\n\n'
+                  ':dollar_banknote: USD rate: $ {usd_rate}\n'
+                  ':receipt: Commission: $ {usd_commission}'),
+                **self.storage[user.chat_id],
             ),
-            reply_markup=markup,
+            reply_markup=keyboards.get_deposit_answer_keyboard(),
         )
 
-    @transaction.atomic()
-    def make_deposit_message(self, user: BaseUserData):
-        deposit_info = self.storage.pop(user.chat_id)
-        deposit = create_deposit_by_telegram(user.obj, deposit_info)
-
-        markup = keyboards.get_deposit_keyboard(deposit.pk)
+    @classmethod
+    def make_deposit_message(cls, deposit: Deposit):
+        markup = keyboards.get_deposit_keyboard(deposit)
 
         return dict(
-            text=make_text(_('Your deposit: {pk}'),
-                           pk=deposit.pk,),
+            text=make_text(_(':id_button: {pk}\n\n'
+                             ':money_with_wings: {amount} {currency} => $ {usd_amount}\n'
+                             ':dollar_banknote: USD rate: $ {usd_rate}\n'
+                             ':receipt: Commission: $ {usd_commission}\n\n'
+                             '{status}'),
+                           pk=deposit.pk,
+                           amount=deposit.order.amount,
+                           currency=deposit.order.currency,
+                           usd_amount=deposit.amount,
+                           usd_rate=deposit.usd_exchange_rate,
+                           usd_commission=deposit.commission,
+                           status=deposit.order.status_by_telegram),
             reply_markup=markup,
         )
 
+    def _pre_call(self, message: types.Message, user: BaseUserData, extra: dict) -> Optional[dict]:
+        if extra['cb_data'].startswith('deposit:cancel:'):
+            if cancel_deposit(user.obj, pk=int(extra['cb_data'].replace('deposit:cancel:', ''))):
+                return dict(
+                    text=make_text(':cross_mark: CANCELED! ' + message.text),
+                )
+            return dict(
+                text=message.text,
+            )
+        if deposit := user.active_deposit:
+            return self.make_deposit_message(deposit)
+
     def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
-        if extra['cb_data'] == 'deposit' or len(message.text.split()) == 1:
+        if params := self._pre_call(message, user, extra):
+            return params
+
+        if 'deposit' in (extra['cb_data'], message.text[1:]):
             markup = keyboards.get_create_deposit_keyboard()
             if extra['cb_data']:
                 markup.row(get_back_button(pattern='orders'))
 
             return dict(
-                text=make_text(_('Do you want create order?\n\n...manual text...')),
+                text=make_text(_(':money_with_wings: Do you want to make a deposit?\n\n'
+                                 ':page_with_curl: Instruction manual:\n\n'
+                                 ':one: Choose a currency\n'
+                                 ':two: Enter the amount:\n\n'
+                                 ':receipt: We will calculate the `USD` exchange rate and commission, '
+                                 'and then you can pay!\n\n'
+                                 ':high_voltage: Create a deposit by command:\n'
+                                 '`/deposit <network>:<currency> <amount>`')),
                 reply_markup=markup,
             )
-        elif extra['cb_data'].startswith('deposit:cancel:'):
-            cancel_deposit(user.obj, pk=int(extra['cb_data'].replace('deposit:cancel:', '')))
-            return dict(
-                text=make_text('CANCEL! ' + message.text)
-            )
 
+        return self._post_call(message, user, extra)
+
+    def _post_call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         if not self.storage.get(user.chat_id):
             return dict(
-                text=make_text(_('Not found')),
+                text=make_text(_(":disappointed_face: Sorry, but, I'm not found!")),
+                reply_markup=get_back_keyboard(patten='deposit'),
             )
 
-        cb_data = callbacks.deposit_answer.parse(extra['cb_data'])
-        match cb_data['answer']:
+        match callbacks.deposit_answer.parse(extra['cb_data'])['answer']:
             case callbacks.Answer.NO:
                 del self.storage[user.chat_id]
                 return dict(
-                    text=make_text(_('Deposit cancelled'))
+                    text=make_text(_(":OK_hand: I've closed your deposit!")),
+                    reply_markup=get_back_keyboard(patten='deposit'),
                 )
             case callbacks.Answer.YES:
-                return self.make_deposit_message(user)
+                return self.make_deposit_message(
+                    deposit=create_deposit_by_telegram(
+                        user=user.obj,
+                        deposit_info=self.storage.pop(user.chat_id),
+                    ),
+                )
 
     def is_step(self, extra: dict) -> bool:
         return (
@@ -142,7 +164,7 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
             markup.add(get_back_button('deposit'))
 
             return dict(
-                text=make_text(_('Choose currency')),
+                text=make_text(_(':yellow_circle: Choose a currency:')),
                 reply_markup=markup,
             )
         elif extra['cb_data'].startswith('deposit:currency:'):
@@ -152,7 +174,8 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
                 ),
             }
             return dict(
-                text=make_text(_('Write amount:')),
+                text=make_text(_(':fountain_pen: Write amount:\n\n'
+                                 'Example:\n\t`100.2`\n\t`12,244`')),
                 for_step=dict(
                     message=message,
                     callback=self,
@@ -165,13 +188,13 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
             )
         elif extra['data']['step'] == 'wrote_amount':
             try:
-                amount = self.storage[user.chat_id]['currency'].str_to_decimal(message.text)
+                self.storage[user.chat_id].update({
+                    'amount': self.storage[user.chat_id]['currency'].str_to_decimal(message.text),
+                })
+                return self.make_answer_message(user)
             except decimal.InvalidOperation:
+                del self.storage[user.chat_id]
                 return dict(
-                    text=make_text(_('Invalid amount'))
+                    text=make_text(_(':no_entry: Invalid amount :no_entry:\n'))
                 )
 
-            self.storage[user.chat_id].update({
-                'amount': amount,
-            })
-            return self.make_answer_message(user)

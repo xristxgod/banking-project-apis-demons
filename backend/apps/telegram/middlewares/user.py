@@ -1,14 +1,25 @@
 import decimal
+from typing import Optional
 
 from telebot import types
 from telebot.handler_backends import BaseMiddleware
 
 from apps.users import models
+from apps.orders.models import OrderStatus, Deposit
 
 
 class BaseUserData:
     def __init__(self, obj: types.User | models.User):
         self.obj = obj
+        self.deposit = self._take_active_deposit()
+
+    def _take_active_deposit(self) -> Deposit:
+        qs = Deposit.objects.filter(
+            order__user=self.obj,
+            order__status=OrderStatus.CREATED,
+        )
+        if qs.exists():
+            return qs.first()
 
     @property
     def is_anonymous(self) -> bool:
@@ -23,6 +34,10 @@ class BaseUserData:
     @property
     def username(self) -> str:
         return self.obj.username
+
+    @property
+    def active_deposit(self) -> Optional[Deposit]:
+        return self.deposit
 
 
 class AnonymousUserData(BaseUserData):
