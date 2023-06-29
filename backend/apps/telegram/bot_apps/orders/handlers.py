@@ -79,18 +79,18 @@ class DepositHandlers(AbstractStepsMixin, StartHandler):
         markup = keyboards.get_deposit_keyboard(deposit)
 
         return dict(
-            text=make_text(_('Deposit: {pk}\n\n'
+            text=make_text(_(':id_button: {pk}\n\n'
                              ':money_with_wings: {amount} {currency} => $ {usd_amount}\n'
                              ':dollar_banknote: USD rate: $ {usd_rate}\n'
                              ':receipt: Commission: $ {usd_commission}\n\n'
-                             'Status: {status}'),
+                             '{status}'),
                            pk=deposit.pk,
                            amount=deposit.order.amount,
                            currency=deposit.order.currency,
                            usd_amount=deposit.amount,
                            usd_rate=deposit.usd_exchange_rate,
                            usd_commission=deposit.commission,
-                           status=deposit.order.get_status_display()),
+                           status=deposit.order.status_by_telegram),
             reply_markup=markup,
         )
 

@@ -42,10 +42,17 @@ class Order(models.Model):
         return self.status == OrderStatus.DONE
 
     @property
-    def verbose_currency(self):
-        if self.currency.is_native:
-            return f'{self.currency.symbol}'
-        return f'{self.currency.network.name}:{self.currency.symbol}'
+    def status_by_telegram(self) -> str:
+        match self.status:
+            case OrderStatus.CREATED:
+                prefix = ':white_circle: '
+            case OrderStatus.SENT:
+                prefix = ':yellow_circle: '
+            case OrderStatus.DONE:
+                prefix = ':green_circle: '
+            case _:
+                prefix = ':red_circle: '
+        return prefix + self.get_status_display()
 
 
 class Transaction(models.Model):
@@ -86,3 +93,13 @@ class Deposit(models.Model):
             self.save()
             return True
         return False
+
+    @property
+    def payment_url(self) -> str:
+        # TODO add payment deposit
+        return f'http://fake/{self.order.pk}'
+
+    @property
+    def transaction_url(self) -> str:
+        url = self.order.currency.network.block_explorer_url
+        return f'{url}/{self.order.transaction.transaction_hash}'

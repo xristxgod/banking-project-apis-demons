@@ -71,9 +71,27 @@ def get_deposit_keyboard(deposit: Deposit) -> types.InlineKeyboardMarkup:
     keyboard = types.InlineKeyboardMarkup()
 
     if deposit.order.status == OrderStatus.CREATED:
-        keyboard.row(types.InlineKeyboardButton(
-            text=make_text(_('Cancel')),
-            callback_data=f'deposit:cancel:{deposit.pk}',
-        ))
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':eight_spoked_asterisk: To pay')),
+                url=deposit.payment_url,
+            ),
+            types.InlineKeyboardButton(
+                text=make_text(_(':cross_mark: Cancel')),
+                callback_data=f'deposit:cancel:{deposit.pk}',
+            )
+        )
+    elif deposit.order.status == OrderStatus.DONE:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':receipt: Transaction')),
+                url=deposit.transaction_url,
+            ),
+        )
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':counterclockwise_arrows_button: Repeat'))
+            )
+        )
 
     return keyboard
