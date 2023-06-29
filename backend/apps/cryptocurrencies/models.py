@@ -44,6 +44,13 @@ class CurrencyFilterManager(ActiveManager):
             address__isnull=False,
         )
 
+    def by_verbose_telegram(self, currency: str):
+        network_name, symbol = currency.split(':')
+        return self.filter(
+            network__name=network_name,
+            symbol=symbol,
+        )
+
 
 class Currency(models.Model):
     name = models.CharField(_('Name'), max_length=255)

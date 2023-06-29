@@ -25,13 +25,13 @@ class StartHandler(AbstractHandler):
             func=lambda call: call.data in ['menu', 'start'],
         )
 
-    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         return dict(
             text=make_text(_(':upwards_button: Select actions: :downwards_button:')),
             reply_markup=keyboards.get_menu_keyboard(),
         )
 
-    def call_without_auth(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call_without_auth(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         return dict(
             text=make_text(_(
                 ':waving_hand: Welcome!\n'
@@ -46,10 +46,10 @@ class RegistrationHandler(AbstractHandler):
         self.bot.register_callback_query_handler(
             callback=self,
             func=None,
-            config=callbacks.registration.filter(),
+            cq_filter=callbacks.registration.filter(),
         )
 
-    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         return dict(
             text=make_text(_(':smiling_face_with_halo: You are already registered!\n\n'
                              ':upwards_button: Select actions: :downwards_button:')),
@@ -57,10 +57,10 @@ class RegistrationHandler(AbstractHandler):
         )
 
     @transaction.atomic()
-    def call_without_auth(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call_without_auth(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         from apps.users.models import User
 
-        cb_data = callbacks.registration.parse(callback_data=cb_data)
+        cb_data = callbacks.registration.parse(callback_data=extra['cb_data'])
         if cb_data['referral_code'] != utils.EMPTY_REF_CODE:
             # TODO когда добавится реферальрая система, то можно делать
             ...
@@ -92,10 +92,10 @@ class BalanceHandler(StartHandler):
             func=lambda call: call.data == 'balance',
         )
 
-    def call(self, message: types.Message, user: BaseUserData, cb_data: str) -> dict:
+    def call(self, message: types.Message, user: BaseUserData, extra: dict) -> dict:
         from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
 
-        markup = get_back_keyboard('menu') if cb_data else None
+        markup = get_back_keyboard('menu') if extra['cb_data'] else None
         return dict(
             text=make_text(
                 _('{date_now}\n'
