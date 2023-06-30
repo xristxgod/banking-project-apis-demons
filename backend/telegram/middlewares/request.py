@@ -13,12 +13,20 @@ class TelegramRequest:
         self.data: str = params['data']
         self.text: str = params['text']
         self.message_id: int = params['message_id']
-        self.can_edit: bool = params['can_edit']
+        self._can_edit: bool = params['can_edit']
 
     @property
     def text_params(self) -> Optional[str]:
         if len(self.text.split()) > 1:
             return ' '.join(self.text.split()[1:])
+
+    @property
+    def can_edit(self) -> bool:
+        return self._can_edit
+
+    @can_edit.setter
+    def can_edit(self, value: bool):
+        self._can_edit = value
 
 
 class Middleware(BaseMiddleware):

@@ -11,6 +11,7 @@ from telegram.bot_apps.start.handlers import StartHandler
 
 from telegram.bot_apps.orders import utils
 from telegram.bot_apps.orders import keyboards
+from telegram.bot_apps.orders import callbacks
 
 
 class OrdersHandler(StartHandler):
@@ -66,3 +67,28 @@ class DepositHandler(StartHandler):
 
         return self.view_active_deposit(request)
 
+
+class MakeDepositHandler(DepositHandler):
+    def attach(self):
+        self.bot.register_message_handler(
+            callback=self,
+            regexp=r'^/makedeposit( [A-z]+:[A-z]+ \d*[.,]?\d+)?$',
+        )
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=lambda call: call.data == 'makedeposit',
+        )
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=None,
+            cq_filter=callbacks.repeat_deposit.filter(),
+        )
+
+    def call(self, request: TelegramRequest) -> dict:
+        # 1. Если у юзера есть активный депозит, то вернем его
+        # 2. Если в тексте есть параметры то смотрим на них и если валидны сохраняем их в хранилище и даем ему
+        #    две кнопки, да или нет
+        # 3. Если пришел по repeat_deposit то создаем без вопросов и возвращаем ему новое сообщение (не меняем старое)
+
+        if request.user.has_active_deposit:
+            return self.view_active_deposit(request)
