@@ -7,18 +7,8 @@ from django.conf import settings
 
 class BaseBot:
 
-    @classmethod
-    def get_logger(cls):
-        logger = telebot.logger
-        logger.setLevel(logging.INFO)
-        logger.setLevel(logging.ERROR)
-        return logger
-
-    def __init__(self, token: str, use_logger: bool = True):
+    def __init__(self, token: str):
         self.bot = telebot.TeleBot(token=token, use_class_middlewares=True)
-        if use_logger:
-            setattr(self, 'logger', self.get_logger())
-
         self.setup()
 
     def infinity_polling(self):
