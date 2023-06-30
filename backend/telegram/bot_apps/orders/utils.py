@@ -34,13 +34,14 @@ def view_active_deposit(request: TelegramRequest) -> dict:
             raw_text = _(':cross_mark: CANCEL Deposit: {pk}\n\n'
                          ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
                          ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n'
+                         ':receipt: Commission: $ {usd_commission}\n\n'
                          'Created: {created}')
             text = make_text(
                 raw_text=raw_text,
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
+                usd_amount=deposit.amount,
                 usd_exchange_rate=deposit.usd_exchange_rate,
                 usd_commission=deposit.commission,
                 created=deposit.order.created,
@@ -60,6 +61,7 @@ def view_active_deposit(request: TelegramRequest) -> dict:
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
+                usd_amount=deposit.amount,
                 usd_exchange_rate=deposit.usd_exchange_rate,
                 usd_commission=deposit.commission,
                 transaction_hash=transaction.transaction_hash,

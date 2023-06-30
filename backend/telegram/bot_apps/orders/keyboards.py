@@ -42,7 +42,7 @@ def get_deposit_keyboard(request: TelegramRequest) -> types.InlineKeyboardMarkup
             keyboard.row(
                 types.InlineKeyboardButton(
                     text=_('Cancel'),
-                    callback_data='cancle',
+                    callback_data='cancel_deposit',
                 ),
                 types.InlineKeyboardButton(
                     text=_('To pay'),

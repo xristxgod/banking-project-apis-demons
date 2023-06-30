@@ -92,8 +92,7 @@ class Deposit(models.Model):
         if self.order.status == OrderStatus.CREATED:
             self.order.make_cancel()
             self.save()
-            return True
-        return False
+        return self
 
     @property
     def consumer(self) -> User:

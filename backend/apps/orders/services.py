@@ -40,3 +40,8 @@ def create_deposit(user: User, deposit_info: dict) -> Deposit:
         usd_exchange_rate=deposit_info['usd_rate_cost'],
         commission=deposit_info['usd_commission'],
     )
+
+
+@transaction.atomic()
+def cancel_deposit(deposit: Deposit) -> Deposit:
+    return deposit.make_cancel()

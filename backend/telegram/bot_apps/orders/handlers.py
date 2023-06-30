@@ -4,7 +4,7 @@ from django.utils.translation import gettext as _
 
 from apps.orders.models import Deposit
 from apps.cryptocurrencies.models import Currency
-from apps.orders.services import calculate_deposit_amount, create_deposit
+from apps.orders.services import calculate_deposit_amount, create_deposit, cancel_deposit
 
 from telegram.utils import make_text
 from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
@@ -179,3 +179,27 @@ class MakeDepositHandler(DepositHandler):
                     deposit_info=temp_deposit_storage.pop(request.user.chat_id)
                 )
                 return self.view_active_deposit(request)
+
+
+class CancelDepositHandler(DepositHandler):
+    def attach(self):
+        self.bot.register_message_handler(
+            callback=self,
+            commands=['candeldeposit'],
+        )
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=lambda call: call.data == 'cancel_deposit'
+        )
+
+    def call(self, request: TelegramRequest) -> dict:
+        markup = get_back_keyboard('orders') if request.data else None
+
+        if not request.user.has_active_deposit:
+            return dict(
+                text=make_text(_('The deposit was not found!')),
+                reply_markup=markup,
+            )
+
+        request.user.deposit = cancel_deposit(request.user.deposit)
+        return self.view_active_deposit(request)
