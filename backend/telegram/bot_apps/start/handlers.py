@@ -15,7 +15,7 @@ class StartHandler(AbstractHandler):
             callback=self,
             commands=['start'],
         )
-        self.bot.register_message_handler(
+        self.bot.register_callback_query_handler(
             callback=self,
             func=lambda call: call.data in ['menu', 'start'],
         )
@@ -82,7 +82,7 @@ class BalanceHandler(StartHandler):
             callback=self,
             commands=['balance'],
         )
-        self.bot.register_message_handler(
+        self.bot.register_callback_query_handler(
             callback=self,
             func=lambda call: call.data.startswith(self.cb_data_startswith),
         )
