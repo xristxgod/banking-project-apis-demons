@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from telegram.utils import make_text
-from telegram.bot_apps.base.keyboards import get_back_keyboard
+from telegram.bot_apps.base.keyboards import get_back_button
 from telegram.middlewares.request import TelegramRequest
 from telegram.bot_apps.start.handlers import StartHandler
 
@@ -23,7 +23,7 @@ class OrdersHandler(StartHandler):
     def call(self, request: TelegramRequest) -> dict:
         markup = keyboards.get_orders_keyboard()
         if request.data:
-            markup.row(get_back_keyboard('menu'))
+            markup.row(get_back_button('menu'))
 
         return dict(
             text=make_text(_(':upwards_button: Select actions: :downwards_button:')),
