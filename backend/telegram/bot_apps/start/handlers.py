@@ -2,11 +2,11 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from telegram.utils import make_text
-from telegram.apps.base.handlers import AbstractHandler
-from telegram.apps.base.keyboards import get_back_keyboard
+from telegram.bot_apps.base.handlers import AbstractHandler
+from telegram.bot_apps.base.keyboards import get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
 
-from telegram.apps.start import keyboards
+from telegram.bot_apps.start import keyboards
 
 
 class StartHandler(AbstractHandler):

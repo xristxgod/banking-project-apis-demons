@@ -4,9 +4,9 @@ from django.utils.translation import gettext as _
 from telegram.utils import make_text
 from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
-from telegram.apps.start.handlers import StartHandler
+from telegram.bot_apps.start.handlers import StartHandler
 
-from telegram.apps.orders import keyboards
+from telegram.bot_apps.orders import keyboards
 
 
 class OrdersHandler(StartHandler):

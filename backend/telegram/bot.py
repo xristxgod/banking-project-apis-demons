@@ -50,7 +50,7 @@ class MainBot(BaseBot):
         self.bot.add_custom_filter(filters.RegexpFilter())
 
     def setup_handlers(self):
-        from telegram.apps import ALL_HANDLERS
+        from telegram.bot_apps import ALL_HANDLERS
         for handler in ALL_HANDLERS:
             handler(self.bot)
 

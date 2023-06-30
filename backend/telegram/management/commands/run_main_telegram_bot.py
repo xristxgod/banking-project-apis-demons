@@ -7,5 +7,4 @@ class Command(BaseCommand):
     help = 'Implemented to Django application telegram bot setup command'
 
     def handle(self, *args, **options):
-        print('t')
-        # bot.infinity_polling()
+        bot.infinity_polling()
