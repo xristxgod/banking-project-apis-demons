@@ -93,14 +93,13 @@ class PreMakeDepositHandler(DepositHandler):
 
     @classmethod
     def by_text_params(cls, request: TelegramRequest) -> dict:
-        if not request.valid_text_params(r'^[A-z]+:[A-z]+ \d*[.,]?\d+)?$'):
+        if not request.valid_text_params(r'^[A-z]+:[A-z]+ \d*[.,]?\d+$'):
             return dict(
                 text=make_text(_('Invalid params!'))
             )
 
         network_and_currency, amount = request.text_params.split()
         network_name, currency_symbol = network_and_currency.split(':')
-
         qs = Currency.objects.filter(
             network__name__iexact=network_name,
             symbol__iexact=currency_symbol,
