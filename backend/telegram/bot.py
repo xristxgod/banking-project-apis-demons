@@ -49,5 +49,10 @@ class MainBot(BaseBot):
         self.bot.add_custom_filter(filters.CallbackQueryFilter())
         self.bot.add_custom_filter(filters.RegexpFilter())
 
+    def setup_handlers(self):
+        from telegram.apps import ALL_HANDLERS
+        for handler in ALL_HANDLERS:
+            handler(self.bot)
+
 
 main_bot = MainBot(settings.MAIN_TELEGRAM_BOT_TOKEN)
