@@ -2,6 +2,7 @@ from telebot import types
 from telebot.handler_backends import BaseMiddleware
 
 from apps.users import models
+from apps.users.services import get_balance
 
 
 class AnonymousTelegramUser:
@@ -16,11 +17,19 @@ class AnonymousTelegramUser:
     def chat_id(self) -> int:
         return self.obj.id
 
+    @property
+    def username(self) -> str:
+        return self.obj.username
+
 
 class TelegramUser(AnonymousTelegramUser):
     @property
     def is_anonymous(self):
         return False
+
+    @property
+    def balance(self):
+        return get_balance(self.obj)
 
 
 class Middleware(BaseMiddleware):

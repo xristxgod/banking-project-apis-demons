@@ -7,6 +7,7 @@ from apps.users.models import User
 from apps.orders.models import OrderStatus, Deposit
 
 
+# Cached 2 minute and uncache by signal
 def get_balance(user: User) -> decimal.Decimal:
     balance = 0
 
