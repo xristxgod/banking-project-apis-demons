@@ -9,18 +9,7 @@ from telegram.middlewares.request import TelegramRequest
 from telegram.apps.start import keyboards
 
 
-class WithoutAuthMixin:
-    def call_without_auth(self, request: TelegramRequest) -> dict:
-        return dict(
-            text=make_text(_(
-                ':waving_hand: You are not registered!\n'
-                ':heart_hands: To join us, click on:'
-            )),
-            reply_markup=keyboards.get_registration_keyboard(),
-        )
-
-
-class StartHandler(WithoutAuthMixin, AbstractHandler):
+class StartHandler(AbstractHandler):
     def attach(self):
         self.bot.register_message_handler(
             callback=self,
@@ -32,10 +21,13 @@ class StartHandler(WithoutAuthMixin, AbstractHandler):
         )
 
     def call_without_auth(self, request: TelegramRequest) -> dict:
-        params = super(WithoutAuthMixin, self).call_without_auth(request)
-        if ref_code := request.text_params:
-            params['reply_markup'] = keyboards.get_registration_keyboard(ref_code)
-        return params
+        return dict(
+            text=make_text(_(
+                ':waving_hand: You are not registered!\n'
+                ':heart_hands: To join us, click on:'
+            )),
+            reply_markup=keyboards.get_registration_keyboard(request.text_params),
+        )
 
     def call(self, request: TelegramRequest) -> dict:
         return dict(

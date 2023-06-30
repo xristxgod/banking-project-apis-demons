@@ -10,7 +10,7 @@ def get_registration_keyboard(ref_code: Optional[str] = None) -> types.InlineKey
     markup = types.InlineKeyboardMarkup()
 
     callback_data = 'registration'
-    if ref_code:
+    if ref_code and len(ref_code) == 5:
         callback_data += f':{ref_code}'
 
     markup.row(types.InlineKeyboardButton(
