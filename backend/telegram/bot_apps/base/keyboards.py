@@ -1,9 +1,8 @@
-from typing import Optional
 from telebot import types
 
 from django.utils.translation import gettext as _
 
-from apps.telegram.utils import make_text
+from telegram.utils import make_text
 
 
 def get_back_button(callback_data: str) -> types.InlineKeyboardButton:

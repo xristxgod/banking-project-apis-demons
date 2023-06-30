@@ -21,6 +21,9 @@ class BaseBot:
 
         self.setup()
 
+    def infinity_polling(self):
+        self.bot.infinity_polling()
+
     def setup(self):
         self.setup_middleware()
         self.setup_custom_filter()

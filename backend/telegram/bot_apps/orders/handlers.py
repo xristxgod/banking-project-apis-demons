@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from telegram.utils import make_text
-from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
+from telegram.bot_apps.base.keyboards import get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
 from telegram.bot_apps.start.handlers import StartHandler
 
