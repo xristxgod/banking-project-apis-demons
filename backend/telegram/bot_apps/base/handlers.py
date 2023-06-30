@@ -4,10 +4,6 @@ import telebot
 
 from telegram.middlewares.request import TelegramRequest
 
-__all__ = (
-    'AbstractHandler',
-)
-
 
 class AbstractHandler(metaclass=abc.ABCMeta):
     use_auth = True

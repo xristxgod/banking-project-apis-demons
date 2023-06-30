@@ -26,7 +26,7 @@ def get_orders_keyboard(request: TelegramRequest) -> types.InlineKeyboardMarkup:
     else:
         keyboard.row(types.InlineKeyboardButton(
             text=make_text(_(':money_with_wings: Make Deposit')),
-            callback_data='make_deposit'
+            callback_data='premakedeposit'
         ))
 
     return keyboard
@@ -60,5 +60,26 @@ def get_deposit_keyboard(request: TelegramRequest) -> types.InlineKeyboardMarkup
                     callback_data=callbacks.repeat_deposit.new(pk=deposit.pk)
                 )
             )
+
+    return keyboard
+
+
+def get_deposit_question_keyboard() -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text=make_text(_('No')),
+            callback_data=callbacks.make_deposit_question.new(
+                answer=callbacks.MakeDepositQuestion.NO,
+            )
+        ),
+        types.InlineKeyboardButton(
+            text=make_text(_('Yes')),
+            callback_data=callbacks.make_deposit_question.new(
+                answer=callbacks.MakeDepositQuestion.YES,
+            )
+        )
+    )
 
     return keyboard

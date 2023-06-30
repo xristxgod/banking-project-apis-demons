@@ -73,3 +73,21 @@ def view_active_deposit(request: TelegramRequest) -> dict:
         text=text,
         reply_markup=keyboards.get_orders_keyboard(request),
     )
+
+
+def view_question_deposit(deposit_info: dict) -> dict:
+    return dict(
+        text=make_text(
+            raw_text=_(':round_pushpin: Deposit info:\n\n'
+                       ':money_with_wings: You give: {amount} {currency}\n'
+                       ':money_bag: You get: $ {usd_amount}\n\n'
+                       ':dollar_banknote: USD rate: $ {usd_rate_cost}\n'
+                       ':receipt: Commission: $ {usd_commission}'),
+            amount=deposit_info['amount'],
+            currency=deposit_info['currency'].verbose_telegram,
+            usd_amount=deposit_info['usd_amount'],
+            usd_rate_cost=deposit_info['usd_rate_cost'],
+            usd_commission=deposit_info['usd_commission'],
+        ),
+        reply_markup=keyboards.get_deposit_question_keyboard(),
+    )

@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from telebot import types
@@ -27,6 +28,9 @@ class TelegramRequest:
     @can_edit.setter
     def can_edit(self, value: bool):
         self._can_edit = value
+
+    def valid_text_params(self, pattern: str) -> bool:
+        return re.match(pattern, self.text_params) is not None
 
 
 class Middleware(BaseMiddleware):

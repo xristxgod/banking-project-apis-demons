@@ -2,7 +2,9 @@ from telebot import types
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from apps.orders.models import OrderStatus
+from apps.orders.models import Deposit
+from apps.cryptocurrencies.models import Currency
+from apps.orders.services import calculate_deposit_amount
 
 from telegram.utils import make_text
 from telegram.bot_apps.base.keyboards import get_back_button
@@ -12,6 +14,9 @@ from telegram.bot_apps.start.handlers import StartHandler
 from telegram.bot_apps.orders import utils
 from telegram.bot_apps.orders import keyboards
 from telegram.bot_apps.orders import callbacks
+
+
+temp_deposit_storage = {}
 
 
 class OrdersHandler(StartHandler):
@@ -57,7 +62,7 @@ class DepositHandler(StartHandler):
             markup = types.InlineKeyboardMarkup()
             markup.row(types.InlineKeyboardButton(
                 text=make_text(_('Create')),
-                callback_data='makedeposit'
+                callback_data='premakedeposit'
             ))
 
             return dict(
@@ -68,7 +73,9 @@ class DepositHandler(StartHandler):
         return self.view_active_deposit(request)
 
 
-class MakeDepositHandler(DepositHandler):
+class PreMakeDepositHandler(DepositHandler):
+    help = '/makedeposit <network>:<currency> <amount>`'
+
     def attach(self):
         self.bot.register_message_handler(
             callback=self,
@@ -76,7 +83,7 @@ class MakeDepositHandler(DepositHandler):
         )
         self.bot.register_callback_query_handler(
             callback=self,
-            func=lambda call: call.data == 'makedeposit',
+            func=lambda call: call.data == 'premakedeposit',
         )
         self.bot.register_callback_query_handler(
             callback=self,
@@ -84,11 +91,60 @@ class MakeDepositHandler(DepositHandler):
             cq_filter=callbacks.repeat_deposit.filter(),
         )
 
-    def call(self, request: TelegramRequest) -> dict:
-        # 1. Если у юзера есть активный депозит, то вернем его
-        # 2. Если в тексте есть параметры то смотрим на них и если валидны сохраняем их в хранилище и даем ему
-        #    две кнопки, да или нет
-        # 3. Если пришел по repeat_deposit то создаем без вопросов и возвращаем ему новое сообщение (не меняем старое)
+    @classmethod
+    def by_text_params(cls, request: TelegramRequest) -> dict:
+        if not request.valid_text_params(r'^[A-z]+:[A-z]+ \d*[.,]?\d+)?$'):
+            return dict(
+                text=make_text(_('Invalid params!'))
+            )
 
+        network_and_currency, amount = request.text_params.split()
+        network_name, currency_symbol = network_and_currency.split(':')
+
+        qs = Currency.objects.filter(
+            network__name__iexact=network_name,
+            symbol__iexact=currency_symbol,
+        )
+        if not qs.exists():
+            return dict(
+                text=make_text(_('Invalid currency!'))
+            )
+
+        currency = qs.first()
+        amount = currency.str_to_decimal(amount)
+        usd_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
+
+        temp_deposit_storage[request.user.chat_id] = {
+            'currency': currency,
+            'amount': amount,
+            **usd_info,
+        }
+
+        return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
+
+    @classmethod
+    def by_repeat_deposit(cls, request: TelegramRequest) -> dict:
+        decoded_cb_data = callbacks.repeat_deposit.parse(callback_data=request.data)
+        old_deposit = Deposit.objects.get(pk=decoded_cb_data['pk'])
+
+        currency = old_deposit.order.currency
+        amount = old_deposit.order.amount
+        usd_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
+
+        temp_deposit_storage[request.user.chat_id] = {
+            'currency': currency,
+            'amount': amount,
+            **usd_info,
+        }
+
+        return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
+
+    def call(self, request: TelegramRequest) -> dict:
         if request.user.has_active_deposit:
             return self.view_active_deposit(request)
+        elif request.text_params:
+            return self.by_text_params(request)
+        elif request.data.startswith('repeat_deposit'):
+            return self.by_repeat_deposit(request)
+        else:
+            pass
