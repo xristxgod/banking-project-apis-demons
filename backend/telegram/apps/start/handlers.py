@@ -3,7 +3,7 @@ from django.utils.translation import gettext as _
 
 from telegram.utils import make_text
 from telegram.apps.base.handlers import AbstractHandler
-from apps.telegram.bot_apps.base.keyboards import get_back_keyboard
+from telegram.apps.base.keyboards import get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
 
 from telegram.apps.start import keyboards
