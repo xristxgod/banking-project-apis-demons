@@ -16,6 +16,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
+        self.attach()
 
     def _get_params(self, request: TelegramRequest):
         if self.use_auth and request.user.is_anonymous:
@@ -47,6 +48,9 @@ class AbstractHandler(metaclass=abc.ABCMeta):
                 parse_mode=self.parse_mode,
                 **params,
             )
+
+    @abc.abstractmethod
+    def attach(self): ...
 
     @abc.abstractmethod
     def call_without_auth(self, request: TelegramRequest) -> dict: ...
