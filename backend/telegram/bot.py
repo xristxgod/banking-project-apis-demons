@@ -25,6 +25,11 @@ class BaseBot:
         self.setup_middleware()
         self.setup_custom_filter()
         self.setup_handlers()
+        self.setup_step_controller()
+
+    def setup_step_controller(self):
+        self.bot.enable_save_next_step_handlers(delay=2)
+        self.bot.load_next_step_handlers()
 
     def setup_middleware(self): ...
 
