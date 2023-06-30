@@ -23,6 +23,7 @@ class Order(models.Model):
 
     created = models.DateTimeField(_('Created'), auto_now_add=True)
     updated = models.DateTimeField(_('Updated'), auto_now=True)
+    confirmed = models.DateTimeField(_('Confirmed'), blank=True, null=True)
 
     class Meta:
         verbose_name = _('Order')
@@ -103,3 +104,13 @@ class Deposit(models.Model):
     def transaction_url(self) -> str:
         url = self.order.currency.network.block_explorer_url
         return f'{url}/{self.order.transaction.transaction_hash}'
+
+    @property
+    def status(self) -> OrderStatus:
+        # Proxy
+        return self.order.status
+
+    @property
+    def status_by_telegram(self) -> str:
+        # Proxy
+        return self.order.status_by_telegram

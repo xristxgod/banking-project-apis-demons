@@ -23,6 +23,14 @@ class AnonymousTelegramUser:
 
 
 class TelegramUser(AnonymousTelegramUser):
+    def __init__(self, obj: models.User):
+        from apps.orders.models import OrderStatus, Deposit
+        super().__init__(obj)
+        self.deposit = Deposit.objects.filter(
+            order__user=self.obj,
+            order__status=OrderStatus.CREATED,
+        ).first()
+
     @property
     def is_anonymous(self):
         return False
@@ -30,6 +38,10 @@ class TelegramUser(AnonymousTelegramUser):
     @property
     def balance(self):
         return get_balance(self.obj)
+
+    @property
+    def has_active_deposit(self) -> bool:
+        return self.deposit is not None
 
 
 class Middleware(BaseMiddleware):

@@ -1,8 +1,8 @@
 import emoji
 
 
-def make_text(text: str, *, language: str = 'alias', **params):
+def make_text(raw_text: str, *, language: str = 'alias', **params):
     return emoji.emojize(
-        text.format(**params),
+        raw_text.format(**params),
         language=language,
     )
