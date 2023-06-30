@@ -24,11 +24,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
 
-    'telegram',
-
     'apps.users',
     'apps.cryptocurrencies',
     'apps.orders',
+
+    'telegram',
 ]
 
 MIDDLEWARE = [
