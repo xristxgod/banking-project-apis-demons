@@ -35,7 +35,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
         return self._handler(request=data['request'])
 
     def notify(self, request: TelegramRequest, **params):
-        if request.cen_edit:
+        if request.can_edit:
             self.bot.edit_message_text(
                 chat_id=request.user.chat_id,
                 message_id=request.message_id,

@@ -13,7 +13,7 @@ class TelegramRequest:
         self.data: str = params['data']
         self.text: str = params['text']
         self.message_id: int = params['message_id']
-        self.cen_edit: bool = params['can_edit']
+        self.can_edit: bool = params['can_edit']
 
     @property
     def text_params(self) -> Optional[str]:
@@ -32,14 +32,14 @@ class Middleware(BaseMiddleware):
                 data=None,
                 text=call.text,
                 message_id=call.message_id,
-                cen_edit=False,
+                can_edit=False,
             )
         else:
             params = dict(
                 data=call.data,
                 text=call.message.text,
                 message_id=call.message.message_id,
-                cen_edit=True,
+                can_edit=True,
             )
 
         data['request'] = TelegramRequest(
