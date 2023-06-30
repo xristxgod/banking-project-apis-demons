@@ -84,7 +84,7 @@ class BalanceHandler(StartHandler):
         )
         self.bot.register_message_handler(
             callback=self,
-            func=lambda call: call.data.startswith(self.cb_data_startswith)
+            func=lambda call: call.data.startswith(self.cb_data_startswith),
         )
 
     def call(self, request: TelegramRequest) -> dict:
