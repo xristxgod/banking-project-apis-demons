@@ -12,6 +12,10 @@ class AnonymousTelegramUser:
     def is_anonymous(self):
         return True
 
+    @property
+    def chat_id(self) -> int:
+        return self.obj.id
+
 
 class TelegramUser(AnonymousTelegramUser):
     @property
