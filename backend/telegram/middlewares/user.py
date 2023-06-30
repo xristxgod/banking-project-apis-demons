@@ -3,6 +3,7 @@ from telebot.handler_backends import BaseMiddleware
 
 from apps.users import models
 from apps.users.services import get_balance
+from apps.orders.models import OrderStatus, Deposit
 
 
 class AnonymousTelegramUser:
@@ -24,9 +25,8 @@ class AnonymousTelegramUser:
 
 class TelegramUser(AnonymousTelegramUser):
     def __init__(self, obj: models.User):
-        from apps.orders.models import OrderStatus, Deposit
         super().__init__(obj)
-        self.deposit = Deposit.objects.filter(
+        self._deposit = Deposit.objects.filter(
             order__user=self.obj,
             order__status=OrderStatus.CREATED,
         ).first()
@@ -40,8 +40,16 @@ class TelegramUser(AnonymousTelegramUser):
         return get_balance(self.obj)
 
     @property
+    def deposit(self) -> Deposit:
+        return self._deposit
+
+    @deposit.setter
+    def deposit(self, new_deposit: Deposit):
+        self._deposit = new_deposit
+
+    @property
     def has_active_deposit(self) -> bool:
-        return self.deposit is not None
+        return self._deposit is not None
 
 
 class Middleware(BaseMiddleware):

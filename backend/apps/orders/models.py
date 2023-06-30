@@ -96,9 +96,13 @@ class Deposit(models.Model):
         return False
 
     @property
+    def consumer(self) -> User:
+        return self.order.user
+
+    @property
     def payment_url(self) -> str:
         # TODO add payment deposit
-        return f'http://fake/{self.order.pk}'
+        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
 
     @property
     def transaction_url(self) -> str:

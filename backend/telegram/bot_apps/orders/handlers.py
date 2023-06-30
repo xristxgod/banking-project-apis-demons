@@ -4,10 +4,10 @@ from django.utils.translation import gettext as _
 
 from apps.orders.models import Deposit
 from apps.cryptocurrencies.models import Currency
-from apps.orders.services import calculate_deposit_amount
+from apps.orders.services import calculate_deposit_amount, create_deposit
 
 from telegram.utils import make_text
-from telegram.bot_apps.base.keyboards import get_back_button
+from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
 from telegram.bot_apps.start.handlers import StartHandler
 
@@ -147,3 +147,35 @@ class PreMakeDepositHandler(DepositHandler):
             return self.by_repeat_deposit(request)
         else:
             pass
+
+
+class MakeDepositHandler(DepositHandler):
+    def attach(self):
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=None,
+            cq_filter=callbacks.make_deposit_question.filter(),
+        )
+
+    def call(self, request: TelegramRequest) -> dict:
+        if not temp_deposit_storage.get(request.user.chat_id):
+            return dict(
+                text=make_text(_('Oops...')),
+            )
+
+        decoded_cb_data = callbacks.make_deposit_question.parse(callback_data=request.data)
+
+        match decoded_cb_data['answer']:
+            case callbacks.MakeDepositQuestion.NO:
+                del temp_deposit_storage[request.user.chat_id]
+
+                return dict(
+                    text=make_text(_('Ok, I have removed your application')),
+                    reply_markup=get_back_keyboard('orders'),
+                )
+            case callbacks.MakeDepositQuestion.YES:
+                request.user.deposit = create_deposit(
+                    request.user.obj,
+                    deposit_info=temp_deposit_storage.pop(request.user.chat_id)
+                )
+                return self.view_active_deposit(request)

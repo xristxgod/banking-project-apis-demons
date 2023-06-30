@@ -4,4 +4,5 @@ HANDLERS = (
     handlers.OrdersHandler,
     handlers.DepositHandler,
     handlers.PreMakeDepositHandler,
+    handlers.MakeDepositHandler,
 )

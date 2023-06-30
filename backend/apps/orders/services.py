@@ -25,3 +25,18 @@ def calculate_deposit_amount(user: User, amount: decimal.Decimal, currency: Curr
         usd_amount=usd_amount,
         usd_commission=usd_commission,
     )
+
+
+@transaction.atomic()
+def create_deposit(user: User, deposit_info: dict) -> Deposit:
+    order = Order.objects.create(
+        user=user,
+        amount=deposit_info['amount'],
+        currency=deposit_info['currency'],
+    )
+    return Deposit.objects.create(
+        order=order,
+        amount=deposit_info['usd_amount'],
+        usd_exchange_rate=deposit_info['usd_rate_cost'],
+        commission=deposit_info['usd_commission'],
+    )

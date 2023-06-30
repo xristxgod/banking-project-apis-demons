@@ -24,6 +24,7 @@ def view_active_deposit(request: TelegramRequest) -> dict:
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
+                usd_amount=deposit.amount,
                 usd_exchange_rate=deposit.usd_exchange_rate,
                 usd_commission=deposit.commission,
                 created=deposit.order.created,
@@ -71,7 +72,7 @@ def view_active_deposit(request: TelegramRequest) -> dict:
 
     return dict(
         text=text,
-        reply_markup=keyboards.get_orders_keyboard(request),
+        reply_markup=keyboards.get_deposit_keyboard(request),
     )
 
 
