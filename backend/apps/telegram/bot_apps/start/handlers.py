@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from apps.telegram.utils import make_text
-from apps.telegram.middlewares.user import BaseUserData
+from telegram.middlewares import BaseUserData
 from apps.telegram.bot_apps.start import utils
 from apps.telegram.bot_apps.start import keyboards
 from apps.telegram.bot_apps.start import callbacks

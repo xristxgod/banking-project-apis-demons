@@ -1,5 +1,4 @@
 import decimal
-import datetime
 from typing import Optional
 
 from telebot import types
@@ -13,7 +12,7 @@ from apps.telegram.bot_apps.base.handlers import AbstractStepsMixin
 from apps.telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from apps.telegram.bot_apps.start.handlers import StartHandler
 from apps.telegram.utils import make_text
-from apps.telegram.middlewares.user import BaseUserData
+from telegram.middlewares import BaseUserData
 from apps.telegram.bot_apps.orders import keyboards
 from apps.telegram.bot_apps.orders import callbacks
 

@@ -24,10 +24,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
 
+    'telegram',
+
     'apps.users',
     'apps.cryptocurrencies',
     'apps.orders',
-    'apps.telegram',
 ]
 
 MIDDLEWARE = [
@@ -97,7 +98,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
-TELEGRAM_BOT_TOKEN = ''
+MAIN_TELEGRAM_BOT_TOKEN = ''
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

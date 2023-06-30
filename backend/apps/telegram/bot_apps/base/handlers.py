@@ -1,12 +1,10 @@
-import re
 import abc
 from typing import Optional
 
 import telebot
-from telebot import types
 from telebot.types import Message, CallbackQuery
 
-from apps.telegram.middlewares.user import BaseUserData
+from telegram.middlewares import BaseUserData
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):

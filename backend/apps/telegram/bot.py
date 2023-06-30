@@ -4,8 +4,7 @@ import telebot
 
 from django.conf import settings
 
-from apps.telegram import middlewares
-from apps.telegram import filters
+from telegram import middlewares, filters
 from apps.telegram.bot_apps import APPS_HANDLERS
 
 logger = telebot.logger
