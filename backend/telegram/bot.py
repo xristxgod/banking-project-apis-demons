@@ -42,6 +42,7 @@ class MainBot(BaseBot):
     def setup_middleware(self):
         from telegram import middlewares
         self.bot.setup_middleware(middlewares.UserMiddleware())
+        self.bot.setup_middleware(middlewares.RequestMiddleware())
 
     def setup_custom_filter(self):
         from telegram import filters
