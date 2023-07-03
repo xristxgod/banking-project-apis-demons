@@ -168,7 +168,7 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
             return dict(
                 text=_('Write amount'),
             )
-        else:
+        elif not deposit_info.get('amount'):
             amount = decimal.Decimal(request.text)
             usd_info = calculate_deposit_amount(
                 request.user.obj,
