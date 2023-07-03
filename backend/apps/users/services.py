@@ -15,10 +15,10 @@ def get_balance(user: User) -> decimal.Decimal:
         order__user=user,
         order__status=OrderStatus.DONE,
     ).aggregate(
-        Sum('amount')
+        Sum('usdt_amount')
     )
 
-    balance += deposits_amount['amount__sum'] or 0
+    balance += deposits_amount['usdt_amount__sum'] or 0
 
     with decimal.localcontext() as ctx:
         ctx.prec = 2

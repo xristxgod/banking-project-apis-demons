@@ -38,9 +38,9 @@ class DepositFactory(DjangoModelFactory):
         model = models.Deposit
 
     order = factory.SubFactory(OrderFactory, deposit=None)
-    amount = factory.fuzzy.FuzzyDecimal(low=10, high=10**3, precision=2)
-    usd_exchange_rate = factory.fuzzy.FuzzyDecimal(low=40, high=99, precision=2)
-    commission = factory.fuzzy.FuzzyDecimal(low=1, high=15, precision=2)
+    usdt_amount = factory.fuzzy.FuzzyDecimal(low=10, high=10**3, precision=2)
+    usdt_exchange_rate = factory.fuzzy.FuzzyDecimal(low=40, high=99, precision=2)
+    usdt_commission = factory.fuzzy.FuzzyDecimal(low=1, high=15, precision=2)
 
     class Params:
         is_created = factory.Trait(

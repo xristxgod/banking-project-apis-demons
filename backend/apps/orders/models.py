@@ -76,16 +76,15 @@ class Transaction(models.Model):
         return self.transaction_hash
 
 
-class Deposit(models.Model):
+class AbstractPayment(models.Model):
     order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='deposit',
                                  on_delete=models.PROTECT)
-    amount = models.DecimalField(_('USD amount'), max_digits=25, decimal_places=2)
-    usd_exchange_rate = models.DecimalField(_('USD rate'), max_digits=25, decimal_places=2)
-    commission = models.DecimalField(_('USD commission'), max_digits=25, decimal_places=2)
+    usdt_amount = models.DecimalField(_('USDT amount'), default=0, max_digits=25, decimal_places=2)
+    usdt_exchange_rate = models.DecimalField(_('USDT rate'), default=0, max_digits=25, decimal_places=2)
+    usdt_commission = models.DecimalField(_('USDT commission'), default=0, max_digits=25, decimal_places=2)
 
     class Meta:
-        verbose_name = _('Order')
-        verbose_name_plural = _('Orders')
+        abstract = True
 
     @transaction.atomic()
     def make_cancel(self):
@@ -99,30 +98,17 @@ class Deposit(models.Model):
         return self.order.user
 
     @property
-    def payment_url(self) -> str:
-        # TODO add payment deposit
-        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
-
-    @property
-    def transaction_url(self) -> str:
-        url = self.order.currency.network.block_explorer_url
-        return f'{url}/{self.order.transaction.transaction_hash}'
-
-    @property
     def status(self) -> OrderStatus:
         # Proxy
         return self.order.status
+
+    def get_status_display(self) -> str:
+        return self.order.get_status_display()
 
     @property
     def status_by_telegram(self) -> str:
         # Proxy
         return self.order.status_by_telegram
-   
-    def costumer(self) -> User:
-        return self.order.user
-
-    def get_status_display(self) -> str:
-        return self.order.get_status_display()
 
     @property
     def create(self):
@@ -135,3 +121,20 @@ class Deposit(models.Model):
     @property
     def confirmed(self):
         return self.order.confirmed
+
+    @property
+    def transaction_url(self) -> str:
+        url = self.order.currency.network.block_explorer_url
+        return f'{url}/{self.order.transaction.transaction_hash}'
+
+
+class Deposit(AbstractPayment):
+
+    class Meta:
+        verbose_name = _('Deposit')
+        verbose_name_plural = _('Deposits')
+
+    @property
+    def payment_url(self) -> str:
+        # TODO add payment deposit
+        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'

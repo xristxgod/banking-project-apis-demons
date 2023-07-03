@@ -36,7 +36,7 @@ class DepositSerializer(serializers.Serializer):
 
     create = serializers.DateTimeField()
     update = serializers.DateTimeField()
-    confirmed = serializers.DecimalField(default=None, required=False)
+    confirmed = serializers.DateTimeField(default=None, required=False)
 
     @classmethod
     def _get_detail(cls, instance: Deposit):

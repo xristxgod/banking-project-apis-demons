@@ -14,9 +14,9 @@ def view_active_deposit(request: TelegramRequest) -> dict:
     match deposit.status:
         case OrderStatus.CREATED | OrderStatus.SENT:
             raw_text = _('Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n'
+                         ':money_with_wings: {amount} {currency} => $ {usdt_amount}\n\n'
+                         ':dollar_banknote: USDT rate: $ {usdt_exchange_rate}\n'
+                         ':receipt: USDT Commission: $ {usdt_commission}\n'
                          'Created: {created}\n\n'
                          '{status}')
             text = make_text(
@@ -24,34 +24,34 @@ def view_active_deposit(request: TelegramRequest) -> dict:
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
+                usdt_amount=deposit.usdt_amount,
+                usdt_exchange_rate=deposit.usdt_exchange_rate,
+                usdt_commission=deposit.usdt_commission,
                 created=deposit.order.created,
                 status=deposit.status_by_telegram,
             )
         case OrderStatus.CANCEL:
             raw_text = _(':cross_mark: CANCEL Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n\n'
+                         ':money_with_wings: {amount} {currency} => $ {usdt_amount}\n\n'
+                         ':dollar_banknote: USDT rate: $ {usdt_exchange_rate}\n'
+                         ':receipt: USDT Commission: $ {usdt_commission}\n\n'
                          'Created: {created}')
             text = make_text(
                 raw_text=raw_text,
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
+                usdt_amount=deposit.usdt_amount,
+                usdt_exchange_rate=deposit.usdt_exchange_rate,
+                usdt_commission=deposit.usdt_commission,
                 created=deposit.order.created,
             )
         case OrderStatus.DONE:
             transaction = deposit.order.transaction
             raw_text = _(':check_mark_button: DONE Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n\n'
+                         ':money_with_wings: {amount} {currency} => $ {usdt_amount}\n\n'
+                         ':dollar_banknote: USDT rate: $ {usdt_exchange_rate}\n'
+                         ':receipt: USDT Commission: $ {usdt_commission}\n\n'
                          'Hash: {transaction_hash}\n'
                          ':receipt: Fee: {fee} {currency}\n'
                          'Sender: {sender}\n\n'
@@ -61,9 +61,9 @@ def view_active_deposit(request: TelegramRequest) -> dict:
                 pk=deposit.pk,
                 amount=deposit.order.amount,
                 currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
+                usdt_amount=deposit.usdt_amount,
+                usdt_exchange_rate=deposit.usdt_exchange_rate,
+                usdt_commission=deposit.usdt_commission,
                 transaction_hash=transaction.transaction_hash,
                 fee=transaction.fee,
                 sender=transaction.sender_address,
@@ -83,14 +83,14 @@ def view_question_deposit(deposit_info: dict) -> dict:
         text=make_text(
             raw_text=_(':round_pushpin: Deposit info:\n\n'
                        ':money_with_wings: You give: {amount} {currency}\n'
-                       ':money_bag: You get: $ {usd_amount}\n\n'
-                       ':dollar_banknote: USD rate: $ {usd_rate_cost}\n'
-                       ':receipt: Commission: $ {usd_commission}'),
+                       ':money_bag: You get: $ {usdt_amount}\n\n'
+                       ':dollar_banknote: USDT rate: $ {usdt_rate_cost}\n'
+                       ':receipt: USDT Commission: $ {usdt_commission}'),
             amount=deposit_info['amount'],
             currency=deposit_info['currency'].verbose_telegram,
-            usd_amount=deposit_info['usd_amount'],
-            usd_rate_cost=deposit_info['usd_rate_cost'],
-            usd_commission=deposit_info['usd_commission'],
+            usdt_amount=deposit_info['usdt_amount'],
+            usdt_rate_cost=deposit_info['usdt_rate_cost'],
+            usdt_commission=deposit_info['usdt_commission'],
         ),
         reply_markup=keyboards.get_deposit_question_keyboard(),
     )

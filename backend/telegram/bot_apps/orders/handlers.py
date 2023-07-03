@@ -136,12 +136,12 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
 
         currency = qs.first()
         amount = currency.str_to_decimal(amount)
-        usd_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
+        usdt_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
 
         temp_deposit_storage[request.user.chat_id] = {
             'currency': currency,
             'amount': amount,
-            **usd_info,
+            **usdt_info,
         }
 
         return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
@@ -154,12 +154,12 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
 
         currency = old_deposit.order.currency
         amount = old_deposit.order.amount
-        usd_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
+        usdt_info = calculate_deposit_amount(request.user.obj, amount=amount, currency=currency)
 
         temp_deposit_storage[request.user.chat_id] = {
             'currency': currency,
             'amount': amount,
-            **usd_info,
+            **usdt_info,
         }
 
         return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
@@ -172,9 +172,9 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
             temp_deposit_storage[request.user.chat_id] = {
                 'currency': None,
                 'amount': None,
-                'usd_rate_cost': None,
-                'usd_amount': None,
-                'usd_commission': None,
+                'usdt_rate_cost': None,
+                'usdt_amount': None,
+                'usdt_commission': None,
             }
             markup = keyboards.get_currencies_keyboard()
             markup.add(get_back_button('orders'))

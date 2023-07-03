@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class TelegramMessageIDStorage(models.Model):
-    ids: list = models.JSONField(_('Message ids'), default=[])
+    ids = models.JSONField(_('Message ids'), default=dict)
     content_type = models.ForeignKey(ContentType, on_delete=models.DO_NOTHING)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -16,5 +16,9 @@ class TelegramMessageIDStorage(models.Model):
 
     @transaction.atomic()
     def add(self, message_id: int):
-        self.ids.append(message_id)
+        self.ids['ids'].append(message_id)
         self.save()
+
+    @property
+    def get(self) -> list:
+        return self.ids['ids']
