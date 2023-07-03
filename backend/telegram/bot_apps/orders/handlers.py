@@ -1,3 +1,5 @@
+import decimal
+
 from telebot import types
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -7,6 +9,7 @@ from apps.cryptocurrencies.models import Currency
 from apps.orders.services import calculate_deposit_amount, create_deposit, cancel_deposit
 
 from telegram.utils import make_text
+from telegram.bot_apps.base.handlers import StepMixin
 from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
 from telegram.bot_apps.start.handlers import StartHandler
@@ -73,7 +76,7 @@ class DepositHandler(StartHandler):
         return self.view_active_deposit(request)
 
 
-class PreMakeDepositHandler(DepositHandler):
+class PreMakeDepositHandler(StepMixin, DepositHandler):
     help = '/makedeposit <network>:<currency> <amount>`'
 
     def attach(self):
@@ -83,7 +86,7 @@ class PreMakeDepositHandler(DepositHandler):
         )
         self.bot.register_callback_query_handler(
             callback=self,
-            func=lambda call: call.data == 'premakedeposit',
+            func=lambda call: call.data.startswith('premakedeposit'),
         )
         self.bot.register_callback_query_handler(
             callback=self,
@@ -93,6 +96,7 @@ class PreMakeDepositHandler(DepositHandler):
 
     @classmethod
     def by_text_params(cls, request: TelegramRequest) -> dict:
+        """It will work when: you write a text description of the deposit in the chat"""
         if not request.valid_text_params(r'^[A-z]+:[A-z]+ \d*[.,]?\d+$'):
             return dict(
                 text=make_text(_('Invalid params!'))
@@ -123,6 +127,7 @@ class PreMakeDepositHandler(DepositHandler):
 
     @classmethod
     def by_repeat_deposit(cls, request: TelegramRequest) -> dict:
+        """It will work when: you try to repeat the deposit by clicking the repeat button"""
         decoded_cb_data = callbacks.repeat_deposit.parse(callback_data=request.data)
         old_deposit = Deposit.objects.get(pk=decoded_cb_data['pk'])
 
@@ -138,6 +143,46 @@ class PreMakeDepositHandler(DepositHandler):
 
         return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
 
+    def by_step(self, request: TelegramRequest) -> dict:
+        """It will work when: you run a task sequence"""
+        deposit_info = temp_deposit_storage.get(request.user.chat_id)
+        if not deposit_info:
+            markup = keyboards.get_currencies_keyboard()
+            markup.add(get_back_button('orders'))
+            return dict(
+                text=make_text(_(':yellow_circle: Choose a currency:')),
+                reply_markup=markup,
+            )
+
+        # if deposit_info.keys():
+        #     return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
+
+        if not deposit_info.get('currency') and request.data.startswith('premakedeposit:currency'):
+            currency_id = int(request.data.replace('premakedeposit:currency-', ''))
+            temp_deposit_storage[request.user.chat_id] = {
+                'currency': Currency.objects.get(pk=currency_id),
+            }
+
+            request.trigger_step = True
+
+            return dict(
+                text=_('Write amount'),
+            )
+        else:
+            amount = decimal.Decimal(request.text)
+            usd_info = calculate_deposit_amount(
+                request.user.obj,
+                amount=temp_deposit_storage['amount'],
+                currency=temp_deposit_storage['currency'],
+            )
+            temp_deposit_storage[request.user.chat_id].update({
+                'amount': amount,
+                **usd_info,
+            })
+            request.trigger_step = False
+
+        return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
+
     def call(self, request: TelegramRequest) -> dict:
         if request.user.has_active_deposit:
             return self.view_active_deposit(request)
@@ -146,7 +191,7 @@ class PreMakeDepositHandler(DepositHandler):
         elif request.data.startswith('repeat_deposit'):
             return self.by_repeat_deposit(request)
         else:
-            pass
+            return self.by_step(request)
 
 
 class MakeDepositHandler(DepositHandler):

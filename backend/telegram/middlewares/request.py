@@ -15,6 +15,9 @@ class TelegramRequest:
         self.text: str = params['text']
         self.message_id: int = params['message_id']
         self._can_edit: bool = params['can_edit']
+        self.message_obj = params['message_obj']
+
+        self.trigger_step = False
 
     @property
     def text_params(self) -> Optional[str]:
@@ -45,6 +48,7 @@ class Middleware(BaseMiddleware):
                 text=call.text,
                 message_id=call.message_id,
                 can_edit=False,
+                message_obj=call,
             )
         else:
             params = dict(
@@ -52,6 +56,7 @@ class Middleware(BaseMiddleware):
                 text=call.message.text,
                 message_id=call.message.message_id,
                 can_edit=True,
+                message_obj=call.message,
             )
 
         data['request'] = TelegramRequest(

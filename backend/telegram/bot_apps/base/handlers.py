@@ -53,3 +53,21 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def call(self, request: TelegramRequest) -> dict: ...
+
+
+class StepMixin:
+
+    @abc.abstractmethod
+    def by_step(self, request: TelegramRequest): ...
+
+    def notify(self, request: TelegramRequest, **params):
+        super().notify(request, **params)
+        if request.trigger_step:
+            self.bot.register_next_step_handler(
+                message=request.message_obj,
+                data=dict(
+                    user=request.user,
+                )
+            )
+        else:
+            self.bot.clear_step_handler_by_chat_id(request.user.chat_id)
