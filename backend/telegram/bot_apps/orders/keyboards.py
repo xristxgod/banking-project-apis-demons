@@ -3,6 +3,7 @@ from telebot import types
 from django.utils.translation import gettext as _
 
 from apps.orders.models import OrderStatus
+from apps.cryptocurrencies.models import Currency
 
 from telegram.utils import make_text
 from telegram.middlewares.request import TelegramRequest
@@ -81,5 +82,20 @@ def get_deposit_question_keyboard() -> types.InlineKeyboardMarkup:
             )
         )
     )
+
+    return keyboard
+
+
+def get_currencies_keyboard() -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    buttons = []
+    for currency in Currency.objects.all():
+        buttons.append(types.InlineKeyboardButton(
+            text=make_text(currency.verbose_telegram),
+            callback_data=f'premakedeposit:currency-{currency.pk}'
+        ))
+
+    keyboard.row(*buttons)
 
     return keyboard

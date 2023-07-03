@@ -15,11 +15,20 @@ class TelegramRequest:
         self.text: str = params['text']
         self.message_id: int = params['message_id']
         self._can_edit: bool = params['can_edit']
+        self.message_obj = params['message_obj']
+
+        self.trigger_step = False
+        self._text_params = None
 
     @property
     def text_params(self) -> Optional[str]:
-        if len(self.text.split()) > 1:
-            return ' '.join(self.text.split()[1:])
+        if not self._text_params and len(self.text.split()) > 1:
+            self._text_params = ' '.join(self.text.split()[1:])
+        return self._text_params
+
+    @property
+    def has_text_params(self) -> str:
+        return self._text_params is not None
 
     @property
     def can_edit(self) -> bool:
@@ -45,6 +54,7 @@ class Middleware(BaseMiddleware):
                 text=call.text,
                 message_id=call.message_id,
                 can_edit=False,
+                message_obj=call,
             )
         else:
             params = dict(
@@ -52,6 +62,7 @@ class Middleware(BaseMiddleware):
                 text=call.message.text,
                 message_id=call.message.message_id,
                 can_edit=True,
+                message_obj=call.message,
             )
 
         data['request'] = TelegramRequest(

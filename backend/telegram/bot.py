@@ -7,8 +7,8 @@ from django.conf import settings
 
 class BaseBot:
 
-    def __init__(self, token: str):
-        self.bot = telebot.TeleBot(token=token, use_class_middlewares=True)
+    def __init__(self, token: str, **kwargs):
+        self.bot = telebot.TeleBot(token=token, use_class_middlewares=True, **kwargs)
         self.setup()
 
     def infinity_polling(self):
