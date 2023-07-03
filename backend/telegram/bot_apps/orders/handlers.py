@@ -10,6 +10,7 @@ from apps.cryptocurrencies.models import Currency
 from apps.orders.services import calculate_deposit_amount, create_deposit, cancel_deposit
 
 from telegram.utils import make_text
+from telegram.models import TelegramMessageIDStorage
 from telegram.bot_apps.base.handlers import StepMixin
 from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
@@ -54,15 +55,20 @@ class DepositHandler(StartHandler):
 
         self.bot.register_callback_query_handler(
             callback=self,
-            func=lambda call: call.data == 'deposit',
+            func=lambda call: call.data.startswith('deposit'),
         )
 
+    @transaction.atomic()
     def view_active_deposit(self, request: TelegramRequest):
-        # TODO add save message_id for further modification
+        if not request.user.deposit.order.is_done:
+            obj = TelegramMessageIDStorage.objects.get_or_create(content_object=request.user.deposit)
+            obj.add(request.message_id + 1)
         return utils.view_active_deposit(request)
 
     def call(self, request: TelegramRequest) -> dict:
-        if not request.user.has_active_deposit:
+        if request.data == 'deposit:last' or request.user.has_active_deposit:
+            return self.view_active_deposit(request)
+        elif not request.user.has_active_deposit and not request.user.deposit:
             markup = types.InlineKeyboardMarkup()
             markup.row(types.InlineKeyboardButton(
                 text=make_text(_('Create')),
@@ -73,8 +79,22 @@ class DepositHandler(StartHandler):
                 text=make_text(_('You have a gntu of an active deposit')),
                 reply_markup=markup,
             )
-
-        return self.view_active_deposit(request)
+        elif not request.user.has_active_deposit and request.user.deposit:
+            markup = types.InlineKeyboardMarkup()
+            markup.row(
+                types.InlineKeyboardButton(
+                    text=make_text(_('Create')),
+                    callback_data='premakedeposit',
+                ),
+                types.InlineKeyboardButton(
+                    text=make_text(_('View last')),
+                    callback_data='deposit:last'
+                )
+            )
+            return dict(
+                text=make_text(_('You have a gntu of an active deposit')),
+                reply_markup=markup,
+            )
 
 
 class PreMakeDepositHandler(StepMixin, DepositHandler):

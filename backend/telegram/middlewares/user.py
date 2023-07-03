@@ -26,10 +26,9 @@ class AnonymousTelegramUser:
 class TelegramUser(AnonymousTelegramUser):
     def __init__(self, obj: models.User):
         super().__init__(obj)
-        self._deposit = Deposit.objects.filter(
-            order__user=self.obj,
-            order__status=OrderStatus.CREATED,
-        ).first()
+        qs = Deposit.objects.filter(order__user=self.obj)
+        self.last_deposit = qs.last()
+        self.active_deposit = qs.filter(order__status=OrderStatus.CREATED).first()
 
     @property
     def is_anonymous(self):
@@ -41,15 +40,15 @@ class TelegramUser(AnonymousTelegramUser):
 
     @property
     def deposit(self) -> Deposit:
-        return self._deposit
+        return self.active_deposit or self.last_deposit
 
     @deposit.setter
     def deposit(self, new_deposit: Deposit):
-        self._deposit = new_deposit
+        self.active_deposit = new_deposit
 
     @property
     def has_active_deposit(self) -> bool:
-        return self._deposit is not None
+        return self.active_deposit is not None
 
 
 class Middleware(BaseMiddleware):

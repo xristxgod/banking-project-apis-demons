@@ -40,7 +40,7 @@ class Order(models.Model):
 
     @property
     def is_done(self) -> bool:
-        return self.status == OrderStatus.DONE
+        return self.status in [OrderStatus.DONE, OrderStatus.ERROR]
 
     @property
     def status_by_telegram(self) -> str:
