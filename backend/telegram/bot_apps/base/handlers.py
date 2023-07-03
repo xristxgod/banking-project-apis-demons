@@ -1,6 +1,7 @@
 import abc
 
 import telebot
+from telebot import types
 
 from telegram.middlewares.request import TelegramRequest
 
@@ -57,6 +58,18 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
 class StepMixin:
 
+    def _step_call(self, message: types.Message, data: dict):
+        old_request: TelegramRequest = data['request']
+        data['request'] = TelegramRequest(
+            user=old_request.user,
+            data=data.get('data') or old_request.data,
+            text=message.text,
+            message_id=message.message_id,
+            can_edit=False,
+            message_obj=message,
+        )
+        return self.__call__(message, data)
+
     @abc.abstractmethod
     def by_step(self, request: TelegramRequest): ...
 
@@ -64,9 +77,10 @@ class StepMixin:
         super().notify(request, **params)
         if request.trigger_step:
             self.bot.register_next_step_handler(
+                callback=self._step_call,
                 message=request.message_obj,
                 data=dict(
-                    user=request.user,
+                    request=request,
                 )
             )
         else:

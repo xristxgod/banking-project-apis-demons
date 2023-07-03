@@ -1,3 +1,4 @@
+import re
 import decimal
 
 from telebot import types
@@ -145,8 +146,16 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
 
     def by_step(self, request: TelegramRequest) -> dict:
         """It will work when: you run a task sequence"""
+
         deposit_info = temp_deposit_storage.get(request.user.chat_id)
         if not deposit_info:
+            temp_deposit_storage[request.user.chat_id] = {
+                'currency': None,
+                'amount': None,
+                'usd_rate_cost': None,
+                'usd_amount': None,
+                'usd_commission': None,
+            }
             markup = keyboards.get_currencies_keyboard()
             markup.add(get_back_button('orders'))
             return dict(
@@ -154,32 +163,34 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
                 reply_markup=markup,
             )
 
-        # if deposit_info.keys():
-        #     return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
-
         if not deposit_info.get('currency') and request.data.startswith('premakedeposit:currency'):
             currency_id = int(request.data.replace('premakedeposit:currency-', ''))
             temp_deposit_storage[request.user.chat_id] = {
                 'currency': Currency.objects.get(pk=currency_id),
             }
-
             request.trigger_step = True
 
             return dict(
-                text=_('Write amount'),
+                text=make_text(_('Write amount')),
             )
         elif not deposit_info.get('amount'):
-            amount = decimal.Decimal(request.text)
+            if re.match(r'^\d*[.,]?\d+$', request.text) is None:
+                request.trigger_step = True
+                return dict(
+                    text=make_text(_('Write amount')),
+                )
+
+            temp_deposit_storage[request.user.chat_id]['amount'] = decimal.Decimal(request.text)
+
+            deposit_info = temp_deposit_storage[request.user.chat_id]
             usd_info = calculate_deposit_amount(
                 request.user.obj,
-                amount=temp_deposit_storage['amount'],
-                currency=temp_deposit_storage['currency'],
+                amount=deposit_info['amount'],
+                currency=deposit_info['currency'],
             )
             temp_deposit_storage[request.user.chat_id].update({
-                'amount': amount,
                 **usd_info,
             })
-            request.trigger_step = False
 
         return utils.view_question_deposit(temp_deposit_storage[request.user.chat_id])
 
