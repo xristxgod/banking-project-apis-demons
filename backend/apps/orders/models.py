@@ -79,9 +79,9 @@ class Transaction(models.Model):
 class Deposit(models.Model):
     order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='deposit',
                                  on_delete=models.PROTECT)
-    amount = models.DecimalField(_('Amount'), max_digits=25, decimal_places=2)
+    amount = models.DecimalField(_('USD amount'), max_digits=25, decimal_places=2)
     usd_exchange_rate = models.DecimalField(_('USD rate'), max_digits=25, decimal_places=2)
-    commission = models.DecimalField(_('Commission'), max_digits=25, decimal_places=2)
+    commission = models.DecimalField(_('USD commission'), max_digits=25, decimal_places=2)
 
     class Meta:
         verbose_name = _('Order')
@@ -117,3 +117,21 @@ class Deposit(models.Model):
     def status_by_telegram(self) -> str:
         # Proxy
         return self.order.status_by_telegram
+   
+    def costumer(self) -> User:
+        return self.order.user
+
+    def get_status_display(self) -> str:
+        return self.order.get_status_display()
+
+    @property
+    def create(self):
+        return self.order.created
+
+    @property
+    def update(self):
+        return self.order.updated
+
+    @property
+    def confirmed(self):
+        return self.order.confirmed
