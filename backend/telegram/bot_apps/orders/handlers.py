@@ -186,7 +186,7 @@ class PreMakeDepositHandler(StepMixin, DepositHandler):
     def call(self, request: TelegramRequest) -> dict:
         if request.user.has_active_deposit:
             return self.view_active_deposit(request)
-        elif request.text_params:
+        elif request.has_text_params:
             return self.by_text_params(request)
         elif request.data.startswith('repeat_deposit'):
             return self.by_repeat_deposit(request)
