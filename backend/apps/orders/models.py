@@ -127,6 +127,11 @@ class AbstractPayment(models.Model):
         url = self.order.currency.network.block_explorer_url
         return f'{url}/{self.order.transaction.transaction_hash}'
 
+    @property
+    def payment_url(self) -> str:
+        # TODO add payment deposit
+        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
+
 
 class Deposit(AbstractPayment):
 
@@ -134,7 +139,10 @@ class Deposit(AbstractPayment):
         verbose_name = _('Deposit')
         verbose_name_plural = _('Deposits')
 
-    @property
-    def payment_url(self) -> str:
-        # TODO add payment deposit
-        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
+
+class Withdraw(AbstractPayment):
+    to_address = models.CharField(_('To address'), max_length=255)
+
+    class Meta:
+        verbose_name = _('Withdraw')
+        verbose_name_plural = _('Withdraws')
