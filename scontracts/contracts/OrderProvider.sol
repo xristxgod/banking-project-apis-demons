@@ -41,10 +41,9 @@ contract OrderProvider {
         IERC20 stableCoin = IERC20(_stableCoinAddress);
 
         uint _value = stableCoin.balanceOf(address(this));
-        uint _balance = stableCoin.balanceOf(centralWalletAddress);
 
-        stableCoin.transfer(address(centralWallet), _value);
-        centralWallet.depositStableCoin(address(this), _stableCoinAddress, _value, _balance + _value);
+        bytes memory txId = stableCoin.transfer(address(centralWallet), _value);
+        centralWallet.depositStableCoin(address(this), _stableCoinAddress, _value, txId);
     }
     
     // Functionals
@@ -61,14 +60,13 @@ contract OrderProvider {
         IERC20 stableCoin = IERC20(_stableCoinAddress);
 
         require(stableCoin.balanceOf(msg.sender) >= _value, 'not enough balance');
-        require(stableCoin.allownace(msg.sender, centralWalletAddress), 'not approved');
+        require(stableCoin.allowance(msg.sender, centralWalletAddress), 'not approved');
 
-        stableCoin.transferFrom(msg.sender, centralWalletAddress, _value);
+        bytes memory txId = stableCoin.transferFrom(msg.sender, centralWalletAddress, _value);
 
         emit AcceptStableCoin(orderId, _value, _stableCoinAddress, msg.sender);
 
-        uint _balance = stableCoin.balanceOf(centralWalletAddress);
-        centralWallet.depositStableCoin(msg.sender, _stableCoinAddress, _value, _balance + _value);
+        centralWallet.depositStableCoin(msg.sender, _stableCoinAddress, _value, txId);
     }
 
 }

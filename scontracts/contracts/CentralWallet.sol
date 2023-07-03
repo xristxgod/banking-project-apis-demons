@@ -19,7 +19,7 @@ contract CentralWallet {
     Transaction[] public transactions;
 
     event DepositNative(address indexed sender, uint amount, uint balance);
-    event DepositStableCoin(address indexed sender, address indexed stableCoinAddress, uint amount, uint balance);
+    event DepositStableCoin(address indexed sender, address indexed stableCoinAddress, uint amount, bytes txId);
 
     event SubmitTransaction(
         address indexed owner,
@@ -78,8 +78,8 @@ contract CentralWallet {
         emit DepositNative(msg.sender, msg.value, address(this).balance);
     }
 
-    function depositStableCoin(address sender, address _stableCoinAddress, uint _value, uint _balance) external onlyOwner() {
-        emit DepositStableCoin(sender, _stableCoinAddress, _value, _balance);
+    function depositStableCoin(address sender, address _stableCoinAddress, uint _value, bytes memory _txId) external onlyOwner() {
+        emit DepositStableCoin(sender, _stableCoinAddress, _value, _txId);
     }
     
     function submitTransaction(
