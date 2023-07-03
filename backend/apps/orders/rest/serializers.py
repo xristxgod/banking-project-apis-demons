@@ -3,20 +3,14 @@ from rest_framework import serializers
 from apps.orders.models import OrderStatus, Deposit
 
 
-class PaymentDetailSerializer(serializers.Serializer):
+class DepositDetailSerializer(serializers.Serializer):
     create = update = None
+    currencyId = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=25, decimal_places=18)
+
     usdAmount = serializers.DecimalField(max_digits=25, decimal_places=2)
     usdCommission = serializers.DecimalField(max_digits=25, decimal_places=2)
     usdExchangeRate = serializers.DecimalField(max_digits=25, decimal_places=2)
-
-
-class OrderDetailSerializer(serializers.Serializer):
-    create = update = None
-    amount = serializers.DecimalField(max_digits=25, decimal_places=18)
-    networkId = serializers.IntegerField()
-    networkName = serializers.CharField()
-    currencyId = serializers.IntegerField()
-    currencySymbol = serializers.CharField()
 
 
 class TransactionDetailSerializer(serializers.Serializer):
@@ -32,40 +26,27 @@ class DepositSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     userId = serializers.IntegerField()
 
-    status = serializers.ChoiceField(choices=OrderStatus.choices)
+    status = serializers.IntegerField()
     verbose_status = serializers.CharField()
 
-    chainId = serializers.IntegerField(default=None)
-    nodeUrl = serializers.URLField()
-    blockExplorerUrl = serializers.URLField()
+    detail = DepositDetailSerializer()
 
-    paymentDetail = PaymentDetailSerializer()
-    orderDetail = OrderDetailSerializer()
     transactionDetail = TransactionDetailSerializer(required=False, default=None)
-
     can_send = serializers.BooleanField()
 
     create = serializers.DateTimeField()
     update = serializers.DateTimeField()
+    confirmed = serializers.DecimalField(default=None, required=False)
 
     @classmethod
-    def _get_payment_detail(cls, instance: Deposit):
-        return PaymentDetailSerializer(dict(
+    def _get_detail(cls, instance: Deposit):
+        return DepositDetailSerializer(dict(
+            currencyId=instance.order.currency_id,
+            amount=instance.order.amount,
             usdAmount=instance.amount,
             usdCommission=instance.commission,
-            usdExchangeRate=instance.usd_exchange_rate,
-        )).data
-
-    @classmethod
-    def _get_order_detail(cls, instance: Deposit):
-        order = instance.order
-        return OrderDetailSerializer(dict(
-            amount=order.amount,
-            networkId=order.currency.network_id,
-            networkName=order.currency.network.name,
-            currencyId=order.currency_id,
-            currencySymbol=order.currency.symbol,
-        )).data
+            usdExchangeRate=instance.usd_exchange_rate
+        ))
 
     @classmethod
     def _get_transaction_detail(cls, instance: Deposit):
@@ -88,16 +69,13 @@ class DepositSerializer(serializers.Serializer):
     def to_representation(self, instance: Deposit):
         return dict(
             id=instance.pk,
-            userId=instance.order.user_id,
-            status=instance.order.status,
-            verbose_status=instance.order.get_status_display(),
-            chainId=instance.order.currency.network.chain_id,
-            nodeUrl=instance.order.currency.network.url,
-            blockExplorerUrl=instance.order.currency.network.block_explorer_url,
-            paymentDetail=self._get_payment_detail(instance),
-            orderDetail=self._get_order_detail(instance),
+            userId=instance.costumer.pk,
+            status=instance.status,
+            verbose_status=instance.get_status_display(),
+            detail=self._get_detail(instance),
             transactionDetail=self._get_transaction_detail(instance),
             can_send=instance.order.can_send,
-            create=instance.order.created,
-            update=instance.order.updated,
+            create=instance.create,
+            update=instance.update,
+            confirmed=instance.confirmed,
         )
