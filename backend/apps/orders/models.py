@@ -23,6 +23,7 @@ class Order(models.Model):
 
     created = models.DateTimeField(_('Created'), auto_now_add=True)
     updated = models.DateTimeField(_('Updated'), auto_now=True)
+    confirmed = models.DateTimeField(_('Confirmed'), blank=True, null=True)
 
     class Meta:
         verbose_name = _('Order')
@@ -39,7 +40,7 @@ class Order(models.Model):
 
     @property
     def is_done(self) -> bool:
-        return self.status == OrderStatus.DONE
+        return self.status in [OrderStatus.DONE, OrderStatus.ERROR]
 
     @property
     def status_by_telegram(self) -> str:
@@ -91,13 +92,16 @@ class Deposit(models.Model):
         if self.order.status == OrderStatus.CREATED:
             self.order.make_cancel()
             self.save()
-            return True
-        return False
+        return self
+
+    @property
+    def consumer(self) -> User:
+        return self.order.user
 
     @property
     def payment_url(self) -> str:
         # TODO add payment deposit
-        return f'http://fake/{self.order.pk}'
+        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
 
     @property
     def transaction_url(self) -> str:
@@ -105,12 +109,17 @@ class Deposit(models.Model):
         return f'{url}/{self.order.transaction.transaction_hash}'
 
     @property
-    def costumer(self) -> User:
-        return self.order.user
+    def status(self) -> OrderStatus:
+        # Proxy
+        return self.order.status
 
     @property
-    def status(self) -> OrderStatus:
-        return self.order.status
+    def status_by_telegram(self) -> str:
+        # Proxy
+        return self.order.status_by_telegram
+   
+    def costumer(self) -> User:
+        return self.order.user
 
     def get_status_display(self) -> str:
         return self.order.get_status_display()

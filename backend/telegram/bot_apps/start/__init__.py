@@ -1,7 +1,7 @@
 from . import handlers
 
-HANDLERS = [
+HANDLERS = (
     handlers.StartHandler,
     handlers.RegistrationHandler,
     handlers.BalanceHandler,
-]
+)
