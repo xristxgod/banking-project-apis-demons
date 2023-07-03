@@ -54,7 +54,7 @@ class DepositHandler(StartHandler):
 
         self.bot.register_callback_query_handler(
             callback=self,
-            func=lambda call: call.data == 'deposit',
+            func=lambda call: call.data.startswith('deposit'),
         )
 
     def view_active_deposit(self, request: TelegramRequest):
@@ -62,7 +62,9 @@ class DepositHandler(StartHandler):
         return utils.view_active_deposit(request)
 
     def call(self, request: TelegramRequest) -> dict:
-        if not request.user.has_active_deposit:
+        if request.data == 'deposit:last' or request.user.has_active_deposit:
+            return self.view_active_deposit(request)
+        elif not request.user.has_active_deposit and not request.user.deposit:
             markup = types.InlineKeyboardMarkup()
             markup.row(types.InlineKeyboardButton(
                 text=make_text(_('Create')),
@@ -73,8 +75,22 @@ class DepositHandler(StartHandler):
                 text=make_text(_('You have a gntu of an active deposit')),
                 reply_markup=markup,
             )
-
-        return self.view_active_deposit(request)
+        elif not request.user.has_active_deposit and request.user.deposit:
+            markup = types.InlineKeyboardMarkup()
+            markup.row(
+                types.InlineKeyboardButton(
+                    text=make_text(_('Create')),
+                    callback_data='premakedeposit',
+                ),
+                types.InlineKeyboardButton(
+                    text=make_text(_('View last')),
+                    callback_data='deposit:last'
+                )
+            )
+            return dict(
+                text=make_text(_('You have a gntu of an active deposit')),
+                reply_markup=markup,
+            )
 
 
 class PreMakeDepositHandler(StepMixin, DepositHandler):
