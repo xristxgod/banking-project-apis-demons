@@ -10,6 +10,7 @@ from apps.cryptocurrencies.models import Currency
 from apps.orders.services import calculate_deposit_amount, create_deposit, cancel_deposit
 
 from telegram.utils import make_text
+from telegram.models import TelegramMessageIDStorage
 from telegram.bot_apps.base.handlers import StepMixin
 from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 from telegram.middlewares.request import TelegramRequest
@@ -57,8 +58,11 @@ class DepositHandler(StartHandler):
             func=lambda call: call.data.startswith('deposit'),
         )
 
+    @transaction.atomic()
     def view_active_deposit(self, request: TelegramRequest):
-        # TODO add save message_id for further modification
+        if not request.user.deposit.order.is_done:
+            obj = TelegramMessageIDStorage.objects.get_or_create(content_object=request.user.deposit)
+            obj.add(request.message_id + 1)
         return utils.view_active_deposit(request)
 
     def call(self, request: TelegramRequest) -> dict:
