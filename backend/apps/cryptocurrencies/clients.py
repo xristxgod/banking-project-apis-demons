@@ -31,4 +31,4 @@ class CoinGeckoAPIClient(metaclass=Singleton):
         }
 
 
-client = CoinGeckoAPIClient()
+coin_gecko_client = CoinGeckoAPIClient()
