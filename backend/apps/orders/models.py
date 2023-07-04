@@ -29,18 +29,18 @@ class Order(models.Model):
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
 
-    @property
-    def can_send(self) -> bool:
-        return self.status == OrderStatus.CREATED
-
     @transaction.atomic()
     def make_cancel(self):
         self.status = OrderStatus.CANCEL
         self.save()
 
     @property
+    def can_send(self) -> bool:
+        return self.status == OrderStatus.CREATED
+
+    @property
     def is_done(self) -> bool:
-        return self.status in [OrderStatus.DONE, OrderStatus.ERROR]
+        return self.confirmed is not None
 
     @property
     def status_by_telegram(self) -> str:
@@ -75,16 +75,27 @@ class Transaction(models.Model):
     def hash(self) -> str:
         return self.transaction_hash
 
+    @property
+    def url(self) -> str:
+        return f'https://{self.order.currency.network.block_explorer_url}/{self.hash}/'
 
-class AbstractPayment(models.Model):
-    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='deposit',
+
+class Payment(models.Model):
+    class Type(models.TextChoices):
+        BY_PROVIDER_DEPOSIT = 'by_provider_deposit', _('By provider deposit')
+        DEPOSIT = 'deposit', _('Deposit')
+        WITHDRAW = 'withdraw', _('Withdraw')
+
+    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='payment',
                                  on_delete=models.PROTECT)
     usdt_amount = models.DecimalField(_('USDT amount'), default=0, max_digits=25, decimal_places=2)
     usdt_exchange_rate = models.DecimalField(_('USDT rate'), default=0, max_digits=25, decimal_places=2)
     usdt_commission = models.DecimalField(_('USDT commission'), default=0, max_digits=25, decimal_places=2)
+    type = models.CharField(_('Type'), max_length=255, choices=Type.choices)
 
     class Meta:
-        abstract = True
+        verbose_name = _('Payment')
+        verbose_name_plural = _('Payments')
 
     @transaction.atomic()
     def make_cancel(self):
@@ -96,19 +107,6 @@ class AbstractPayment(models.Model):
     @property
     def consumer(self) -> User:
         return self.order.user
-
-    @property
-    def status(self) -> OrderStatus:
-        # Proxy
-        return self.order.status
-
-    def get_status_display(self) -> str:
-        return self.order.get_status_display()
-
-    @property
-    def status_by_telegram(self) -> str:
-        # Proxy
-        return self.order.status_by_telegram
 
     @property
     def create(self):
@@ -123,26 +121,25 @@ class AbstractPayment(models.Model):
         return self.order.confirmed
 
     @property
-    def transaction_url(self) -> str:
-        url = self.order.currency.network.block_explorer_url
-        return f'{url}/{self.order.transaction.transaction_hash}'
+    def status(self) -> OrderStatus:
+        return self.order.status
 
     @property
-    def payment_url(self) -> str:
-        # TODO add payment deposit
-        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
+    def transaction_url(self) -> str:
+        return self.order.transaction.url
+
+    @property
+    def url(self) -> str:
+        return ''
 
 
-class Deposit(AbstractPayment):
+class TempWallet(models.Model):
+    """Temp wallet for deposit"""
+    deposit = models.OneToOneField(Payment, verbose_name=_('Deposit'), primary_key=True, related_name='temp_wallet',
+                                   on_delete=models.PROTECT)
+    address = models.CharField(_('Address'), max_length=255)
+    private_key = models.CharField(_('Private key'), max_length=255)
 
     class Meta:
-        verbose_name = _('Deposit')
-        verbose_name_plural = _('Deposits')
-
-
-class Withdraw(AbstractPayment):
-    to_address = models.CharField(_('To address'), max_length=255)
-
-    class Meta:
-        verbose_name = _('Withdraw')
-        verbose_name_plural = _('Withdraws')
+        verbose_name = _('Temp wallet')
+        verbose_name_plural = _('Temp wallets')
