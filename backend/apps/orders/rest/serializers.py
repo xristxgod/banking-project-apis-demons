@@ -27,26 +27,38 @@ class TransactionSerializer(serializers.ModelSerializer):
         )
 
 
+class TempWalletSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TempWallet
+        fields = (
+            'address',
+        )
+
+
 class PaymentSerializer(serializers.ModelSerializer):
     can_send = serializers.BooleanField(source='order.can_send')
-    verbose_type = serializers.CharField(source='get_type_display()')
-    order_detail = OrderSerializer()
+    verbose_type = serializers.CharField(source='get_type_display')
+    order_detail = OrderSerializer(source='order')
     transaction_detail = serializers.SerializerMethodField()
+    temp_wallet = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Payment
         fields = (
             'pk', 'usdt_amount', 'usdt_exchange_rate', 'usdt_commission',
             'type', 'verbose_type', 'order_detail', 'transaction_detail',
-            'can_send',
+            'can_send', 'temp_wallet',
         )
 
     @classmethod
-    def _get_transaction_detail(cls, instance: models.Payment) -> Optional[TransactionSerializer]:
+    def get_transaction_detail(cls, instance: models.Payment) -> Optional[TransactionSerializer]:
         if (
-                instance.status != models.OrderStatus.DONE or
-                not hasattr(instance.order, 'transaction')
+                instance.status == models.OrderStatus.DONE and
+                hasattr(instance.order, 'transaction')
         ):
-            return
+            return TransactionSerializer(instance.order.transaction).data
 
-        return TransactionSerializer(instance.order.transaction).data
+    @classmethod
+    def get_temp_wallet(cls, instance: models.Payment) -> Optional[TempWalletSerializer]:
+        if instance.type == models.Payment.Type.DEPOSIT:
+            return TempWalletSerializer(instance.temp_wallet).data

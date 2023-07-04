@@ -67,7 +67,7 @@ class TempWalletFactory(DjangoModelFactory):
     class Meta:
         model = models.TempWallet
 
-    payment = factory.SubFactory(PaymentFactory, type=models.Payment.Type.DEPOSIT)
+    deposit = factory.SubFactory(PaymentFactory, type=models.Payment.Type.DEPOSIT)
 
     address = factory.Sequence(lambda n: "address#%d" % n)
     private_key = factory.Sequence(lambda n: "private_key#%d" % n)
