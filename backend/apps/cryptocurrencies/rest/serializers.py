@@ -13,14 +13,14 @@ class NetworkSerializer(serializers.ModelSerializer):
 
 
 class CurrencySerializer(serializers.ModelSerializer):
-    network = NetworkSerializer(source='network')
+    network = NetworkSerializer()
 
     class Meta:
         model = models.Currency
         fields = (
             'pk', 'name', 'symbol',
             'decimal_place', 'address',
-            'network',
+            'network', 'abi',
         )
 
 
