@@ -18,9 +18,10 @@ class ActiveManager(models.Manager):
 class Network(models.Model):
     name = models.CharField(_('Name'), max_length=255)
 
-    chain_id = models.IntegerField(_('Chain id'), blank=True, null=True)
     url = models.URLField(_('Node url'), blank=True, null=True)
     block_explorer_url = models.URLField(_('Block explorer url'), blank=True, null=True)
+    chain_id = models.IntegerField(_('Chain id'), blank=True, null=True)
+
     active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
@@ -57,7 +58,10 @@ class Currency(models.Model):
     symbol = models.CharField(_('Symbol'), max_length=255)
     decimal_place = models.IntegerField(_('Decimal place'), default=6)
     address = models.CharField(_('Contract address'), max_length=50, blank=True, null=True)
+
     network = models.ForeignKey(Network, verbose_name=_('Network'), related_name='currencies', on_delete=models.CASCADE)
+
+    coin_gecko_id = models.CharField(_('Coin gecko id'), max_length=10)
     active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
@@ -80,12 +84,6 @@ class Currency(models.Model):
     @property
     def verbose_telegram(self) -> str:
         return str(self)
-
-    def str_to_decimal(self, amount: str) -> decimal.Decimal:
-        with decimal.localcontext() as ctx:
-            ctx.prec = self.decimal_place
-            amount = decimal.Decimal(amount, context=ctx)
-        return amount
 
 
 class Provider(models.Model):
