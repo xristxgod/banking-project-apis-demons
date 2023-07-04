@@ -7,7 +7,7 @@ class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Network
         fields = (
-            'name', 'url', 'block_explorer_url',
+            'pk', 'name', 'url', 'block_explorer_url',
             'chain_id',
         )
 
@@ -18,7 +18,7 @@ class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Currency
         fields = (
-            'name', 'symbol',
+            'pk', 'name', 'symbol',
             'decimal_place', 'address',
             'network',
         )
@@ -28,5 +28,5 @@ class ProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Provider
         fields = (
-            'address', 'abi',
+            'pk', 'address', 'abi',
         )
