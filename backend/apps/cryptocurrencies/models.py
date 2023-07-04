@@ -61,7 +61,7 @@ class Currency(models.Model):
 
     network = models.ForeignKey(Network, verbose_name=_('Network'), related_name='currencies', on_delete=models.CASCADE)
 
-    coin_gecko_id = models.CharField(_('Coin gecko id'), max_length=10)
+    coin_gecko_id = models.CharField(_('Coin gecko id'), max_length=25)
     active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()

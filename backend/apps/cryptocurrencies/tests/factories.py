@@ -12,9 +12,11 @@ class NetworkFactory(DjangoModelFactory):
         model = models.Network
 
     name = factory.Sequence(lambda n: "name#%d" % n)
-    chain_id = factory.fuzzy.FuzzyInteger(low=1, high=10**2)
+
     url = fake.unique.url()
     block_explorer_url = fake.unique.url()
+    chain_id = factory.fuzzy.FuzzyInteger(low=1, high=10**2)
+
     active = True
 
 
@@ -26,7 +28,10 @@ class CurrencyFactory(DjangoModelFactory):
     symbol = factory.Sequence(lambda n: "symbol#%d" % n)
     decimal_place = factory.fuzzy.FuzzyInteger(low=6, high=25)
     address = None
+
     network = factory.SubFactory(NetworkFactory)
+
+    coin_gecko_id = factory.Sequence(lambda n: "coin_gecko_id#%d" % n)
     active = True
 
     class Params:
