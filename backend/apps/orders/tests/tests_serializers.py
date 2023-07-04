@@ -10,7 +10,7 @@ from .factories import OrderFactory, TransactionFactory, PaymentFactory
 class TestOrderSerializer:
     serializer = serializers.OrderSerializer
 
-    def test_success(self):
+    def test_serializer(self):
         obj = OrderFactory()
 
         assert self.serializer(obj).data == {
