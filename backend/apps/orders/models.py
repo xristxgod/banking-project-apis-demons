@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from django.utils import timezone
 from django.db import models, transaction
 from django.utils.translation import gettext as _
@@ -88,7 +90,7 @@ class Transaction(models.Model):
 
     @property
     def url(self) -> str:
-        return f'https://{self.order.currency.network.block_explorer_url}/{self.hash}/'
+        return urljoin(self.order.currency.network.block_explorer_url, self.hash)
 
 
 class Payment(models.Model):

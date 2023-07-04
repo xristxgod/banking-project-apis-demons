@@ -42,7 +42,7 @@ class PaymentFactory(DjangoModelFactory):
     class Meta:
         model = models.Payment
 
-    order = factory.SubFactory(OrderFactory, deposit=None)
+    order = factory.SubFactory(OrderFactory, payment=None)
     usdt_amount = factory.fuzzy.FuzzyDecimal(low=10, high=10**3, precision=2)
     usdt_exchange_rate = factory.fuzzy.FuzzyDecimal(low=40, high=99, precision=2)
     usdt_commission = factory.fuzzy.FuzzyDecimal(low=1, high=15, precision=2)
@@ -61,3 +61,13 @@ class PaymentFactory(DjangoModelFactory):
             order__transaction=factory.SubFactory(TransactionFactory),
             order__confirmed=timezone.now(),
         )
+
+
+class TempWalletFactory(DjangoModelFactory):
+    class Meta:
+        model = models.TempWallet
+
+    payment = factory.SubFactory(PaymentFactory, type=models.Payment.Type.DEPOSIT)
+
+    address = factory.Sequence(lambda n: "address#%d" % n)
+    private_key = factory.Sequence(lambda n: "private_key#%d" % n)
