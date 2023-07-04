@@ -5,8 +5,8 @@ from django.shortcuts import get_object_or_404
 
 from drf_spectacular.utils import extend_schema
 
+from apps.cryptocurrencies import models
 from apps.cryptocurrencies.rest import serializers
-from apps.cryptocurrencies.models import Provider
 
 
 @api_view(['GET'])
@@ -19,5 +19,5 @@ from apps.cryptocurrencies.models import Provider
     description='Provider',
 )
 def provider_view(request, pk: int):
-    obj = get_object_or_404(Provider, pk=pk)
+    obj = get_object_or_404(models.Provider, pk=pk)
     return Response(serializers.ProviderSerializer(obj).data)
