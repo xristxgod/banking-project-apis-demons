@@ -15,7 +15,7 @@ class OrderFactory(DjangoModelFactory):
     class Meta:
         model = models.Order
 
-    amount = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=18)
+    amount = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=6)
     currency = factory.SubFactory(CurrencyFactory)
     user = factory.SubFactory(UserFactory)
     status = factory.fuzzy.FuzzyChoice(choices=models.OrderStatus)
@@ -35,7 +35,7 @@ class TransactionFactory(DjangoModelFactory):
     timestamp = fake.unique.unix_time()
     sender_address = factory.Sequence(lambda n: "senderAddress#%d" % n)
     recipient_address = factory.Sequence(lambda n: "recipientAddress#%d" % n)
-    fee = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=18)
+    fee = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=6)
 
 
 class PaymentFactory(DjangoModelFactory):
