@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models, transaction
 from django.utils.translation import gettext as _
 
@@ -32,7 +33,17 @@ class Order(models.Model):
     @transaction.atomic()
     def make_cancel(self):
         self.status = OrderStatus.CANCEL
+        self.confirmed = timezone.now()
         self.save()
+        return self
+
+    @transaction.atomic()
+    def update_status(self, status: OrderStatus):
+        self.status = status
+        if self.status == OrderStatus.DONE:
+            self.confirmed = timezone.now()
+        self.save()
+        return self
 
     @property
     def can_send(self) -> bool:
@@ -101,7 +112,12 @@ class Payment(models.Model):
     def make_cancel(self):
         if self.order.status == OrderStatus.CREATED:
             self.order.make_cancel()
-            self.save()
+        return self
+
+    @transaction.atomic()
+    def update_status(self, status: OrderStatus):
+        if self.order.status != OrderStatus.DONE:
+            self.order.update_status(status)
         return self
 
     @property
