@@ -66,6 +66,10 @@ class Currency(models.Model):
 
     objects = ActiveManager()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = decimal.Context(prec=self.decimal_place)
+
     class Meta:
         verbose_name = _('Currency')
         verbose_name_plural = _('Currencies')
