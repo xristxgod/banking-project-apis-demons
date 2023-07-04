@@ -1,4 +1,4 @@
-import decimal
+from django.utils import timezone
 
 import faker
 import factory.fuzzy
@@ -20,6 +20,11 @@ class OrderFactory(DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     status = factory.fuzzy.FuzzyChoice(choices=models.OrderStatus)
 
+    class Params:
+        is_confirmed = is_created = factory.Trait(
+            confirmed=timezone.now(),
+        )
+
 
 class TransactionFactory(DjangoModelFactory):
     class Meta:
@@ -33,14 +38,15 @@ class TransactionFactory(DjangoModelFactory):
     fee = factory.fuzzy.FuzzyDecimal(low=0.005, high=10**3, precision=18)
 
 
-class DepositFactory(DjangoModelFactory):
+class PaymentFactory(DjangoModelFactory):
     class Meta:
-        model = models.Deposit
+        model = models.Payment
 
     order = factory.SubFactory(OrderFactory, deposit=None)
     usdt_amount = factory.fuzzy.FuzzyDecimal(low=10, high=10**3, precision=2)
     usdt_exchange_rate = factory.fuzzy.FuzzyDecimal(low=40, high=99, precision=2)
     usdt_commission = factory.fuzzy.FuzzyDecimal(low=1, high=15, precision=2)
+    type = factory.fuzzy.FuzzyChoice(choices=models.Payment.Type.choices)
 
     class Params:
         is_created = factory.Trait(
@@ -48,8 +54,10 @@ class DepositFactory(DjangoModelFactory):
         )
         is_cancel = factory.Trait(
             order__status=models.OrderStatus.CANCEL,
+            order__confirmed=timezone.now(),
         )
         is_done = factory.Trait(
             order__status=models.OrderStatus.DONE,
-            order__transaction=factory.SubFactory(TransactionFactory)
+            order__transaction=factory.SubFactory(TransactionFactory),
+            order__confirmed=timezone.now(),
         )
