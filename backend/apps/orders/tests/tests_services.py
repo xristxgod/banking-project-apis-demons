@@ -7,6 +7,10 @@ from apps.users.models import User
 from apps.users.tests.factories import UserFactory
 from apps.cryptocurrencies.tests.factories import CurrencyFactory
 
+from apps.orders import models
+
+from .factories import fake
+
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('deposit_commission_status, amount, usdt_price, result', [
@@ -67,3 +71,37 @@ def test_calculate_deposit_amount(deposit_commission_status, amount, usdt_price,
     )
 
     assert response == result
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('typ', [
+    models.Payment.Type.DEPOSIT,
+    models.Payment.Type.BY_PROVIDER_DEPOSIT,
+    models.Payment.Type.WITHDRAW,
+])
+def test_create_payment(typ):
+    from apps.orders.services import create_payment
+
+    user = UserFactory()
+    currency = CurrencyFactory()
+
+    params = {
+        'amount': fake.unique.pydecimal(left_digits=1, right_digits=4, positive=True),
+        'currency': currency,
+        'usdt_amount': fake.unique.pydecimal(left_digits=2, right_digits=2, positive=True),
+        'usdt_exchange_rate': fake.unique.pydecimal(left_digits=2, right_digits=2, positive=True),
+        'usdt_commission': fake.unique.pydecimal(left_digits=2, right_digits=2, positive=True),
+    }
+
+    payment = create_payment(user, typ, **params)
+
+    assert payment.order.amount == params['amount']
+    assert payment.order.currency == currency
+    assert payment.usdt_amount == params['usdt_amount']
+    assert payment.usdt_exchange_rate == params['usdt_exchange_rate']
+    assert payment.usdt_commission == params['usdt_commission']
+
+    assert payment.status == models.OrderStatus.CREATED
+
+    if typ == models.Payment.Type.DEPOSIT:
+        assert hasattr(payment, 'temp_wallet')
