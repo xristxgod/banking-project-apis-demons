@@ -1,3 +1,5 @@
+import decimal
+
 from django.db import models
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import AbstractUser
@@ -45,3 +47,8 @@ class User(AbstractUser):
     def withdraw_percent(self) -> int:
         from apps.users.utils import withdraw_percent
         return withdraw_percent(self)
+
+    @property
+    def balance(self) -> decimal.Decimal:
+        from apps.users.services import get_balance
+        return get_balance(self)
