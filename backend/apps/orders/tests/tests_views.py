@@ -43,3 +43,30 @@ class TestPaymentAPIView:
             # It does not affect the progress of work
             models.Payment.objects.get(pk=payment.pk)
         ).data
+
+    @pytest.mark.parametrize('inp, out, res', [
+        (models.OrderStatus.CREATED, models.OrderStatus.SENT, models.OrderStatus.SENT),
+        (models.OrderStatus.DONE, models.OrderStatus.SENT, models.OrderStatus.DONE),
+        (models.OrderStatus.CANCEL, models.OrderStatus.DONE, models.OrderStatus.CANCEL),
+        (models.OrderStatus.ERROR, models.OrderStatus.DONE, models.OrderStatus.ERROR),
+    ])
+    def test_put_success(self, inp, out, res, api_client):
+        order = OrderFactory(status=inp)
+        payment = PaymentFactory(
+            order=order,
+            type=models.Payment.Type.BY_PROVIDER_DEPOSIT,
+            is_done=True
+        )
+
+        assert payment.status == inp
+
+        response = api_client().put(self.get_endpoint(payment.pk), data={
+            'status': out,
+        })
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data['order_detail']['status'] == res
+        assert not data['can_send']

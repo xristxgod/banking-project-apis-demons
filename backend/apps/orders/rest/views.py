@@ -27,3 +27,21 @@ class PaymentAPIView(GenericAPIView):
         return Response(
             serializers.PaymentSerializer(obj).data
         )
+
+    @extend_schema(
+        request=serializers.UpdatePaymentSerializer(),
+        responses={
+            status.HTTP_200_OK: serializers.PaymentSerializer(),
+        },
+        summary='Update payment',
+        description='Update payment',
+    )
+    def put(self, request, pk: int, *args, **kwargs):
+        obj = get_object_or_404(models.Payment, pk=pk)
+        serializer = serializers.UpdatePaymentSerializer(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                serializers.PaymentSerializer(obj).data
+            )
+        return Response(status=status.HTTP_400_BAD_REQUEST)

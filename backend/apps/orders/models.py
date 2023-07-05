@@ -28,6 +28,10 @@ class Order(models.Model):
     updated = models.DateTimeField(_('Updated'), auto_now=True)
     confirmed = models.DateTimeField(_('Confirmed'), blank=True, null=True)
 
+    DONE_STATUSES = (
+        OrderStatus.DONE, OrderStatus.CANCEL, OrderStatus.ERROR,
+    )
+
     class Meta:
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
@@ -53,7 +57,8 @@ class Order(models.Model):
 
     @property
     def is_done(self) -> bool:
-        return self.confirmed is not None
+        return (self.confirmed is not None or
+                self.status in self.DONE_STATUSES)
 
     @property
     def status_by_telegram(self) -> str:

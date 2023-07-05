@@ -1,8 +1,10 @@
 from typing import Optional
 
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.orders import models
+from apps.orders.services import update_payment_status
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -62,3 +64,12 @@ class PaymentSerializer(serializers.ModelSerializer):
     def get_temp_wallet(cls, instance: models.Payment) -> Optional[TempWalletSerializer]:
         if instance.type == models.Payment.Type.DEPOSIT:
             return TempWalletSerializer(instance.temp_wallet).data
+
+
+class UpdatePaymentSerializer(serializers.Serializer):
+    create = update = None
+    status = serializers.ChoiceField(choices=models.OrderStatus.choices)
+
+    @transaction.atomic()
+    def update(self, instance: models.Payment, validated_data):
+        return update_payment_status(payment=instance, status=validated_data['status'])
