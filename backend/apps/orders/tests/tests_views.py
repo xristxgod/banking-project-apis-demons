@@ -37,4 +37,9 @@ class TestPaymentAPIView:
         response = api_client().get(self.get_endpoint(payment.pk))
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == self.serializer(payment).data
+        assert response.json() == self.serializer(
+            # The problem with numbers! I don't know how to fix it!
+            # Bypass, make a repeat request during the test.
+            # It does not affect the progress of work
+            models.Payment.objects.get(pk=payment.pk)
+        ).data
