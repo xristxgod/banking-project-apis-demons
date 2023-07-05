@@ -26,7 +26,7 @@ class CoinGeckoAPIClient(metaclass=Singleton):
 
         coin = response[currency.coin_gecko_id]
         return {
-            'price': decimal.Decimal(repr(coin['usd'])),
+            'price': decimal.Decimal(coin['usd']),
             'last_updated_at': coin['last_updated_at'],
         }
 
