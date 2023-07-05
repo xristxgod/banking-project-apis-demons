@@ -10,6 +10,7 @@ from apps.cryptocurrencies.tests.factories import CurrencyFactory
 from apps.orders import models
 
 from .factories import fake
+from .factories import OrderFactory, PaymentFactory
 
 
 @pytest.mark.django_db
@@ -105,3 +106,42 @@ def test_create_payment(typ):
 
     if typ == models.Payment.Type.DEPOSIT:
         assert hasattr(payment, 'temp_wallet')
+
+
+@pytest.mark.django_db
+def test_update_and_cancel_payment():
+    from apps.orders.services import update_payment_status, cancel_payment
+
+    order1 = OrderFactory(status=models.OrderStatus.CREATED)
+    payment1 = PaymentFactory(order=order1)
+
+    assert payment1.status == models.OrderStatus.CREATED
+
+    cancel_payment(payment1)
+
+    qs = models.Payment.objects.filter(pk=payment1.pk)
+
+    assert qs.first().status == models.OrderStatus.CANCEL
+
+    update_payment_status(qs.first(), models.OrderStatus.DONE)
+
+    assert (
+            qs.first().status != models.OrderStatus.DONE and
+            qs.first().status == models.OrderStatus.CANCEL
+    )
+
+    order2 = OrderFactory(status=models.OrderStatus.CREATED)
+    payment2 = PaymentFactory(order=order2)
+
+    update_payment_status(payment2, models.OrderStatus.DONE)
+
+    qs = models.Payment.objects.filter(pk=payment2.pk)
+
+    assert qs.first().status == models.OrderStatus.DONE
+
+    cancel_payment(qs.first())
+
+    assert (
+            qs.first().status == models.OrderStatus.DONE and
+            qs.first().status != models.OrderStatus.CANCEL
+    )

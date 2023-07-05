@@ -118,7 +118,7 @@ class Payment(models.Model):
 
     @transaction.atomic()
     def update_status(self, status: OrderStatus):
-        if self.order.status != OrderStatus.DONE:
+        if not self.order.is_done:
             self.order.update_status(status)
         return self
 

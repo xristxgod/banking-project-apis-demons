@@ -55,6 +55,8 @@ def create_payment(user: User, typ: models.Payment.Type, **params):
 
 @transaction.atomic()
 def update_payment_status(payment: models.Payment, status: models.OrderStatus) -> models.Payment:
+    if status == status.CANCEL:
+        return cancel_payment(payment)
     return payment.update_status(status)
 
 
