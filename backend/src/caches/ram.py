@@ -2,6 +2,7 @@ import inspect
 import hashlib
 import functools
 import operator
+from typing import Any
 from datetime import datetime, timedelta
 
 from django.db import models
@@ -38,7 +39,7 @@ class Cached(metaclass=Singleton):
         return result
 
     def __init__(self):
-        self._storage = {}
+        self._storage: dict[str: tuple[Any, datetime]] = {}
 
     def get_slot_name(self, function, args, kwargs) -> str:
         params = self._vary_on(function, args, kwargs)
