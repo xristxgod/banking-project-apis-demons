@@ -3,7 +3,7 @@ import abc
 import telebot
 from telebot import types
 
-from telegram.middlewares.request import TelegramRequest
+from telegram.middlewares.request import Request
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):
@@ -15,13 +15,13 @@ class AbstractHandler(metaclass=abc.ABCMeta):
         self.bot = bot
         self.attach()
 
-    def _get_params(self, request: TelegramRequest):
+    def _get_params(self, request: Request):
         if self.use_auth and request.user.is_anonymous:
             return self.call_without_auth(request)
         else:
             return self.call(request)
 
-    def _handler(self, request: TelegramRequest):
+    def _handler(self, request: Request):
         params = self._get_params(request)
         return self.notify(
             request=request,
@@ -31,7 +31,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
     def __call__(self, _, data: dict):
         return self._handler(request=data['request'])
 
-    def notify(self, request: TelegramRequest, **params):
+    def notify(self, request: Request, **params):
         if request.can_edit:
             self.bot.edit_message_text(
                 chat_id=request.user.chat_id,
@@ -50,17 +50,17 @@ class AbstractHandler(metaclass=abc.ABCMeta):
     def attach(self): ...
 
     @abc.abstractmethod
-    def call_without_auth(self, request: TelegramRequest) -> dict: ...
+    def call_without_auth(self, request: Request) -> dict: ...
 
     @abc.abstractmethod
-    def call(self, request: TelegramRequest) -> dict: ...
+    def call(self, request: Request) -> dict: ...
 
 
 class StepMixin:
 
     def _step_call(self, message: types.Message, data: dict):
-        old_request: TelegramRequest = data['request']
-        data['request'] = TelegramRequest(
+        old_request: Request = data['request']
+        data['request'] = Request(
             user=old_request.user,
             data=data.get('data') or old_request.data,
             text=message.text,
@@ -71,9 +71,9 @@ class StepMixin:
         return self.__call__(message, data)
 
     @abc.abstractmethod
-    def by_step(self, request: TelegramRequest): ...
+    def by_step(self, request: Request): ...
 
-    def notify(self, request: TelegramRequest, **params):
+    def notify(self, request: Request, **params):
         super().notify(request, **params)
         if request.trigger_step:
             self.bot.register_next_step_handler(
