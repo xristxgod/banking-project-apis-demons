@@ -46,7 +46,7 @@ class Order(models.Model):
     @transaction.atomic()
     def update_status(self, status: OrderStatus):
         self.status = status
-        if self.status == OrderStatus.DONE:
+        if self.status in self.DONE_STATUSES:
             self.confirmed = timezone.now()
         self.save()
         return self

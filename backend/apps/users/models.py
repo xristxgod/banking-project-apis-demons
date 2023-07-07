@@ -52,3 +52,23 @@ class User(AbstractUser):
     def balance(self) -> decimal.Decimal:
         from apps.users.services import get_balance
         return get_balance(self)
+
+    @property
+    def active_deposit(self):
+        from apps.users.services import get_active_deposit
+        return get_active_deposit(self)
+
+    @property
+    def last_deposit(self):
+        from apps.users.services import get_last_deposit
+        return get_last_deposit(self)
+
+    @property
+    def active_withdraw(self):
+        from apps.users.services import get_active_withdraw
+        return get_active_withdraw(self)
+
+    @property
+    def last_withdraw(self):
+        from apps.users.services import get_last_withdraw
+        return get_last_withdraw(self)
