@@ -1,6 +1,3 @@
-import re
-from typing import Optional
-
 from telebot import types
 
 from telebot.handler_backends import BaseMiddleware

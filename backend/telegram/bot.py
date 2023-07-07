@@ -1,6 +1,7 @@
 import logging
 
 import telebot
+from telebot.handler_backends import RedisHandlerBackend
 
 from django.conf import settings
 
@@ -8,7 +9,11 @@ from django.conf import settings
 class BaseBot:
 
     def __init__(self, token: str, **kwargs):
-        self.bot = telebot.TeleBot(token=token, use_class_middlewares=True, **kwargs)
+        self.bot = telebot.TeleBot(
+            token=token, use_class_middlewares=True,
+            # next_step_backend=RedisHandlerBackend(settings.REDIS_URL),
+            **kwargs
+        )
         self.setup()
 
     def infinity_polling(self):
