@@ -20,5 +20,5 @@ class Middleware(BaseMiddleware):
     def pre_process(self, call, data):
         data['user'] = self.get_user(call.from_user)
 
-    def post_process(self, message, data, exception):
+    def post_process(self, call, data, exception):
         del data['user']
