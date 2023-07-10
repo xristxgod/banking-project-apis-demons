@@ -73,7 +73,7 @@ class BaseViewPaymentHandler(StartHandler):
 
 
 class ViewDepositHandler(BaseViewPaymentHandler):
-    regexp = r'^/deposit ([ ]?(active)|(last)|(history))?$'
+    regexp = r'^/deposit[ ]?((active)|(last)|(history))?$'
     callback = callbacks.deposit
 
     def view_active(self, request: Request) -> dict:
@@ -92,7 +92,7 @@ class ViewDepositHandler(BaseViewPaymentHandler):
 
 
 class ViewWithdrawHandler(BaseViewPaymentHandler):
-    regexp = r'^/withdraw ([ ]?(active)|(last)|(history))?$'
+    regexp = r'^/withdraw[ ]?((active)|(last)|(history))?$'
     callback = callbacks.withdraw
 
     def view_active(self, request: Request) -> dict:
