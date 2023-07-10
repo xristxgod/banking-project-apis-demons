@@ -1,4 +1,3 @@
-from telebot import types
 from telebot.handler_backends import BaseMiddleware
 
 from apps.users import models

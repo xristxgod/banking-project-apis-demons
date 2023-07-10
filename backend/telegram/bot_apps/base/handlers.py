@@ -11,40 +11,46 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     parse_mode = 'Markdown'
 
+    @classmethod
+    def _is_anonymous(cls, request: Request):
+        return isinstance(request.user, types.User)
+
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
         self.attach()
 
-    def _get_params(self, request: Request):
-        if self.use_auth and request.user.is_anonymous:
+    def _call_method(self, request: Request) -> dict:
+        if self.use_auth and self._is_anonymous(request):
             return self.call_without_auth(request)
         else:
             return self.call(request)
 
     def _handler(self, request: Request):
-        params = self._get_params(request)
         return self.notify(
             request=request,
-            **params,
+            params=self._call_method(request),
         )
 
     def __call__(self, _, data: dict):
         return self._handler(request=data['request'])
 
-    def notify(self, request: Request, **params):
+    def notify(self, request: Request, params: dict):
         if request.can_edit:
             self.bot.edit_message_text(
-                chat_id=request.user.chat_id,
+                chat_id=request.user.id,
                 message_id=request.message_id,
                 parse_mode=self.parse_mode,
                 **params,
             )
         else:
             self.bot.send_message(
-                chat_id=request.user.chat_id,
+                chat_id=request.user.id,
                 parse_mode=self.parse_mode,
                 **params,
             )
+
+    def post_notify(self, request: Request):
+        pass
 
     @abc.abstractmethod
     def attach(self): ...
@@ -54,34 +60,3 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def call(self, request: Request) -> dict: ...
-
-
-class StepMixin:
-
-    def _step_call(self, message: types.Message, data: dict):
-        old_request: Request = data['request']
-        data['request'] = Request(
-            user=old_request.user,
-            data=data.get('data') or old_request.data,
-            text=message.text,
-            message_id=message.message_id,
-            can_edit=False,
-            message_obj=message,
-        )
-        return self.__call__(message, data)
-
-    @abc.abstractmethod
-    def by_step(self, request: Request): ...
-
-    def notify(self, request: Request, **params):
-        super().notify(request, **params)
-        if request.trigger_step:
-            self.bot.register_next_step_handler(
-                callback=self._step_call,
-                message=request.message_obj,
-                data=dict(
-                    request=request,
-                )
-            )
-        else:
-            self.bot.clear_step_handler_by_chat_id(request.user.chat_id)

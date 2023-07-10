@@ -10,7 +10,7 @@ class Request:
 
         self.data: str = params['data']
         self.text: str = params['text']
-        self.message_id: int = params['message_obj']
+        self.message_id: int = params['message_id']
 
         self.can_edit: bool = params['can_edit']
 
@@ -32,7 +32,6 @@ class Middleware(BaseMiddleware):
                 text=call.text,
                 message_id=call.message_id,
                 can_edit=False,
-                message_obj=call,
             )
         else:
             return dict(
@@ -40,7 +39,6 @@ class Middleware(BaseMiddleware):
                 text=call.message.text,
                 message_id=call.message.message_id,
                 can_edit=True,
-                message_obj=call.message,
             )
 
     def __init__(self):
