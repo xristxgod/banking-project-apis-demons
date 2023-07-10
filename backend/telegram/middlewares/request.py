@@ -2,12 +2,9 @@ from telebot import types
 
 from telebot.handler_backends import BaseMiddleware
 
-from telegram.middlewares.user import TelegramUser, AnonymousTelegramUser
-
 
 class Request:
-    def __init__(self, user: TelegramUser | AnonymousTelegramUser,
-                 call: types.Message | types.CallbackQuery, **params):
+    def __init__(self, user, call: types.Message | types.CallbackQuery, **params):
         self.user = user
         self.call = call
 
