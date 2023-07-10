@@ -1,5 +1,3 @@
-import logging
-
 import telebot
 from telebot.handler_backends import RedisHandlerBackend
 
@@ -36,7 +34,7 @@ class BaseBot:
     def setup_handlers(self): ...
 
 
-class MainBot(BaseBot):
+class Bot(BaseBot):
     def setup_middleware(self):
         from telegram import middlewares
         self.bot.setup_middleware(middlewares.UserMiddleware())
@@ -53,4 +51,4 @@ class MainBot(BaseBot):
             handler(self.bot)
 
 
-main_bot = MainBot(settings.MAIN_TELEGRAM_BOT_TOKEN)
+bot = Bot(settings.TELEGRAM_BOT_TOKENS['default'])

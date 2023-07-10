@@ -11,23 +11,23 @@ from apps.orders.models import OrderStatus, Order, Payment
 
 @cached(60 * 2)
 def get_balance(user: User) -> decimal.Decimal:
-    deposit = Payment.objects.filter(
+    deposit_sum = Payment.objects.filter(
         order__user=user,
         order__status=OrderStatus.DONE,
         type__in=[Payment.Type.DEPOSIT, Payment.Type.BY_PROVIDER_DEPOSIT]
     ).aggregate(
-        Sum('usdt_amount')
+        Sum('usdt_amount', default=0)
     )
 
-    withdraw = Payment.objects.filter(
+    withdraw_sum = Payment.objects.filter(
         order__user=user,
         order__status=OrderStatus.DONE,
         type=Payment.Type.WITHDRAW
     ).aggregate(
-        Sum('usdt_amount')
+        Sum('usdt_amount', default=0)
     )
 
-    balance = deposit['usdt_amount__sum'] - withdraw['usdt_amount__sum']
+    balance = deposit_sum['usdt_amount__sum'] - withdraw_sum['usdt_amount__sum']
 
     with decimal.localcontext() as ctx:
         ctx.prec = 2
