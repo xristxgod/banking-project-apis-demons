@@ -12,8 +12,14 @@ def not_found_deposit(request: Request) -> dict:
     pass
 
 
-def view_create_deposit_question(request: Request, payment_info: dict) -> dict:
-    pass
+def view_create_deposit_question(payment_info: dict, prefix: str) -> dict:
+    markup = keyboards.get_question_keyboard(prefix=prefix)
+    return dict(
+        text=make_text(_(
+            f'Do you want create, {payment_info}',
+        )),
+        reply_markup=markup,
+    )
 
 
 def view_active_deposit(payment: Payment) -> dict:

@@ -21,6 +21,11 @@ def get_orders_keyboard(request: Request) -> types.InlineKeyboardMarkup:
         callback_data='my_orders',
     ))
 
+    keyboard.row(types.InlineKeyboardButton(
+        text=make_text(_('Create deposit')),
+        callback_data='create-deposit:step#0'
+    ))
+
     return keyboard
 
 
@@ -36,5 +41,22 @@ def get_currencies_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
         ))
 
     keyboard.row(*buttons)
+
+    return keyboard
+
+
+def get_question_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text=make_text(_('No')),
+            callback_data=f'{prefix}:no',
+        ),
+        types.InlineKeyboardButton(
+            text=make_text(_('Yes')),
+            callback_data=f'{prefix}:yes',
+        ),
+    )
 
     return keyboard

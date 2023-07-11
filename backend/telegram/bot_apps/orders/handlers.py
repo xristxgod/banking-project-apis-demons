@@ -128,7 +128,7 @@ class CreateDepositHandler(StartHandler):
             func=lambda call: call.data.startswith('create-deposit'),
         )
 
-    def create_deposit(self, request: Request) -> dict:
+    def create_deposit(self, request: Request, prefix: str) -> dict:
         if not self.storage.has(chat_id=request.user.id):
             raise ValueError()
 
@@ -143,8 +143,8 @@ class CreateDepositHandler(StartHandler):
         )
 
         return utils.view_create_deposit_question(
-            request=request,
             payment_info=self.storage[request.user.id],
+            prefix=prefix,
         )
 
     def call(self, request: Request) -> dict:
@@ -211,6 +211,9 @@ class CreateDepositHandler(StartHandler):
                 set_step=False,
                 amount=decimal.Decimal(request.text, context=decimal.Context(prec=999)),
             )
-            return self.create_deposit(request)
+            return self.create_deposit(
+                request,
+                prefix='create-deposit:step#4',
+            )
         elif request.data.startswith('create-deposit:step#4'):
             pass
