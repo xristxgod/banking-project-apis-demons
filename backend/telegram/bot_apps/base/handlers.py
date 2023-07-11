@@ -1,15 +1,18 @@
 import abc
+from typing import Callable
 
 import telebot
 from telebot import types
 
 from telegram.middlewares.request import Request
+from telegram.bot_apps.base.storage import MemoryStorage
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):
     use_auth = True
 
     parse_mode = 'Markdown'
+    cls_storage = MemoryStorage
 
     @classmethod
     def _is_anonymous(cls, request: Request):
@@ -17,6 +20,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
+        self.storage = self.cls_storage(self)
         self.attach()
 
     def _call_method(self, request: Request) -> dict:
@@ -48,9 +52,19 @@ class AbstractHandler(metaclass=abc.ABCMeta):
                 parse_mode=self.parse_mode,
                 **params,
             )
+        self.post_notify(request)
 
     def post_notify(self, request: Request):
-        pass
+        if self.storage.get(request.user.id) and self.storage[request.user.id]['step']['set']:
+            request.can_edit = False
+            request.message_id += 1
+            self.bot.register_next_step_handler_by_chat_id(
+                chat_id=request.user.id,
+                callback=self.storage[request.user.id]['step']['callback'] or self,
+                data={
+                    'request': request,
+                }
+            )
 
     @abc.abstractmethod
     def attach(self): ...

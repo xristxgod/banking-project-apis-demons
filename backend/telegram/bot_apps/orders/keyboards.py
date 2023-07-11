@@ -2,6 +2,8 @@ from telebot import types
 
 from django.utils.translation import gettext as _
 
+from src.caches.ram import cached
+
 from apps.orders.models import OrderStatus
 from apps.cryptocurrencies.models import Currency
 
@@ -18,5 +20,21 @@ def get_orders_keyboard(request: Request) -> types.InlineKeyboardMarkup:
         text=make_text(_(':briefcase: My orders')),
         callback_data='my_orders',
     ))
+
+    return keyboard
+
+
+@cached(60 * 30)
+def get_currencies_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    buttons = []
+    for currency in Currency.objects.all():
+        buttons.append(types.InlineKeyboardButton(
+            text=make_text(_(currency.verbose_telegram)),
+            callback_data=f'{prefix}:{currency.id}'
+        ))
+
+    keyboard.row(*buttons)
 
     return keyboard

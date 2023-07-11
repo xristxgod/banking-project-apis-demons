@@ -12,6 +12,10 @@ def not_found_deposit(request: Request) -> dict:
     pass
 
 
+def view_create_deposit_question(request: Request, payment_info: dict) -> dict:
+    pass
+
+
 def view_active_deposit(payment: Payment) -> dict:
     pass
 
