@@ -153,7 +153,11 @@ class CreateDepositHandler(StartHandler):
         return services.make_deposit(request, self.storage.pop(request.user.id))
 
     def call(self, request: Request) -> dict:
-        if request.data.startswith('create-deposit:step#0'):
+        if (
+                not self.storage.has(request.user.id) and
+                request.data != 'create-deposit:step#0' or
+                request.data.startswith('create-deposit:step#0')
+        ):
             self.storage.delete(request.user.id)
             markup = types.InlineKeyboardMarkup()
             markup.row(
@@ -163,6 +167,12 @@ class CreateDepositHandler(StartHandler):
                 ),
                 get_back_button('orders'),
             )
+
+            text = make_text(_('Do you make deposit'))
+
+            if request.data != 'create-deposit:step#0':
+                text = make_text(_('Im not found\n')) + text
+
             return dict(
                 text=make_text(_(
                     'Do you make deposit'
@@ -230,7 +240,7 @@ class CreateDepositHandler(StartHandler):
         elif request.data.startswith('create-deposit:step#5'):
             """Make or no deposit"""
             match request.data.replace('create-deposit:step#5:', ''):
-                case callbacks.Answer.YES:
+                case callbacks.Answer.NO:
                     self.storage.delete(request.user.id)
                     return dict(
                         text=make_text(_('Ok, im close')),
