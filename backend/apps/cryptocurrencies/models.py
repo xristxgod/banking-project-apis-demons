@@ -75,6 +75,8 @@ class Currency(models.Model):
         verbose_name_plural = _('Currencies')
 
     def __str__(self):
+        if self.network.name.upper() == self.symbol.upper():
+            return self.symbol.upper()
         return f'{self.network.name.upper()}:{self.symbol.upper()}'
 
     @property
