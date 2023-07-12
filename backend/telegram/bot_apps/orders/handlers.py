@@ -134,8 +134,8 @@ class CreateDepositHandler(StartHandler):
 
         usdt_info = calculate_deposit_amount(
             request.user,
-            amount=self.storage[request.user.id]['amount'],
-            currency=self.storage[request.user.id]['currency'],
+            amount=self.storage[request.user.id]['data']['amount'],
+            currency=self.storage[request.user.id]['data']['currency'],
         )
         self.storage.update(
             chat_id=request.user.id,
@@ -199,8 +199,7 @@ class CreateDepositHandler(StartHandler):
                     text=_('Ok'),
                     reply_markup=get_back_keyboard('orders'),
                 )
-
-            if re.match(r'^\d{1,25}([,.]\d{1,18})?$', request.text) is None:
+            if re.match(r'^\d{1,25}([,.]\d{1,18})?$', request.call.text) is None:
                 return dict(
                     text=make_text(_(
                         'Write amount',

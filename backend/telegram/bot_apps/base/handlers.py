@@ -35,8 +35,18 @@ class AbstractHandler(metaclass=abc.ABCMeta):
             params=self._call_method(request),
         )
 
+    def _is_step(self, request: Request):
+        return (
+                self.storage.has(request.user.id) and
+                self.storage[request.user.id]['step']['set']
+        )
+
     def __call__(self, _, data: dict):
-        return self._handler(request=data['request'])
+        request = data['request']
+        if self._is_step(request):
+            request.text = _.text
+            request.call = _
+        return self._handler(request=request)
 
     def notify(self, request: Request, params: dict):
         if request.can_edit:

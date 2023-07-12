@@ -37,4 +37,11 @@ class MemoryStorage:
             del self.storage[self.key][chat_id]
 
     def update(self, chat_id: int, *, set_step: bool = None, callback: Callable = None, **params):
-        pass
+        self.storage[self.key][chat_id]['step'] = {
+            'callback': callback,
+            'set': set_step or self.storage[self.key][chat_id]['step']['set'],
+        }
+
+        for key, value in self.storage[self.key][chat_id]['data'].items():
+            if params.get(key):
+                self.storage[self.key][chat_id]['data'][key] = params[key]
