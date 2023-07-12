@@ -76,6 +76,8 @@ class AbstractHandler(metaclass=abc.ABCMeta):
                     'request': request,
                 }
             )
+        else:
+            self.bot.clear_step_handler_by_chat_id(request.user.id)
 
     @abc.abstractmethod
     def attach(self): ...
