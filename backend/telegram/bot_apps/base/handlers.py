@@ -47,7 +47,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
         if self._is_step(request):
             request.text = _.text
             request.call = _
-        return self._handler(request=request)
+        self._handler(request=request)
 
     def notify(self, request: Request, params: dict):
         if request.can_edit:
