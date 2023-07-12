@@ -1,5 +1,5 @@
 import abc
-from typing import Callable
+from typing import Optional
 
 import telebot
 from telebot import types
@@ -13,7 +13,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     parse_mode = 'Markdown'
     cls_storage = MemoryStorage
-    storage_key: str
+    storage_key: Optional[str] = None
 
     @classmethod
     def _is_anonymous(cls, request: Request):

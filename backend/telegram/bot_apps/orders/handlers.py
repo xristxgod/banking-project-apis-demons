@@ -146,7 +146,7 @@ class CreateDepositHandler(StartHandler):
 
         return utils.view_create_deposit_question(
             payment_info=self.storage[request.user.id],
-            prefix='create-deposit:step#4',
+            prefix='create-deposit:step#5',
         )
 
     def make_deposit(self, request: Request) -> dict:
@@ -222,18 +222,18 @@ class CreateDepositHandler(StartHandler):
 
             return dict(
                 text=make_text(_('Take type')),
-                reply_markup=keyboards.get_deposit_type_keyboard('create-deposit:step#5'),
+                reply_markup=keyboards.get_deposit_type_keyboard('create-deposit:step#4'),
             )
-        elif request.data.startswith('create-deposit:step#5'):
+        elif request.data.startswith('create-deposit:step#4'):
             """Take answer"""
             self.storage.update(
                 chat_id=request.user.id,
-                deposit_type=request.data.replace('create-deposit:step#5:', '')
+                deposit_type=request.data.replace('create-deposit:step#4:', '')
             )
             return self.create_deposit(request)
-        elif request.data.startswith('create-deposit:step#6'):
+        elif request.data.startswith('create-deposit:step#5'):
             """Make or no deposit"""
-            match request.data.replace('create-deposit:step#6:', ''):
+            match request.data.replace('create-deposit:step#5:', ''):
                 case callbacks.Answer.YES:
                     self.storage.delete(request.user.id)
                     return dict(
