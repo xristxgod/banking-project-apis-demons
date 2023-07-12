@@ -174,9 +174,7 @@ class CreateDepositHandler(StartHandler):
                 text = make_text(_('Im not found\n')) + text
 
             return dict(
-                text=make_text(_(
-                    'Do you make deposit'
-                )),
+                text=text,
                 reply_markup=markup,
             )
         elif request.data.startswith('create-deposit:step#1'):
