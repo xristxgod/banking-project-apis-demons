@@ -36,7 +36,6 @@ def get_balance(user: User) -> decimal.Decimal:
     return balance
 
 
-@cached(60 * 2)
 def get_active_deposit(user: User) -> Optional[Payment]:
     return Payment.objects.filter(
         order__user=user,
@@ -45,7 +44,6 @@ def get_active_deposit(user: User) -> Optional[Payment]:
     ).first()
 
 
-@cached(60 * 2)
 def get_last_deposit(user: User) -> Optional[Payment]:
     obj = Payment.objects.filter(
         order__user=user,
@@ -61,7 +59,6 @@ def get_last_deposit(user: User) -> Optional[Payment]:
     return obj
 
 
-@cached(60 * 2)
 def get_active_withdraw(user: User) -> Optional[Payment]:
     return Payment.objects.filter(
         order__user=user,
@@ -71,7 +68,6 @@ def get_active_withdraw(user: User) -> Optional[Payment]:
     ).first()
 
 
-@cached(60 * 2)
 def get_last_withdraw(user: User) -> Optional[Payment]:
     obj = Payment.objects.filter(
         order__user=user,
