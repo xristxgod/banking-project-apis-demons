@@ -84,15 +84,18 @@ class ViewDepositHandler(BaseViewPaymentHandler):
     regexp = r'^/deposit[ ]?((active)|(last)|(history))?$'
     callback = callbacks.deposit
 
+    def not_found(self, request: Request) -> dict:
+        return utils.not_found_deposit(request)
+
     def view_active(self, request: Request) -> dict:
         if obj := request.user.active_deposit:
             return utils.view_active_deposit(obj)
-        return utils.not_found_deposit(request)
+        return self.not_found(request)
 
     def view_last(self, request: Request) -> dict:
         if obj := request.user.last_deposit:
             return utils.view_last_deposit(obj)
-        return utils.not_found_deposit(request)
+        return self.not_found(request)
 
     def view_history(self, request: Request) -> dict:
         # TODO
@@ -103,15 +106,18 @@ class ViewWithdrawHandler(BaseViewPaymentHandler):
     regexp = r'^/withdraw[ ]?((active)|(last)|(history))?$'
     callback = callbacks.withdraw
 
+    def not_found(self, request: Request) -> dict:
+        return utils.not_found_withdraw(request)
+
     def view_active(self, request: Request) -> dict:
         if obj := request.user.active_withdraw:
             return utils.view_active_withdraw(obj)
-        return utils.not_found_withdraw(request)
+        return self.not_found(request)
 
     def view_last(self, request: Request) -> dict:
         if obj := request.user.last_withdraw:
             return utils.view_last_withdraw(obj)
-        return utils.not_found_withdraw(request)
+        return self.not_found(request)
 
     def view_history(self, request: Request) -> dict:
         # TODO
