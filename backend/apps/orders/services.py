@@ -2,7 +2,7 @@ import decimal
 
 from django.db import transaction
 
-from apps.cryptocurrencies.clients import coin_gecko_client
+from apps.cryptocurrencies.clients import crypto_exchange_client
 from apps.cryptocurrencies.services import generate_temp_wallet
 
 from apps.users.models import User
@@ -12,7 +12,7 @@ from apps.orders import models
 
 
 def calculate_deposit_amount(user: User, amount: decimal.Decimal, currency: Currency) -> dict:
-    usdt_info = coin_gecko_client.get_currency_to_usdt_rate(currency)
+    usdt_info = crypto_exchange_client.get_currency_to_usdt_rate(currency)
 
     with decimal.localcontext() as ctx:
         ctx.prec = 99

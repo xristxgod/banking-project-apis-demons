@@ -36,4 +36,4 @@ class CryptoExchangeAPIClient(metaclass=Singleton):
         }
 
 
-coin_gecko_client = CryptoExchangeAPIClient()
+crypto_exchange_client = CryptoExchangeAPIClient()
