@@ -311,3 +311,30 @@ class CreateDepositByTextHandler(CreateDepositHandler):
         }
 
         return self.create_deposit(request)
+
+
+class RepeatDepositHandler(CreateDepositHandler):
+    def attach(self):
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=None,
+            cq_filter=callbacks.repeat_deposit.filter(),
+        )
+
+    def call(self, request: Request) -> dict:
+        from apps.orders.models import Payment
+
+        cb_data = callbacks.repeat_deposit.parse(callback_data=request.data)
+
+        payment = Payment.objects.get(pk=int(cb_data['pk']))
+
+        self.storage[request.user.id] = {
+            'currency': payment.order.currency,
+            'amount': payment.order.amount,
+            'deposit_type': payment.type,
+            'usdt_exchange_rate': None,
+            'usdt_amount': None,
+            'usdt_commission': None,
+        }
+
+        return self.create_deposit(request)
