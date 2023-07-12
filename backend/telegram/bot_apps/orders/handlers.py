@@ -6,7 +6,7 @@ from telebot.callback_data import CallbackData
 from django.utils.translation import gettext as _
 
 from apps.cryptocurrencies.services import get_currency
-from apps.orders.services import calculate_deposit_amount, create_payment
+from apps.orders.services import calculate_deposit_amount
 
 from telegram.utils import make_text
 from telegram.middlewares.request import Request
