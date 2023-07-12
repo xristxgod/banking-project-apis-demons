@@ -21,7 +21,7 @@ def save_message(message_id: int, obj: models.Model):
     obj.add(message_id)
 
 
-def update_messages(obj: models.Model, text: str, bot: telebot.TeleBot):
+def update_messages(obj: models.Model, message_params: dict, bot: telebot.TeleBot):
     obj = MessageIDS.objects.filter(
         content_type=ContentType.objects.get_for_model(obj),
         object_id=obj.pk,
@@ -31,8 +31,8 @@ def update_messages(obj: models.Model, text: str, bot: telebot.TeleBot):
 
     for message_id in obj.get_ids():
         bot.edit_message_text(
-            text=text,
             message_id=message_id,
+            **message_params,
         )
 
 
