@@ -61,7 +61,7 @@ def test_calculate_deposit_amount(deposit_commission_status, amount, usdt_price,
     result.update(dict(usdt_info=usdt_info))
 
     mocker.patch(
-        'apps.orders.services.coin_gecko_client.get_currency_to_usdt_rate',
+        'apps.orders.services.crypto_exchange_client.get_currency_to_usdt_rate',
         return_value=usdt_info,
     )
 

@@ -1,10 +1,17 @@
+import pytest
+
 from datetime import datetime
+
+from src.caches.ram import cached
 
 
 class TestRamCached:
     """ src.caches.ram.Cached """
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        cached._storage.clear()
+
     def test_cached(self):
-        from src.caches.ram import cached
 
         @cached(12)
         def temp_func(a: int, b: int) -> int:

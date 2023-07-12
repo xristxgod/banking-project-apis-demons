@@ -4,8 +4,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
 
+DEFAULT_IDS = {
+    'ids': []
+}
+
+
 class MessageIDS(models.Model):
-    ids = models.JSONField(_('Message ids'), default={'ids': []})
+    ids = models.JSONField(_('Message ids'), default=DEFAULT_IDS)
     content_type = models.ForeignKey(ContentType, on_delete=models.DO_NOTHING)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')

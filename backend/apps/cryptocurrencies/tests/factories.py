@@ -31,7 +31,7 @@ class CurrencyFactory(DjangoModelFactory):
 
     network = factory.SubFactory(NetworkFactory)
 
-    coin_gecko_id = factory.Sequence(lambda n: "coin_gecko_id#%d" % n)
+    exchange_id = factory.Sequence(lambda n: "exchange_id#%d" % n)
     active = True
 
     class Params:
