@@ -22,7 +22,7 @@ class MessageIDS(models.Model):
     def save(self, *args, **kwargs):
         if self.ids is None:
             self.ids = DEFAULT_IDS
-        super().save(self, *args, **kwargs)
+        super().save(*args, **kwargs)
 
     @transaction.atomic()
     def add(self, message_id: int):
