@@ -31,7 +31,7 @@ class CryptoExchangeAPIClient(metaclass=Singleton):
         )
 
         return {
-            'price': decimal.Decimal(round(response['rate'], 2)),
+            'price': decimal.Decimal(repr(round(response['rate'], 2))),
             'last_updated_at': response['time'],
         }
 

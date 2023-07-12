@@ -162,11 +162,13 @@ class CreateDepositHandler(StartHandler):
         )
         self.storage.update(
             chat_id=request.user.id,
-            **usdt_info,
+            usdt_exchange_rate=usdt_info['usdt_info']['price'],
+            usdt_amount=usdt_info['usdt_amount'],
+            usdt_commission=usdt_info['usdt_commission'],
         )
 
         return utils.view_create_deposit_question(
-            payment_info=self.storage[request.user.id],
+            payment_info=self.storage[request.user.id]['data'],
             callback=callbacks.create_deposit,
             extra=dict(step=callbacks.CreateDepositStep.QUESTION),
         )

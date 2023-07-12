@@ -17,8 +17,20 @@ def view_create_deposit_question(payment_info: dict, callback: CallbackData, ext
     markup = keyboards.get_question_keyboard(callback=callback, extra=extra)
     return dict(
         text=make_text(_(
-            'Do you want create'
-        )),
+            ':eight_pointed_star: New deposit:\n\n'
+            ':coin: You give: {amount} {currency}\n'
+            ':coin: You get: {usdt_amount} USDT\n\n'
+            ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+            ':battery: Our commission: ${usdt_commission}\n\n'
+            ':credit_card: Payment via: {typ}'
+        ),
+            currency=payment_info['currency'].verbose_telegram,
+            amount=payment_info['amount'],
+            usdt_amount=payment_info['usdt_amount'],
+            usdt_exchange_rate=payment_info['usdt_exchange_rate'],
+            usdt_commission=payment_info['usdt_commission'],
+            typ=_('QR code') if payment_info['deposit_type'] == Payment.Type.DEPOSIT else _('Crypto Wallet')
+        ),
         reply_markup=markup,
     )
 
