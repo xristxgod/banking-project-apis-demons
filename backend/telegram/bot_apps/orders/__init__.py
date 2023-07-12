@@ -6,4 +6,5 @@ HANDLERS = (
     handlers.ViewWithdrawHandler,
     handlers.CreateDepositHandler,
     handlers.CreateDepositByTextHandler,
+    handlers.RepeatDepositHandler,
 )

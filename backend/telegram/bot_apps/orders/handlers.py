@@ -338,3 +338,18 @@ class RepeatDepositHandler(CreateDepositHandler):
         }
 
         return self.create_deposit(request)
+
+
+class ClosePaymentHandler(StartHandler):
+    def attach(self):
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=None,
+            cq_filter=callbacks.close_payment.filter(),
+        )
+
+    def call(self, request: Request) -> dict:
+        cb_data = callbacks.repeat_deposit.parse(callback_data=request.data)
+
+        payment_pk = int(cb_data['pk'])
+        # TODO

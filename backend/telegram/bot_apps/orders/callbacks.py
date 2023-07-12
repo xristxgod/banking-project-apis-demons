@@ -9,6 +9,7 @@ withdraw = CallbackData('type', prefix='withdraw')
 
 create_deposit = CallbackData('step', 'data', prefix='create-deposit')
 repeat_deposit = CallbackData('pk', prefix='repeat-deposit')
+close_payment = CallbackData('pk', prefix='close-payment')
 
 
 class CreateDepositStep:
