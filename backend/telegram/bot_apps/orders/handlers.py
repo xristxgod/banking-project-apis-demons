@@ -170,7 +170,6 @@ class CreateDepositHandler(StartHandler):
                 reply_markup=markup,
             )
         elif request.data.startswith('create-deposit:step#1'):
-            """Show cryptocurrencies"""
             self.storage[request.user.id] = {
                 'currency': None,
                 'amount': None,
@@ -187,21 +186,29 @@ class CreateDepositHandler(StartHandler):
                 reply_markup=markup,
             )
         elif request.data.startswith('create-deposit:step#2'):
-            """Write amount"""
             currency_id = int(request.data.replace('create-deposit:step#2:', ''))
             self.storage.update(
                 request.user.id,
-                set_step=True,
                 currency=get_currency(currency_id),
             )
-            request.data = 'create-deposit:step#3'
+            return dict(
+                text=make_text(_('Take type')),
+                reply_markup=keyboards.get_deposit_type_keyboard('create-deposit:step#3'),
+            )
+        elif request.data.startswith('create-deposit:step#3'):
+            self.storage.update(
+                request.user.id,
+                set_step=True,
+                deposit_type=request.data.replace('create-deposit:step#3:', '')
+            )
+            request.data = 'create-deposit:step#4'
+
             return dict(
                 text=make_text(_(
                     'Write amount',
                 )),
             )
-        elif request.data.startswith('create-deposit:step#3'):
-            """Show deposit type"""
+        elif request.data.startswith('create-deposit:step#4'):
             if request.text in self.close_text:
                 self.storage.delete(request.user.id)
                 return dict(
@@ -218,17 +225,6 @@ class CreateDepositHandler(StartHandler):
                 chat_id=request.user.id,
                 set_step=False,
                 amount=decimal.Decimal(request.text, context=decimal.Context(prec=999)),
-            )
-
-            return dict(
-                text=make_text(_('Take type')),
-                reply_markup=keyboards.get_deposit_type_keyboard('create-deposit:step#4'),
-            )
-        elif request.data.startswith('create-deposit:step#4'):
-            """Take answer"""
-            self.storage.update(
-                chat_id=request.user.id,
-                deposit_type=request.data.replace('create-deposit:step#4:', '')
             )
             return self.create_deposit(request)
         elif request.data.startswith('create-deposit:step#5'):
