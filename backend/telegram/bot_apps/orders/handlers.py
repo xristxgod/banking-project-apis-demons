@@ -152,12 +152,17 @@ class CreateDepositHandler(StartHandler):
     def make_deposit(self, request: Request) -> dict:
         return services.make_deposit(request, self.storage.pop(request.user.id))
 
-    def call(self, request: Request) -> dict:
-        if (
-                not self.storage.has(request.user.id) and
-                request.data != 'create-deposit:step#0' or
+    def _is_start(self, request: Request):
+        return (
+                (
+                        not self.storage.has(request.user.id) and
+                        request.data not in ('create-deposit:step#0', 'create-deposit:step#1')
+                ) or
                 request.data.startswith('create-deposit:step#0')
-        ):
+        )
+
+    def call(self, request: Request) -> dict:
+        if self._is_start(request):
             self.storage.delete(request.user.id)
             markup = types.InlineKeyboardMarkup()
             markup.row(
