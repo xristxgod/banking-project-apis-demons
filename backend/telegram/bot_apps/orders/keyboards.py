@@ -5,7 +5,7 @@ from django.utils.translation import gettext as _
 
 from src.caches.ram import cached
 
-from apps.orders.models import OrderStatus, Payment
+from apps.orders.models import OrderStatus, Order, Payment
 from apps.cryptocurrencies.models import Currency
 
 from telegram.utils import make_text
@@ -84,28 +84,58 @@ def get_question_keyboard(callback: CallbackData, extra: dict = None) -> types.I
 def get_deposit_menu_keyboard(request: Request) -> types.InlineKeyboardMarkup:
     keyboard = types.InlineKeyboardMarkup()
 
-    buttons = []
-
     active_deposit = request.user.active_deposit
     last_deposit = request.user.last_deposit
 
     if active_deposit:
-        buttons.append(types.InlineKeyboardButton(
+        keyboard.row(types.InlineKeyboardButton(
             text=make_text(_(':green_circle: Active')),
             callback_data=callbacks.deposit.new(type=callbacks.PaymentType.ACTIVE)
         ))
     else:
-        buttons.append(types.InlineKeyboardButton(
+        keyboard.row(types.InlineKeyboardButton(
             text=make_text(_(':blue_circle: Create')),
             callback_data=callbacks.create_deposit.new(step=callbacks.CreateDepositStep.START, data=callbacks.empty),
         ))
 
     if active_deposit != last_deposit:
-        buttons.append(types.InlineKeyboardButton(
+        keyboard.row(types.InlineKeyboardButton(
             text=make_text(_(':yellow_circle: Last')),
             callback_data=callbacks.deposit.new(type=callbacks.PaymentType.LAST),
         ))
 
-    keyboard.row(*buttons)
+    return keyboard
+
+
+def get_deposit_view_keyboard(payment: Payment) -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    if payment.status == OrderStatus.CREATED:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':cross_mark: Cancel')),
+                callback_data=callbacks.close_payment.new(pk=payment.pk),
+            ),
+            types.InlineKeyboardButton(
+                text=make_text(_(':credit_card: To pay')),
+                url=payment.url,
+            ),
+        )
+
+    if payment.status in Order.DONE_STATUSES:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':counterclockwise_arrows_button: Repeat')),
+                callback_data=callbacks.repeat_deposit.new(pk=payment.pk),
+            )
+        )
+
+    if payment.status == OrderStatus.DONE:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=make_text(_(':receipt: View transaction')),
+                url=payment.order.transaction.url,
+            )
+        )
 
     return keyboard

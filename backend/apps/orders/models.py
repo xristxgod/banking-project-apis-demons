@@ -153,7 +153,8 @@ class Payment(models.Model):
 
     @property
     def url(self) -> str:
-        return ''
+        # TODO
+        return 'https://www.webfx.com/tools/emoji-cheat-sheet/'
 
 
 class TempWallet(models.Model):

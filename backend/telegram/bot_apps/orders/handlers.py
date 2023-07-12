@@ -99,11 +99,11 @@ class ViewDepositHandler(BaseViewPaymentHandler):
         )
 
     def not_found(self, request: Request) -> dict:
-        return utils.not_found_deposit(request)
+        return utils.not_found_deposit()
 
     def view_active(self, request: Request) -> dict:
         if obj := request.user.active_deposit:
-            return utils.view_active_deposit(obj)
+            return utils.view_active_deposit(obj, request)
         return self.not_found(request)
 
     def view_last(self, request: Request) -> dict:
