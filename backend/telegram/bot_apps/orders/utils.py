@@ -16,10 +16,8 @@ def view_create_deposit_question(payment_info: dict, prefix: str) -> dict:
     markup = keyboards.get_question_keyboard(prefix=prefix)
     return dict(
         text=make_text(_(
-            'Do you want create, {payment_info}',
-        ),
-            payment_info=payment_info
-        ),
+            'Do you want create'
+        )),
         reply_markup=markup,
     )
 

@@ -13,6 +13,6 @@ class PaymentType:
     HISTORY = 'history'
 
 
-class Answer(enum.StrEnum):
+class Answer:
     YES = 'yes'
     NO = 'no'
