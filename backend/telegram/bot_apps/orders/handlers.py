@@ -179,7 +179,7 @@ class CreateDepositHandler(StartHandler):
 
         if not self.storage.has(request.user.id) and int(cb_data['step']) != callbacks.CreateDepositStep.START:
             return dict(
-               text=make_text(_(':no_entry:')),
+                text=make_text(_(':no_entry:')),
             )
 
         match int(cb_data['step']):
@@ -270,3 +270,44 @@ class CreateDepositHandler(StartHandler):
                         )
                     case callbacks.Answer.YES:
                         return self.make_deposit(request)
+
+
+class CreateDepositByTextHandler(CreateDepositHandler):
+    regexp = r'^/(?P<method>cdeposit|qrcdeposit) (?P<network>[A-z]+):(?P<currency>[A-z]+) (?P<amount>\d*[.,]?\d+)$'
+
+    def attach(self):
+        self.bot.register_message_handler(
+            callback=self,
+            regexp=self.regexp,
+        )
+
+    def call(self, request: Request) -> dict:
+        from apps.orders.models import Payment
+        from apps.cryptocurrencies.models import Currency
+
+        match = re.match(self.regexp, request.text)
+        network_name, symbol = match.group('network'), match.group('currency')
+
+        currency = Currency.objects.filter(
+            symbol__iexact=symbol,
+            network__name__iexact=network_name,
+        ).first()
+
+        if not currency:
+            return dict(
+                text=make_text(_(':double_exclamation_mark: This {currency} currency was not found!'),
+                               currency=f'{network_name}:{symbol}')
+            )
+
+        typ = Payment.Type.DEPOSIT if match.group('method') == 'qrcdeposit' else Payment.Type.BY_PROVIDER_DEPOSIT
+
+        self.storage[request.user.id] = {
+            'currency': currency,
+            'amount': decimal.Decimal(match.group('amount'), context=decimal.Context(prec=999)),
+            'deposit_type': typ,
+            'usdt_exchange_rate': None,
+            'usdt_amount': None,
+            'usdt_commission': None,
+        }
+
+        return self.create_deposit(request)
