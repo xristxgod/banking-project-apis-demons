@@ -20,14 +20,14 @@ class CryptoExchangeAPIClient(metaclass=Singleton):
 
     def _make_request(self, path: str) -> dict:
         url = urljoin(self.endpoint_uri, path)
-        response = self.session.get(url, headers={})
+        response = self.session.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
     @cached(60 * 10)
     def get_currency_to_usdt_rate(self, currency: Currency) -> dict:
         response = self._make_request(
-            path=f'/exchangerate/{currency.exchange_id}/USD',
+            path=f'/v1/exchangerate/{currency.exchange_id}/USD',
         )
 
         return {
