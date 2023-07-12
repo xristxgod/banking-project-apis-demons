@@ -10,7 +10,7 @@ DEFAULT_IDS = {
 
 
 class MessageIDS(models.Model):
-    ids = models.JSONField(_('Message ids'), default=DEFAULT_IDS)
+    ids = models.JSONField(_('Message ids'), default=None)
     content_type = models.ForeignKey(ContentType, on_delete=models.DO_NOTHING)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -18,6 +18,11 @@ class MessageIDS(models.Model):
     class Meta:
         verbose_name = _('Message ids')
         verbose_name_plural = _('Messages ids')
+
+    def save(self, *args, **kwargs):
+        if self.ids is None:
+            self.ids = DEFAULT_IDS
+        super().save(self, *args, **kwargs)
 
     @transaction.atomic()
     def add(self, message_id: int):
