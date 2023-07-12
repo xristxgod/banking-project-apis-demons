@@ -1,3 +1,4 @@
+from telebot.callback_data import CallbackData
 from django.utils.translation import gettext as _
 
 from apps.orders.models import Payment, OrderStatus
@@ -12,8 +13,8 @@ def not_found_deposit(request: Request) -> dict:
     pass
 
 
-def view_create_deposit_question(payment_info: dict, prefix: str) -> dict:
-    markup = keyboards.get_question_keyboard(prefix=prefix)
+def view_create_deposit_question(payment_info: dict, callback: CallbackData, extra: dict = None) -> dict:
+    markup = keyboards.get_question_keyboard(callback=callback, extra=extra)
     return dict(
         text=make_text(_(
             'Do you want create'
