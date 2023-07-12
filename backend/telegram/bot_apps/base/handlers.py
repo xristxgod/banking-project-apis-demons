@@ -13,6 +13,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     parse_mode = 'Markdown'
     cls_storage = MemoryStorage
+    storage_key: str
 
     @classmethod
     def _is_anonymous(cls, request: Request):
@@ -20,7 +21,7 @@ class AbstractHandler(metaclass=abc.ABCMeta):
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
-        self.storage = self.cls_storage(self)
+        self.storage = self.cls_storage(self.storage_key or self)
         self.attach()
 
     def _call_method(self, request: Request) -> dict:

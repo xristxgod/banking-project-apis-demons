@@ -4,7 +4,7 @@ from django.utils.translation import gettext as _
 
 from src.caches.ram import cached
 
-from apps.orders.models import OrderStatus
+from apps.orders.models import OrderStatus, Payment
 from apps.cryptocurrencies.models import Currency
 
 from telegram.utils import make_text
@@ -45,17 +45,34 @@ def get_currencies_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
     return keyboard
 
 
+def get_deposit_type_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
+    keyboard = types.InlineKeyboardMarkup()
+
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text=make_text(_('By crypto wallet')),
+            callback_data=f'{prefix}:{Payment.Type.BY_PROVIDER_DEPOSIT}',
+        ),
+        types.InlineKeyboardButton(
+            text=make_text(_('By qr code')),
+            callback_data=f'{prefix}:{Payment.Type.DEPOSIT}',
+        ),
+    )
+
+    return keyboard
+
+
 def get_question_keyboard(prefix: str) -> types.InlineKeyboardMarkup:
     keyboard = types.InlineKeyboardMarkup()
 
     keyboard.row(
         types.InlineKeyboardButton(
             text=make_text(_('No')),
-            callback_data=f'{prefix}:no',
+            callback_data=f'{prefix}:{callbacks.Answer.NO}',
         ),
         types.InlineKeyboardButton(
             text=make_text(_('Yes')),
-            callback_data=f'{prefix}:yes',
+            callback_data=f'{prefix}:{callbacks.Answer.YES}',
         ),
     )
 

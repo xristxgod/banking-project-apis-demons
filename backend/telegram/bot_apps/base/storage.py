@@ -6,8 +6,12 @@ buffer = {}
 class MemoryStorage:
     storage = buffer
 
-    def __init__(self, _class: object):
-        self.key = (_class.__module__, _class.__class__.__name__)
+    def __init__(self, key: object | str):
+        if isinstance(key, str):
+            self.key = key
+        else:
+            self.key = (key.__module__, key.__class__.__name__)
+
         if not self.storage.get(self.key):
             self.storage[self.key] = {}
 
@@ -45,3 +49,7 @@ class MemoryStorage:
         for key, value in self.storage[self.key][chat_id]['data'].items():
             if params.get(key):
                 self.storage[self.key][chat_id]['data'][key] = params[key]
+
+    def pop(self, chat_id: int) -> dict:
+        value = self.storage[self.key].pop(chat_id)
+        return value['data']

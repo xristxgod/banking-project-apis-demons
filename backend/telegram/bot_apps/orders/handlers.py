@@ -6,7 +6,7 @@ from telebot.callback_data import CallbackData
 from django.utils.translation import gettext as _
 
 from apps.cryptocurrencies.services import get_currency
-from apps.orders.services import calculate_deposit_amount
+from apps.orders.services import calculate_deposit_amount, create_payment
 
 from telegram.utils import make_text
 from telegram.middlewares.request import Request
@@ -14,6 +14,7 @@ from telegram.bot_apps.start.handlers import StartHandler
 from telegram.bot_apps.base.keyboards import get_back_button, get_back_keyboard
 
 from telegram.bot_apps.orders import utils
+from telegram.bot_apps.orders import services
 from telegram.bot_apps.orders import keyboards
 from telegram.bot_apps.orders import callbacks
 
@@ -118,6 +119,7 @@ class ViewWithdrawHandler(BaseViewPaymentHandler):
 
 
 class CreateDepositHandler(StartHandler):
+    storage_key = 'CreateDeposit'
     close_text = (
         'exit', '/exit',
     )
@@ -128,7 +130,7 @@ class CreateDepositHandler(StartHandler):
             func=lambda call: call.data.startswith('create-deposit'),
         )
 
-    def create_deposit(self, request: Request, prefix: str) -> dict:
+    def create_deposit(self, request: Request) -> dict:
         if not self.storage.has(chat_id=request.user.id):
             raise ValueError()
 
@@ -144,8 +146,11 @@ class CreateDepositHandler(StartHandler):
 
         return utils.view_create_deposit_question(
             payment_info=self.storage[request.user.id],
-            prefix=prefix,
+            prefix='create-deposit:step#4',
         )
+
+    def make_deposit(self, request: Request) -> dict:
+        return services.make_deposit(request, self.storage.pop(request.user.id))
 
     def call(self, request: Request) -> dict:
         if request.data.startswith('create-deposit:step#0'):
@@ -165,9 +170,11 @@ class CreateDepositHandler(StartHandler):
                 reply_markup=markup,
             )
         elif request.data.startswith('create-deposit:step#1'):
+            """Show cryptocurrencies"""
             self.storage[request.user.id] = {
                 'currency': None,
                 'amount': None,
+                'deposit_type': None,
                 'usdt_exchange_rate': None,
                 'usdt_amount': None,
                 'usdt_commission': None,
@@ -180,6 +187,7 @@ class CreateDepositHandler(StartHandler):
                 reply_markup=markup,
             )
         elif request.data.startswith('create-deposit:step#2'):
+            """Write amount"""
             currency_id = int(request.data.replace('create-deposit:step#2:', ''))
             self.storage.update(
                 request.user.id,
@@ -193,6 +201,7 @@ class CreateDepositHandler(StartHandler):
                 )),
             )
         elif request.data.startswith('create-deposit:step#3'):
+            """Show deposit type"""
             if request.text in self.close_text:
                 self.storage.delete(request.user.id)
                 return dict(
@@ -210,9 +219,25 @@ class CreateDepositHandler(StartHandler):
                 set_step=False,
                 amount=decimal.Decimal(request.text, context=decimal.Context(prec=999)),
             )
-            return self.create_deposit(
-                request,
-                prefix='create-deposit:step#4',
+
+            return dict(
+                text=make_text(_('Take type')),
+                reply_markup=keyboards.get_deposit_type_keyboard('create-deposit:step#5'),
             )
-        elif request.data.startswith('create-deposit:step#4'):
-            pass
+        elif request.data.startswith('create-deposit:step#5'):
+            """Take answer"""
+            self.storage.update(
+                chat_id=request.user.id,
+                deposit_type=request.data.replace('create-deposit:step#5:', '')
+            )
+            return self.create_deposit(request)
+        elif request.data.startswith('create-deposit:step#6'):
+            """Make or no deposit"""
+            match request.data.replace('create-deposit:step#6:', ''):
+                case callbacks.Answer.YES:
+                    self.storage.delete(request.user.id)
+                    return dict(
+                        text=make_text(_('Ok, im close')),
+                    )
+                case callbacks.Answer.YES:
+                    return self.make_deposit(request)
