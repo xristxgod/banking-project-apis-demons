@@ -114,7 +114,7 @@ def get_deposit_view_keyboard(payment: Payment) -> types.InlineKeyboardMarkup:
         keyboard.row(
             types.InlineKeyboardButton(
                 text=make_text(_(':cross_mark: Cancel')),
-                callback_data=callbacks.close_payment.new(pk=payment.pk),
+                callback_data=callbacks.cancel_payment.new(pk=payment.pk),
             ),
             types.InlineKeyboardButton(
                 text=make_text(_(':credit_card: To pay')),

@@ -111,6 +111,11 @@ class Payment(models.Model):
     usdt_commission = models.DecimalField(_('USDT commission'), default=0, max_digits=25, decimal_places=2)
     type = models.CharField(_('Type'), max_length=255, choices=Type.choices)
 
+    DEPOSIT_TYPES = [
+        Type.DEPOSIT,
+        Type.BY_PROVIDER_DEPOSIT,
+    ]
+
     class Meta:
         verbose_name = _('Payment')
         verbose_name_plural = _('Payments')
@@ -126,6 +131,10 @@ class Payment(models.Model):
         if not self.order.is_done:
             self.order.update_status(status)
         return self
+
+    @property
+    def is_deposit(self) -> bool:
+        return self.type in self.DEPOSIT_TYPES
 
     @property
     def consumer(self) -> User:

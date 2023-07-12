@@ -57,66 +57,59 @@ def view_deposit(payment: Payment) -> dict:
 
     match payment.status:
         case OrderStatus.CREATED:
-            text = make_text(_(
+            text = _(
                 ':money_bag: Deposit#:{payment_id}\n\n'
                 ':coin: You give: {amount} {currency}\n'
                 ':coin: You get: {usdt_amount} USDT\n\n'
                 ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
                 ':battery: Our commission: ${usdt_commission}\n\n'
-            ),
-                payment_id=payment.pk,
-                amount=payment.order.amount,
-                currency=payment.order.currency.verbose_telegram,
-                usdt_amount=payment.usdt_amount,
-                usdt_exchange_rate=payment.usdt_exchange_rate,
-                usdt_commission=payment.usdt_commission,
             )
         case OrderStatus.SENT:
-            text = make_text(_(
+            text = _(
                 ':money_bag: Deposit#:{payment_id}\n\n'
                 ':coin: You gave it away: {amount} {currency}\n'
                 ":coin: You'll get: {usdt_amount} USDT\n\n"
                 ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
                 ':battery: Our commission: ${usdt_commission}\n\n'
-            ),
-                payment_id=payment.pk,
             )
         case OrderStatus.DONE:
-            text = make_text(_(
+            text = _(
                 ':check_mark_button: DONE | Deposit#:{payment_id}\n\n'
                 ':coin: You gave it away: {amount} {currency}\n'
                 ':coin: You got: {usdt_amount} USDT\n\n'
                 ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
                 ':battery: Our commission: ${usdt_commission}\n\n'
-            ),
-                payment_id=payment.pk,
             )
         case OrderStatus.CANCEL:
-            text = make_text(_(
+            text = _(
                 ':cross_mark: CANCEL | Deposit#:{payment_id}\n\n'
                 ':coin: You would give: {amount} {currency}\n'
                 ":coin: You'd get: {usdt_amount} USDT\n\n"
                 ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
                 ':battery: Our commission: ${usdt_commission}\n\n'
-            ),
-                payment_id=payment.pk,
             )
         case OrderStatus.ERROR:
-            text = make_text(_(
+            text = _(
                 ':sos_button: ERROR | Deposit#:{payment_id}\n\n'
                 ':coin: You would give: {amount} {currency}\n'
                 ":coin: You'd get: {usdt_amount} USDT\n\n"
                 ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
                 ':battery: Our commission: ${usdt_commission}\n\n'
                 ':disappointed_face: An error has occurred, we apologize!'
-            ),
-                payment_id=payment.pk,
             )
         case _:
             raise ValueError()
 
     return dict(
-        text=text,
+        text=make_text(
+            text,
+            payment_id=payment.pk,
+            amount=payment.order.amount,
+            currency=payment.order.currency.verbose_telegram,
+            usdt_amount=payment.usdt_amount,
+            usdt_exchange_rate=payment.usdt_exchange_rate,
+            usdt_commission=payment.usdt_commission,
+        ),
         reply_markup=markup,
     )
 

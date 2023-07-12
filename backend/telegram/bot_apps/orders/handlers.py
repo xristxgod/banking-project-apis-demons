@@ -342,16 +342,20 @@ class RepeatDepositHandler(CreateDepositHandler):
         return self.create_deposit(request)
 
 
-class ClosePaymentHandler(StartHandler):
+class CancelPaymentHandler(StartHandler):
     def attach(self):
         self.bot.register_callback_query_handler(
             callback=self,
             func=None,
-            cq_filter=callbacks.close_payment.filter(),
+            cq_filter=callbacks.cancel_payment.filter(),
         )
 
     def call(self, request: Request) -> dict:
-        cb_data = callbacks.repeat_deposit.parse(callback_data=request.data)
+        from apps.orders.models import Payment
 
-        payment_pk = int(cb_data['pk'])
-        # TODO
+        cb_data = callbacks.cancel_payment.parse(callback_data=request.data)
+
+        payment = Payment.objects.get(order__user=request.user, pk=int(cb_data['pk']))
+
+        if payment.is_deposit:
+            return services.cancel_deposit(request, payment)
