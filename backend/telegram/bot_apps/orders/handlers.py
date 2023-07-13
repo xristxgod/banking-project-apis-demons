@@ -1,7 +1,6 @@
 import re
 import decimal
 
-from telebot import types
 from telebot.callback_data import CallbackData
 from django.utils.translation import gettext as _
 
@@ -103,17 +102,30 @@ class ViewDepositHandler(BaseViewPaymentHandler):
 
     def view_active(self, request: Request) -> dict:
         if obj := request.user.active_deposit:
-            return utils.view_active_deposit(obj, request)
+            result = utils.view_active_deposit(obj, request)
+            result['reply_markup'].row(get_back_button(
+                callbacks.deposit.new(type='menu')
+            ))
+            return result
         return self.not_found(request)
 
     def view_last(self, request: Request) -> dict:
         if obj := request.user.last_deposit:
-            return utils.view_last_deposit(obj)
+            result = utils.view_last_deposit(obj)
+            result['reply_markup'].row(get_back_button(
+                callbacks.deposit.new(type='menu')
+            ))
+            return result
         return self.not_found(request)
 
     def view_history(self, request: Request) -> dict:
-        # TODO
-        pass
+        if request.user.deposit_history(limit=5):
+            result = utils.view_deposit_history(request)
+            result['reply_markup'].row(get_back_button(
+                callbacks.deposit.new(type='menu')
+            ))
+            return result
+        return self.not_found(request)
 
 
 class ViewWithdrawHandler(BaseViewPaymentHandler):

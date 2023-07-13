@@ -104,6 +104,12 @@ def get_deposit_menu_keyboard(request: Request) -> types.InlineKeyboardMarkup:
             callback_data=callbacks.deposit.new(type=callbacks.PaymentType.LAST),
         ))
 
+    if request.user.deposit_history(limit=5):
+        keyboard.row(types.InlineKeyboardButton(
+            text=make_text(_(':white_circle: History')),
+            callback_data=callbacks.deposit.new(type=callbacks.PaymentType.HISTORY),
+        ))
+
     return keyboard
 
 

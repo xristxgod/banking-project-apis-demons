@@ -124,8 +124,46 @@ def view_last_deposit(payment: Payment) -> dict:
     return view_deposit(payment)
 
 
-def view_history_deposit() -> dict:
-    pass
+def view_deposit_history(request: Request) -> dict:
+    from tabulate import tabulate
+
+    deposits = request.user.deposit_history(10)
+    if not deposits:
+        return dict(
+            text=make_text(_(
+                ":hushed_face: You don't have a single deposit!"
+            ))
+        )
+
+    markup = types.InlineKeyboardMarkup()
+
+    if len(deposits) > 5:
+        # TODO add download report
+        markup.row()
+
+    headers = (
+        'PK', 'Amount', 'USDT Amount', 'Commission', 'Confirmed', 'Status',
+    )
+
+    table = []
+    for deposit in deposits:
+        table.append((
+            deposit.pk,
+            make_text('{amount} {currency}',
+                      amount=deposit.order.amount,
+                      currency=deposit.order.currency.verbose_telegram),
+            make_text('${usdt_amount}',
+                      usdt_amount=deposit.usdt_amount),
+            make_text('${commission}',
+                      commission=deposit.usdt_commission),
+            deposit.order.confirmed,
+            make_text(deposit.order.status_by_telegram),
+        ))
+
+    return dict(
+        text=tabulate(table, headers=headers),
+        reply_markup=markup,
+    )
 
 
 def not_found_withdraw(request: Request) -> dict:
