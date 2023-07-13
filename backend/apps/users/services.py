@@ -59,6 +59,7 @@ def get_last_deposit(user: User) -> Optional[Payment]:
     return obj
 
 
+@cached(60 * 5)
 def get_deposit_history(user: User, limit: int = 5) -> list[Payment]:
     return Payment.objects.filter(
         order__user=user,
@@ -91,6 +92,7 @@ def get_last_withdraw(user: User) -> Optional[Payment]:
     return obj
 
 
+@cached(60 * 5)
 def get_withdraw_history(user: User, limit: int = 5) -> list[Payment]:
     return Payment.objects.filter(
         order__user=user,
