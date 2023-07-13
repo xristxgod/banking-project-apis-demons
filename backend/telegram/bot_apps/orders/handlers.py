@@ -52,6 +52,11 @@ class BaseViewPaymentHandler(StartHandler):
         self.bot.register_callback_query_handler(
             callback=self,
             func=None,
+            cq_filter=callbacks.view_payment.filter(),
+        )
+        self.bot.register_callback_query_handler(
+            callback=self,
+            func=None,
             cq_filter=self.callback.filter(),
         )
 
@@ -62,6 +67,9 @@ class BaseViewPaymentHandler(StartHandler):
             return self.callback.parse(request.data)['type']
 
     def call(self, request: Request) -> dict:
+        if request.data.startswith('view-payment'):
+            return self.view(request)
+
         match self.get_request_type(request):
             case callbacks.PaymentType.ACTIVE:
                 return self.view_active(request)
@@ -71,6 +79,29 @@ class BaseViewPaymentHandler(StartHandler):
                 return self.view_history(request)
             case _:
                 return self.menu(request)
+
+    def view(self, request: Request) -> dict:
+        from apps.orders.models import Payment
+        cb_data = callbacks.view_payment.parse(callback_data=request.data)
+
+        payment = Payment.objects.filter(
+            pk=int(cb_data['pk']),
+            order__user=request.user,
+        ).first()
+        if not payment:
+            return self.not_found(request)
+
+        if payment.type in Payment.DEPOSIT_TYPES:
+            result = utils.view_deposit(payment)
+        else:
+            result = utils.view_withdraw(payment)
+
+        if cb_data['back'] != callbacks.empty:
+            result['reply_markup'].row(get_back_button(
+                self.callback.new(type=cb_data['back']),
+            ))
+
+        return result
 
     def menu(self, request: Request) -> dict: ...
 

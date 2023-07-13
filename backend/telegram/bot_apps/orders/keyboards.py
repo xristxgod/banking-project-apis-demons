@@ -145,3 +145,21 @@ def get_deposit_view_keyboard(payment: Payment) -> types.InlineKeyboardMarkup:
         )
 
     return keyboard
+
+
+def get_payment_history_keyboard(payments: list[Payment], *, back: str = callbacks.empty) -> types.InlineKeyboardMarkup:
+    markup = types.InlineKeyboardMarkup()
+
+    buttons = []
+
+    for payment in payments:
+        buttons.append(types.InlineKeyboardButton(
+            text=make_text(_(':id_button: {pk} : {status}'),
+                           pk=payment.pk,
+                           status=payment.order.status_by_telegram),
+            callback_data=callbacks.view_payment.new(pk=payment.pk, back=back)
+        ))
+
+    markup.row(*buttons)
+
+    return markup
