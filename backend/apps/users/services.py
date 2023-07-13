@@ -59,6 +59,14 @@ def get_last_deposit(user: User) -> Optional[Payment]:
     return obj
 
 
+def get_deposit_history(user: User, limit: int = 5) -> list[Payment]:
+    return Payment.objects.filter(
+        order__user=user,
+        order__status__in=Order.DONE_STATUSES,
+        type__in=Payment.DEPOSIT_TYPES,
+    ).order_by('-order__confirmed')[:limit]
+
+
 def get_active_withdraw(user: User) -> Optional[Payment]:
     return Payment.objects.filter(
         order__user=user,
@@ -81,3 +89,11 @@ def get_last_withdraw(user: User) -> Optional[Payment]:
         obj = get_active_withdraw(user)
 
     return obj
+
+
+def get_withdraw_history(user: User, limit: int = 5) -> list[Payment]:
+    return Payment.objects.filter(
+        order__user=user,
+        order__status__in=Order.DONE_STATUSES,
+        type=Payment.Type.WITHDRAW,
+    ).order_by('-order__confirmed')[:limit]
