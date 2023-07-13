@@ -1,87 +1,89 @@
 import abc
+from typing import Optional
 
 import telebot
 from telebot import types
 
-from telegram.middlewares.request import TelegramRequest
+from telegram.middlewares.request import Request
+from telegram.bot_apps.base.storage import MemoryStorage
 
 
 class AbstractHandler(metaclass=abc.ABCMeta):
     use_auth = True
 
     parse_mode = 'Markdown'
+    cls_storage = MemoryStorage
+    storage_key: Optional[str] = None
+
+    @classmethod
+    def _is_anonymous(cls, request: Request):
+        return isinstance(request.user, types.User)
 
     def __init__(self, bot: telebot.TeleBot):
         self.bot = bot
+        self.storage = self.cls_storage(self.storage_key or self)
         self.attach()
 
-    def _get_params(self, request: TelegramRequest):
-        if self.use_auth and request.user.is_anonymous:
+    def _call_method(self, request: Request) -> dict:
+        if self.use_auth and self._is_anonymous(request):
             return self.call_without_auth(request)
         else:
             return self.call(request)
 
-    def _handler(self, request: TelegramRequest):
-        params = self._get_params(request)
+    def _handler(self, request: Request):
         return self.notify(
             request=request,
-            **params,
+            params=self._call_method(request),
+        )
+
+    def _is_step(self, request: Request):
+        return (
+                self.storage.has(request.user.id) and
+                self.storage[request.user.id]['step']['set']
         )
 
     def __call__(self, _, data: dict):
-        return self._handler(request=data['request'])
+        request = data['request']
+        if self._is_step(request):
+            request.text = _.text
+            request.call = _
+        self._handler(request=request)
 
-    def notify(self, request: TelegramRequest, **params):
+    def notify(self, request: Request, params: dict):
         if request.can_edit:
             self.bot.edit_message_text(
-                chat_id=request.user.chat_id,
+                chat_id=request.user.id,
                 message_id=request.message_id,
                 parse_mode=self.parse_mode,
                 **params,
             )
         else:
             self.bot.send_message(
-                chat_id=request.user.chat_id,
+                chat_id=request.user.id,
                 parse_mode=self.parse_mode,
                 **params,
             )
+        self.post_notify(request)
+
+    def post_notify(self, request: Request):
+        if self.storage.get(request.user.id) and self.storage[request.user.id]['step']['set']:
+            request.can_edit = False
+            request.message_id += 1
+            self.bot.register_next_step_handler_by_chat_id(
+                chat_id=request.user.id,
+                callback=self.storage[request.user.id]['step']['callback'] or self,
+                data={
+                    'request': request,
+                }
+            )
+        else:
+            self.bot.clear_step_handler_by_chat_id(request.user.id)
 
     @abc.abstractmethod
     def attach(self): ...
 
     @abc.abstractmethod
-    def call_without_auth(self, request: TelegramRequest) -> dict: ...
+    def call_without_auth(self, request: Request) -> dict: ...
 
     @abc.abstractmethod
-    def call(self, request: TelegramRequest) -> dict: ...
-
-
-class StepMixin:
-
-    def _step_call(self, message: types.Message, data: dict):
-        old_request: TelegramRequest = data['request']
-        data['request'] = TelegramRequest(
-            user=old_request.user,
-            data=data.get('data') or old_request.data,
-            text=message.text,
-            message_id=message.message_id,
-            can_edit=False,
-            message_obj=message,
-        )
-        return self.__call__(message, data)
-
-    @abc.abstractmethod
-    def by_step(self, request: TelegramRequest): ...
-
-    def notify(self, request: TelegramRequest, **params):
-        super().notify(request, **params)
-        if request.trigger_step:
-            self.bot.register_next_step_handler(
-                callback=self._step_call,
-                message=request.message_obj,
-                data=dict(
-                    request=request,
-                )
-            )
-        else:
-            self.bot.clear_step_handler_by_chat_id(request.user.chat_id)
+    def call(self, request: Request) -> dict: ...

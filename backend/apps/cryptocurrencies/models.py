@@ -61,7 +61,7 @@ class Currency(models.Model):
 
     network = models.ForeignKey(Network, verbose_name=_('Network'), related_name='currencies', on_delete=models.CASCADE)
 
-    coin_gecko_id = models.CharField(_('Coin gecko id'), max_length=25)
+    exchange_id = models.CharField(_('Coin gecko id'), max_length=25)
     active = models.BooleanField(_('Active'), default=True)
 
     objects = ActiveManager()
@@ -75,6 +75,8 @@ class Currency(models.Model):
         verbose_name_plural = _('Currencies')
 
     def __str__(self):
+        if self.network.name.upper() == self.symbol.upper():
+            return self.symbol.upper()
         return f'{self.network.name.upper()}:{self.symbol.upper()}'
 
     @property

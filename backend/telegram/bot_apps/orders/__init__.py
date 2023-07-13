@@ -1,9 +1,11 @@
 from . import handlers
 
 HANDLERS = (
-    handlers.OrdersHandler,
-    handlers.DepositHandler,
-    handlers.PreMakeDepositHandler,
-    handlers.MakeDepositHandler,
-    handlers.CancelDepositHandler,
+    handlers.OrderHandler,
+    handlers.ViewDepositHandler,
+    handlers.ViewWithdrawHandler,
+    handlers.CreateDepositHandler,
+    handlers.CreateDepositByTextHandler,
+    handlers.RepeatDepositHandler,
+    handlers.CancelPaymentHandler,
 )

@@ -1,6 +1,7 @@
 import pytest
 
 from apps.orders.models import OrderStatus, Payment
+from apps.orders.tests.factories import PaymentFactory
 
 from .factories import UserFactory
 
@@ -32,7 +33,6 @@ class TestUserPayment:
         Payment.Type.BY_PROVIDER_DEPOSIT,
     ])
     def test_deposit(self, typ):
-        from apps.orders.tests.factories import PaymentFactory
         from apps.users.services import get_active_deposit, get_last_deposit
 
         deposit1 = PaymentFactory(type=typ, order__user=self.user, is_created=True)
@@ -55,8 +55,23 @@ class TestUserPayment:
         assert get_active_deposit(self.user) is None
         assert get_last_deposit(self.user) == deposit2
 
+    def test_deposit_history(self):
+        from apps.users.services import get_deposit_history
+
+        _ = PaymentFactory(type=Payment.Type.DEPOSIT, order__user=self.user, is_created=True)
+        _ = PaymentFactory(type=Payment.Type.DEPOSIT, order__user=self.user, is_created=True)
+
+        withdraw = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_done=True)
+        deposit3 = PaymentFactory(type=Payment.Type.DEPOSIT, order__user=self.user, is_cancel=True)
+        deposit4 = PaymentFactory(type=Payment.Type.BY_PROVIDER_DEPOSIT, order__user=self.user, is_done=True)
+        deposit5 = PaymentFactory(type=Payment.Type.DEPOSIT, order__user=self.user, is_done=True)
+
+        history = get_deposit_history(self.user)
+
+        assert len(history) == 3
+        assert list(history) == [deposit3, deposit4, deposit5]
+
     def test_withdraw(self):
-        from apps.orders.tests.factories import PaymentFactory
         from apps.users.services import get_active_withdraw, get_last_withdraw
 
         withdraw1 = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_created=True)
@@ -78,3 +93,19 @@ class TestUserPayment:
 
         assert get_active_withdraw(self.user) is None
         assert get_last_withdraw(self.user) == withdraw2
+
+    def test_withdraw_history(self):
+        from apps.users.services import get_withdraw_history
+
+        _ = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_created=True)
+        _ = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_created=True)
+
+        deposit = PaymentFactory(type=Payment.Type.DEPOSIT, order__user=self.user, is_done=True)
+        withdraw3 = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_cancel=True)
+        withdraw4 = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_done=True)
+        withdraw5 = PaymentFactory(type=Payment.Type.WITHDRAW, order__user=self.user, is_done=True)
+
+        history = get_withdraw_history(self.user)
+
+        assert len(history) == 3
+        assert list(history) == [withdraw3, withdraw4, withdraw5]

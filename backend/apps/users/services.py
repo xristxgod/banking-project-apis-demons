@@ -11,23 +11,23 @@ from apps.orders.models import OrderStatus, Order, Payment
 
 @cached(60 * 2)
 def get_balance(user: User) -> decimal.Decimal:
-    deposit = Payment.objects.filter(
+    deposit_sum = Payment.objects.filter(
         order__user=user,
         order__status=OrderStatus.DONE,
         type__in=[Payment.Type.DEPOSIT, Payment.Type.BY_PROVIDER_DEPOSIT]
     ).aggregate(
-        Sum('usdt_amount')
+        Sum('usdt_amount', default=0)
     )
 
-    withdraw = Payment.objects.filter(
+    withdraw_sum = Payment.objects.filter(
         order__user=user,
         order__status=OrderStatus.DONE,
         type=Payment.Type.WITHDRAW
     ).aggregate(
-        Sum('usdt_amount')
+        Sum('usdt_amount', default=0)
     )
 
-    balance = deposit['usdt_amount__sum'] - withdraw['usdt_amount__sum']
+    balance = deposit_sum['usdt_amount__sum'] - withdraw_sum['usdt_amount__sum']
 
     with decimal.localcontext() as ctx:
         ctx.prec = 2
@@ -59,6 +59,15 @@ def get_last_deposit(user: User) -> Optional[Payment]:
     return obj
 
 
+@cached(60 * 5)
+def get_deposit_history(user: User, limit: int = 5) -> list[Payment]:
+    return Payment.objects.filter(
+        order__user=user,
+        order__status__in=Order.DONE_STATUSES,
+        type__in=Payment.DEPOSIT_TYPES,
+    ).order_by('-order__confirmed')[:limit]
+
+
 def get_active_withdraw(user: User) -> Optional[Payment]:
     return Payment.objects.filter(
         order__user=user,
@@ -81,3 +90,12 @@ def get_last_withdraw(user: User) -> Optional[Payment]:
         obj = get_active_withdraw(user)
 
     return obj
+
+
+@cached(60 * 5)
+def get_withdraw_history(user: User, limit: int = 5) -> list[Payment]:
+    return Payment.objects.filter(
+        order__user=user,
+        order__status__in=Order.DONE_STATUSES,
+        type=Payment.Type.WITHDRAW,
+    ).order_by('-order__confirmed')[:limit]

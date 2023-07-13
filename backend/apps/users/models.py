@@ -63,6 +63,10 @@ class User(AbstractUser):
         from apps.users.services import get_last_deposit
         return get_last_deposit(self)
 
+    def deposit_history(self, limit: int = 5) -> list:
+        from apps.users.services import get_deposit_history
+        return get_deposit_history(self, limit=limit)
+
     @property
     def active_withdraw(self):
         from apps.users.services import get_active_withdraw
@@ -72,3 +76,7 @@ class User(AbstractUser):
     def last_withdraw(self):
         from apps.users.services import get_last_withdraw
         return get_last_withdraw(self)
+
+    def withdraw_history(self, limit: int = 5) -> list:
+        from apps.users.services import get_withdraw_history
+        return get_withdraw_history(self, limit=limit)

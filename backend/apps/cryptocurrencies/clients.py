@@ -5,30 +5,35 @@ import requests
 from django.conf import settings
 
 from src.meta import Singleton
+from src.caches.ram import cached
 from apps.cryptocurrencies.models import Currency
 
 
-class CoinGeckoAPIClient(metaclass=Singleton):
+class CryptoExchangeAPIClient(metaclass=Singleton):
+    headers = {
+        'X-CoinAPI-Key': settings.CRYPTO_EXCHANGE_API_KEY
+    }
+
     def __init__(self):
         self.endpoint_uri = settings.CRYPTO_EXCHANGE_URI
         self.session = requests.session()
 
     def _make_request(self, path: str) -> dict:
         url = urljoin(self.endpoint_uri, path)
-        response = self.session.get(url)
+        response = self.session.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
+    @cached(60 * 10)
     def get_currency_to_usdt_rate(self, currency: Currency) -> dict:
         response = self._make_request(
-            path=f'/simple/price?ids={currency.coin_gecko_id}&vs_currencies=usd&include_last_updated_at=true'
+            path=f'/v1/exchangerate/{currency.exchange_id}/USD',
         )
 
-        coin = response[currency.coin_gecko_id]
         return {
-            'price': decimal.Decimal(coin['usd']),
-            'last_updated_at': coin['last_updated_at'],
+            'price': decimal.Decimal(repr(round(response['rate'], 2))),
+            'last_updated_at': response['time'],
         }
 
 
-coin_gecko_client = CoinGeckoAPIClient()
+crypto_exchange_client = CryptoExchangeAPIClient()
