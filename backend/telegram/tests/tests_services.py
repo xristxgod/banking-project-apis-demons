@@ -1,6 +1,12 @@
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def clear_buffer():
+    from telegram.bot_apps.base.storage import buffer
+    buffer.clear()
+
+
 @pytest.mark.django_db
 def test_save_message():
     from django.contrib.contenttypes.models import ContentType
