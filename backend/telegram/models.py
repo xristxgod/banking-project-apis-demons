@@ -4,17 +4,31 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
 
-class TelegramMessageIDStorage(models.Model):
-    ids: list = models.JSONField(_('Message ids'), default=[])
+DEFAULT_IDS = {
+    'ids': []
+}
+
+
+class MessageIDS(models.Model):
+    ids = models.JSONField(_('Message ids'), default=None)
     content_type = models.ForeignKey(ContentType, on_delete=models.DO_NOTHING)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
     class Meta:
-        verbose_name = _('Telegram message id storage')
-        verbose_name_plural = _('Telegram message id storages')
+        verbose_name = _('Message ids')
+        verbose_name_plural = _('Messages ids')
+
+    def save(self, *args, **kwargs):
+        if self.ids is None:
+            self.ids = DEFAULT_IDS
+        super().save(*args, **kwargs)
 
     @transaction.atomic()
     def add(self, message_id: int):
-        self.ids.append(message_id)
-        self.save()
+        if message_id not in self.ids['ids']:
+            self.ids['ids'].append(message_id)
+            self.save()
+
+    def get_ids(self) -> list:
+        return self.ids['ids']

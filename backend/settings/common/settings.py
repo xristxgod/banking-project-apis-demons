@@ -98,11 +98,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
-MAIN_TELEGRAM_BOT_TOKEN = ''
-
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -112,4 +110,12 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Payment API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+}
+
+FRONTEND_DOMAIN = ''
+CRYPTO_EXCHANGE_URI = ''
+CRYPTO_EXCHANGE_API_KEY = ''
+
+TELEGRAM_BOT_TOKENS = {
+    'default': '..'
 }

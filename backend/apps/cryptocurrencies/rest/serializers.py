@@ -1,11 +1,32 @@
 from rest_framework import serializers
 
-from apps.cryptocurrencies.models import Provider
+from apps.cryptocurrencies import models
+
+
+class NetworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Network
+        fields = (
+            'pk', 'name', 'url', 'block_explorer_url',
+            'chain_id',
+        )
+
+
+class CurrencySerializer(serializers.ModelSerializer):
+    network = NetworkSerializer()
+
+    class Meta:
+        model = models.Currency
+        fields = (
+            'pk', 'name', 'symbol',
+            'decimal_place', 'address',
+            'network', 'abi',
+        )
 
 
 class ProviderSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Provider
+        model = models.Provider
         fields = (
-            'address', 'abi',
+            'pk', 'address', 'abi',
         )

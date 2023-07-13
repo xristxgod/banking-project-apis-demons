@@ -2,46 +2,64 @@ import decimal
 
 from django.db import transaction
 
+from apps.cryptocurrencies.clients import crypto_exchange_client
+from apps.cryptocurrencies.services import generate_temp_wallet
+
 from apps.users.models import User
-from apps.orders.models import Deposit, Order
 from apps.cryptocurrencies.models import Currency
 
-
-def get_usd_rate_cost(currency: Currency) -> decimal.Decimal:
-    # FIXME
-    amount_in_resp = round(1.2, 2)
-    return decimal.Decimal(repr(amount_in_resp))
+from apps.orders import models
 
 
 def calculate_deposit_amount(user: User, amount: decimal.Decimal, currency: Currency) -> dict:
-    usd_rate_cost = get_usd_rate_cost(currency)
+    usdt_info = crypto_exchange_client.get_currency_to_usdt_rate(currency)
 
-    usd_amount_without_commission = round(amount / usd_rate_cost, 2)
-    usd_commission = round(usd_amount_without_commission / 100 * user.personal_commission_percent, 2)
-    usd_amount = round(usd_amount_without_commission - usd_commission, 2)
+    with decimal.localcontext() as ctx:
+        ctx.prec = 99
+        usdt_amount_without_commission = decimal.Decimal(amount * usdt_info['price'], context=ctx)
+        usdt_commission = decimal.Decimal(usdt_amount_without_commission / 100 * user.deposit_percent, context=ctx)
+        usdt_amount = decimal.Decimal(usdt_amount_without_commission - usdt_commission, context=ctx)
 
     return dict(
-        usd_rate_cost=usd_rate_cost,
-        usd_amount=usd_amount,
-        usd_commission=usd_commission,
+        usdt_info=usdt_info,
+        usdt_amount_without_commission=round(usdt_amount_without_commission, 2),
+        usdt_amount=round(usdt_amount, 2),
+        usdt_commission=round(usdt_commission, 2),
     )
 
 
 @transaction.atomic()
-def create_deposit(user: User, deposit_info: dict) -> Deposit:
-    order = Order.objects.create(
+def create_payment(user: User, typ: models.Payment.Type, **params):
+    order = models.Order.objects.create(
         user=user,
-        amount=deposit_info['amount'],
-        currency=deposit_info['currency'],
+        amount=params['amount'],
+        currency=params['currency'],
     )
-    return Deposit.objects.create(
+
+    payment = models.Payment.objects.create(
         order=order,
-        amount=deposit_info['usd_amount'],
-        usd_exchange_rate=deposit_info['usd_rate_cost'],
-        commission=deposit_info['usd_commission'],
+        type=typ,
+        usdt_amount=params['usdt_amount'],
+        usdt_exchange_rate=params['usdt_exchange_rate'],
+        usdt_commission=params['usdt_commission'],
     )
+
+    if typ == models.Payment.Type.DEPOSIT:
+        models.TempWallet.objects.create(
+            deposit=payment,
+            **generate_temp_wallet(currency=params['currency']),
+        )
+
+    return payment
 
 
 @transaction.atomic()
-def cancel_deposit(deposit: Deposit) -> Deposit:
-    return deposit.make_cancel()
+def update_payment_status(payment: models.Payment, status: models.OrderStatus) -> models.Payment:
+    if status == models.OrderStatus.CANCEL:
+        return cancel_payment(payment)
+    return payment.update_status(status)
+
+
+@transaction.atomic()
+def cancel_payment(payment: models.Payment) -> models.Payment:
+    return payment.make_cancel()

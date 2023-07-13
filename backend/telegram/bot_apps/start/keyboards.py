@@ -9,7 +9,7 @@ from telegram.utils import make_text
 def get_registration_keyboard(ref_code: Optional[str] = None) -> types.InlineKeyboardMarkup:
     markup = types.InlineKeyboardMarkup()
 
-    callback_data = 'registration'
+    callback_data = 'reg'
     if ref_code and len(ref_code) == 5:
         callback_data += f':{ref_code}'
 

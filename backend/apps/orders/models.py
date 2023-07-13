@@ -1,3 +1,6 @@
+from urllib.parse import urljoin
+
+from django.utils import timezone
 from django.db import models, transaction
 from django.utils.translation import gettext as _
 
@@ -25,22 +28,37 @@ class Order(models.Model):
     updated = models.DateTimeField(_('Updated'), auto_now=True)
     confirmed = models.DateTimeField(_('Confirmed'), blank=True, null=True)
 
+    DONE_STATUSES = (
+        OrderStatus.DONE, OrderStatus.CANCEL, OrderStatus.ERROR,
+    )
+
     class Meta:
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
+
+    @transaction.atomic()
+    def make_cancel(self):
+        self.status = OrderStatus.CANCEL
+        self.confirmed = timezone.now()
+        self.save()
+        return self
+
+    @transaction.atomic()
+    def update_status(self, status: OrderStatus):
+        self.status = status
+        if self.status in self.DONE_STATUSES:
+            self.confirmed = timezone.now()
+        self.save()
+        return self
 
     @property
     def can_send(self) -> bool:
         return self.status == OrderStatus.CREATED
 
-    @transaction.atomic()
-    def make_cancel(self):
-        self.status = OrderStatus.CANCEL
-        self.save()
-
     @property
     def is_done(self) -> bool:
-        return self.status in [OrderStatus.DONE, OrderStatus.ERROR]
+        return (self.confirmed is not None or
+                self.status in self.DONE_STATUSES)
 
     @property
     def status_by_telegram(self) -> str:
@@ -75,54 +93,52 @@ class Transaction(models.Model):
     def hash(self) -> str:
         return self.transaction_hash
 
+    @property
+    def url(self) -> str:
+        return urljoin(self.order.currency.network.block_explorer_url, self.hash)
 
-class Deposit(models.Model):
-    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='deposit',
+
+class Payment(models.Model):
+    class Type(models.TextChoices):
+        BY_PROVIDER_DEPOSIT = 'by_provider_deposit', _('By provider deposit')
+        DEPOSIT = 'deposit', _('Deposit')
+        WITHDRAW = 'withdraw', _('Withdraw')
+
+    order = models.OneToOneField(Order, verbose_name=_('Order'), primary_key=True, related_name='payment',
                                  on_delete=models.PROTECT)
-    amount = models.DecimalField(_('USD amount'), max_digits=25, decimal_places=2)
-    usd_exchange_rate = models.DecimalField(_('USD rate'), max_digits=25, decimal_places=2)
-    commission = models.DecimalField(_('USD commission'), max_digits=25, decimal_places=2)
+    usdt_amount = models.DecimalField(_('USDT amount'), default=0, max_digits=25, decimal_places=2)
+    usdt_exchange_rate = models.DecimalField(_('USDT rate'), default=0, max_digits=25, decimal_places=2)
+    usdt_commission = models.DecimalField(_('USDT commission'), default=0, max_digits=25, decimal_places=2)
+    type = models.CharField(_('Type'), max_length=255, choices=Type.choices)
+
+    DEPOSIT_TYPES = [
+        Type.DEPOSIT,
+        Type.BY_PROVIDER_DEPOSIT,
+    ]
 
     class Meta:
-        verbose_name = _('Order')
-        verbose_name_plural = _('Orders')
+        verbose_name = _('Payment')
+        verbose_name_plural = _('Payments')
 
     @transaction.atomic()
     def make_cancel(self):
         if self.order.status == OrderStatus.CREATED:
             self.order.make_cancel()
-            self.save()
         return self
+
+    @transaction.atomic()
+    def update_status(self, status: OrderStatus):
+        if not self.order.is_done:
+            self.order.update_status(status)
+        return self
+
+    @property
+    def is_deposit(self) -> bool:
+        return self.type in self.DEPOSIT_TYPES
 
     @property
     def consumer(self) -> User:
         return self.order.user
-
-    @property
-    def payment_url(self) -> str:
-        # TODO add payment deposit
-        return f'https://ru.stackoverflow.com/questions/{self.order.pk}'
-
-    @property
-    def transaction_url(self) -> str:
-        url = self.order.currency.network.block_explorer_url
-        return f'{url}/{self.order.transaction.transaction_hash}'
-
-    @property
-    def status(self) -> OrderStatus:
-        # Proxy
-        return self.order.status
-
-    @property
-    def status_by_telegram(self) -> str:
-        # Proxy
-        return self.order.status_by_telegram
-   
-    def costumer(self) -> User:
-        return self.order.user
-
-    def get_status_display(self) -> str:
-        return self.order.get_status_display()
 
     @property
     def create(self):
@@ -135,3 +151,28 @@ class Deposit(models.Model):
     @property
     def confirmed(self):
         return self.order.confirmed
+
+    @property
+    def status(self) -> OrderStatus:
+        return self.order.status
+
+    @property
+    def transaction_url(self) -> str:
+        return self.order.transaction.url
+
+    @property
+    def url(self) -> str:
+        # TODO
+        return 'https://www.webfx.com/tools/emoji-cheat-sheet/'
+
+
+class TempWallet(models.Model):
+    """Temp wallet for deposit"""
+    deposit = models.OneToOneField(Payment, verbose_name=_('Deposit'), primary_key=True, related_name='temp_wallet',
+                                   on_delete=models.PROTECT)
+    address = models.CharField(_('Address'), max_length=255)
+    private_key = models.CharField(_('Private key'), max_length=255)
+
+    class Meta:
+        verbose_name = _('Temp wallet')
+        verbose_name_plural = _('Temp wallets')

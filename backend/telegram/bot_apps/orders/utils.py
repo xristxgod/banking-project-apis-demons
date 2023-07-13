@@ -1,96 +1,151 @@
+from telebot import types
+from telebot.callback_data import CallbackData
+
+from django.db import transaction
 from django.utils.translation import gettext as _
 
-from apps.orders.models import OrderStatus
+from apps.orders.models import Payment, OrderStatus
 
 from telegram.utils import make_text
-from telegram.middlewares.request import TelegramRequest
+from telegram.services import save_message
+from telegram.middlewares.request import Request
 
 from telegram.bot_apps.orders import keyboards
+from telegram.bot_apps.orders import callbacks
 
 
-def view_active_deposit(request: TelegramRequest) -> dict:
-    deposit = request.user.deposit
+def not_found_deposit() -> dict:
+    markup = types.InlineKeyboardMarkup()
+    markup.row(types.InlineKeyboardButton(
+        text=make_text(_(':money_bag: Create')),
+        callback_data=callbacks.create_deposit.new(step=callbacks.CreateDepositStep.START, data=callbacks.empty),
+    ))
 
-    match deposit.status:
-        case OrderStatus.CREATED | OrderStatus.SENT:
-            raw_text = _('Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n'
-                         'Created: {created}\n\n'
-                         '{status}')
-            text = make_text(
-                raw_text=raw_text,
-                pk=deposit.pk,
-                amount=deposit.order.amount,
-                currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
-                created=deposit.order.created,
-                status=deposit.status_by_telegram,
+    return dict(
+        text=make_text(_(
+            ":persevering_face: Sorry, we couldn't find this deposit!\n"
+            ":partying_face: You can create a new one!"
+        )),
+        reply_markup=markup,
+    )
+
+
+def view_create_deposit_question(payment_info: dict, callback: CallbackData, extra: dict = None) -> dict:
+    markup = keyboards.get_question_keyboard(callback=callback, extra=extra)
+    return dict(
+        text=make_text(_(
+            ':eight_pointed_star: New deposit:\n\n'
+            ':coin: You give: {amount} {currency}\n'
+            ':coin: You get: {usdt_amount} USDT\n\n'
+            ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+            ':battery: Our commission: ${usdt_commission}\n\n'
+            ':credit_card: Payment via: {typ}'
+        ),
+            currency=payment_info['currency'].verbose_telegram,
+            amount=payment_info['amount'],
+            usdt_amount=payment_info['usdt_amount'],
+            usdt_exchange_rate=payment_info['usdt_exchange_rate'],
+            usdt_commission=payment_info['usdt_commission'],
+            typ=_('QR code') if payment_info['deposit_type'] == Payment.Type.DEPOSIT else _('Crypto Wallet')
+        ),
+        reply_markup=markup,
+    )
+
+
+def view_deposit(payment: Payment) -> dict:
+    markup = keyboards.get_deposit_view_keyboard(payment)
+
+    match payment.status:
+        case OrderStatus.CREATED:
+            text = _(
+                ':money_bag: Deposit#:{payment_id}\n\n'
+                ':coin: You give: {amount} {currency}\n'
+                ':coin: You get: {usdt_amount} USDT\n\n'
+                ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+                ':battery: Our commission: ${usdt_commission}\n\n'
             )
-        case OrderStatus.CANCEL:
-            raw_text = _(':cross_mark: CANCEL Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n\n'
-                         'Created: {created}')
-            text = make_text(
-                raw_text=raw_text,
-                pk=deposit.pk,
-                amount=deposit.order.amount,
-                currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
-                created=deposit.order.created,
+        case OrderStatus.SENT:
+            text = _(
+                ':money_bag: Deposit#:{payment_id}\n\n'
+                ':coin: You gave it away: {amount} {currency}\n'
+                ":coin: You'll get: {usdt_amount} USDT\n\n"
+                ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+                ':battery: Our commission: ${usdt_commission}\n\n'
             )
         case OrderStatus.DONE:
-            transaction = deposit.order.transaction
-            raw_text = _(':check_mark_button: DONE Deposit: {pk}\n\n'
-                         ':money_with_wings: {amount} {currency} => $ {usd_amount}\n\n'
-                         ':dollar_banknote: USD rate: $ {usd_exchange_rate}\n'
-                         ':receipt: Commission: $ {usd_commission}\n\n'
-                         'Hash: {transaction_hash}\n'
-                         ':receipt: Fee: {fee} {currency}\n'
-                         'Sender: {sender}\n\n'
-                         'Confirmed: {confirmed}')
-            text = make_text(
-                raw_text=raw_text,
-                pk=deposit.pk,
-                amount=deposit.order.amount,
-                currency=deposit.order.currency.verbose_telegram,
-                usd_amount=deposit.amount,
-                usd_exchange_rate=deposit.usd_exchange_rate,
-                usd_commission=deposit.commission,
-                transaction_hash=transaction.transaction_hash,
-                fee=transaction.fee,
-                sender=transaction.sender_address,
-                confirmed=deposit.order.confirmed,
+            text = _(
+                ':check_mark_button: DONE | Deposit#:{payment_id}\n\n'
+                ':coin: You gave it away: {amount} {currency}\n'
+                ':coin: You got: {usdt_amount} USDT\n\n'
+                ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+                ':battery: Our commission: ${usdt_commission}\n\n'
+            )
+        case OrderStatus.CANCEL:
+            text = _(
+                ':cross_mark: CANCEL | Deposit#:{payment_id}\n\n'
+                ':coin: You would give: {amount} {currency}\n'
+                ":coin: You'd get: {usdt_amount} USDT\n\n"
+                ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+                ':battery: Our commission: ${usdt_commission}\n\n'
+            )
+        case OrderStatus.ERROR:
+            text = _(
+                ':sos_button: ERROR | Deposit#:{payment_id}\n\n'
+                ':coin: You would give: {amount} {currency}\n'
+                ":coin: You'd get: {usdt_amount} USDT\n\n"
+                ':dollar_banknote: At the USDT exchange rate: ${usdt_exchange_rate}\n'
+                ':battery: Our commission: ${usdt_commission}\n\n'
+                ':disappointed_face: An error has occurred, we apologize!'
             )
         case _:
-            text = make_text(_('Sorry, Not found!'))
+            raise ValueError()
 
-    return dict(
-        text=text,
-        reply_markup=keyboards.get_deposit_keyboard(request),
-    )
-
-
-def view_question_deposit(deposit_info: dict) -> dict:
     return dict(
         text=make_text(
-            raw_text=_(':round_pushpin: Deposit info:\n\n'
-                       ':money_with_wings: You give: {amount} {currency}\n'
-                       ':money_bag: You get: $ {usd_amount}\n\n'
-                       ':dollar_banknote: USD rate: $ {usd_rate_cost}\n'
-                       ':receipt: Commission: $ {usd_commission}'),
-            amount=deposit_info['amount'],
-            currency=deposit_info['currency'].verbose_telegram,
-            usd_amount=deposit_info['usd_amount'],
-            usd_rate_cost=deposit_info['usd_rate_cost'],
-            usd_commission=deposit_info['usd_commission'],
+            text,
+            payment_id=payment.pk,
+            amount=payment.order.amount,
+            currency=payment.order.currency.verbose_telegram,
+            usdt_amount=payment.usdt_amount,
+            usdt_exchange_rate=payment.usdt_exchange_rate,
+            usdt_commission=payment.usdt_commission,
         ),
-        reply_markup=keyboards.get_deposit_question_keyboard(),
+        reply_markup=markup,
     )
+
+
+@transaction.atomic()
+def view_active_deposit(payment: Payment, request: Request) -> dict:
+    save_message(message_id=request.message_id + 1, obj=payment)
+    return view_deposit(payment)
+
+
+def view_last_deposit(payment: Payment) -> dict:
+    return view_deposit(payment)
+
+
+def view_deposit_history(request: Request) -> dict:
+    deposits = request.user.deposit_history(10)
+
+    markup = keyboards.get_payment_history_keyboard(deposits, back=callbacks.PaymentType.HISTORY)
+
+    return dict(
+        text=make_text(_('Your deposit story:')),
+        reply_markup=markup,
+    )
+
+
+def not_found_withdraw(request: Request) -> dict:
+    pass
+
+
+def view_active_withdraw(payment: Payment) -> dict:
+    pass
+
+
+def view_last_withdraw(payment: Payment) -> dict:
+    pass
+
+
+def view_history_withdraw(payment: Payment) -> dict:
+    pass
