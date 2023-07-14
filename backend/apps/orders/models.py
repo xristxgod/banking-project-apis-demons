@@ -168,10 +168,10 @@ class Payment(models.Model):
 
 class TempWallet(models.Model):
     """Temp wallet for deposit"""
-    deposit = models.OneToOneField(Payment, verbose_name=_('Deposit'), primary_key=True, related_name='temp_wallet',
+    payment = models.OneToOneField(Payment, verbose_name=_('Payment'), primary_key=True, related_name='temp_wallet',
                                    on_delete=models.PROTECT)
     address = models.CharField(_('Address'), max_length=255)
-    private_key = models.CharField(_('Private key'), max_length=255)
+    private_key = models.CharField(_('Private key'), max_length=255, default=None, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Temp wallet')
