@@ -1,6 +1,6 @@
 import abc
 import asyncio
-from typing import Mapping
+from typing import Optional, Mapping
 from dataclasses import dataclass
 
 from apps.scrapers.queue import Queue
@@ -44,7 +44,7 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     async def send_to_queue(self, message) -> bool:
         pass
 
-    async def parsing_block(self, block_number: int, orders: dict[str: int]):
+    async def parsing_block(self, block_number: int, orders: dict):
         raw_transactions, extra = await self.get_block_detail(block_number)
 
         if not raw_transactions:
@@ -93,4 +93,7 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     async def get_block_detail(self, block_number: int) -> tuple: ...
 
     @abc.abstractmethod
-    async def parsing_transaction(self, transaction: Mapping, orders: dict[str: int], extra: dict): ...
+    async def parsing_transaction(self, transaction: Mapping, orders: dict, extra: dict): ...
+
+    @abc.abstractmethod
+    async def decoded_data(self, data: str) -> Optional[tuple]: ...
