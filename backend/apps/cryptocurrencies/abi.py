@@ -1,3 +1,0 @@
-
-ERC20 = {}
-PROVIDER = {}
