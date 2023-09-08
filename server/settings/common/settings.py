@@ -1,3 +1,5 @@
 from __future__ import absolute_import
 
-DATABASE_URL = ''
+import os
+
+DATABASE_URL = os.getenv('DATABASE_URL')
