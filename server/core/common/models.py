@@ -1,5 +1,3 @@
-import abc
-
 import sqlalchemy as fields
 from sqlalchemy import Column
 

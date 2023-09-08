@@ -10,5 +10,5 @@ class StableCoinDAO(BaseDAO):
     model = models.StableCoin
 
 
-class OrderProvider(BaseDAO):
+class OrderProviderDAO(BaseDAO):
     model = models.OrderProvider
