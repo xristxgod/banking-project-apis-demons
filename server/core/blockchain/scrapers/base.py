@@ -1,11 +1,37 @@
 import abc
 import asyncio
+import decimal
+import json
 from typing import Optional
+from dataclasses import dataclass, asdict
 
 from core.blockchain.gates import get_node
 from core.blockchain.storages import BlockNumberStorage
 from core.blockchain.dao import StableCoinDAO, OrderProviderDAO
 from core.blockchain.models import Network, StableCoin, OrderProvider
+
+
+@dataclass()
+class Participant:
+    address: str
+    amount: decimal.Decimal
+
+
+@dataclass()
+class Message:
+    timestamp: int
+    order_id: int
+    network_id: Network.id
+    transaction_id: str
+    fee: decimal.Decimal
+    commission_detail: dict
+    amount: decimal.Decimal
+    inputs: list[Participant]
+    outputs: list[Participant]
+    currency_id: Optional[StableCoin.id] = None
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), default=str)
 
 
 class AbstractTransactionScraper(metaclass=abc.ABCMeta):
@@ -15,6 +41,8 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     block_pack_size: int = 1
     dependency_update_interval_by_blocks: int = 100         # every 10 blocks
     sleep_after_new_block = 1                               # 1 sec
+
+    task_path = 'core.blockchain.tasks.message_parsing_task'
 
     def __init__(self, network: Network):
         self.node = get_node(network=network)
@@ -59,6 +87,10 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
         await self.update_order_providers()
 
     update_dependencies = setup_dependencies
+
+    def send_to_task(self, message: Message):
+        json_message = message.to_json()
+        # TODO
 
     async def get_search_data(self) -> dict:
         # TODO
