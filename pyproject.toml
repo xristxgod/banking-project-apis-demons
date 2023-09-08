@@ -19,18 +19,6 @@ exclude = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = """\
-    --no-migrations \
-    --disable-warnings \
-    --create-db \
-    --exitfirst \
-    --verbose \
-    --verbosity=2 \
-    --show-capture=all \
-    --full-trace \
-    --durations=5 \
-    --timeout=600 \
-    --ignore=sales"""
 env = [
      'NETWORK=TEST'
 ]
