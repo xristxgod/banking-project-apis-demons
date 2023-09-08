@@ -29,10 +29,8 @@ services:
       - postgres-history:/root/
     networks:
       - merchant-nw
-    environment:
-      POSTGRES_USER: "merchant-user"
-      POSTGRES_PASSWORD: "merchant-password"
-      POSTGRES_DB: "merchant-db"
+    env_file:
+      - envs/.services.env
 
   rabbitmq:
     container_name: merchant-rabbitmq

@@ -1,0 +1,8 @@
+# JetBrains IDE
+.idea
+
+# smth else
+venv/
+logs/
+*.env
+local_*
