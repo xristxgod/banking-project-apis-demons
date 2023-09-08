@@ -31,7 +31,16 @@ addopts = """\
     --durations=5 \
     --timeout=600 \
     --ignore=sales"""
-
-python_files = "tests_*.py"
+env = [
+     'NETWORK=TEST'
+]
+pythonpath = [
+     'server',
+]
+asyncio_mode='auto'
+python_files = "tests*.py"
 norecursedirs = ["static", ".git"]
 python_functions = ["test"]
+filterwarnings = [
+  'ignore::DeprecationWarning:'
+]
