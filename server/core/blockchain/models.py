@@ -64,4 +64,3 @@ class OrderProvider(models.Model):
 
     def __repr__(self):
         return f'OrderProvider: {self.network.name}'
-
