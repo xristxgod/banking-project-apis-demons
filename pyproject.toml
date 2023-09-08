@@ -1,0 +1,37 @@
+[tool.black]
+line-length = 119
+target-version = ['py311']
+include = '\.py?$'
+skip-string-normalization = true
+exclude = [
+     '.eggs',
+     '\.git',
+     '\.hg',
+     '\.mypy_cache',
+     '\.tox',
+     '\.venv',
+     '\.history',
+     '_build',
+     'buck-out',
+     'build',
+     'dist',
+     'migrations']
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = """\
+    --no-migrations \
+    --disable-warnings \
+    --create-db \
+    --exitfirst \
+    --verbose \
+    --verbosity=2 \
+    --show-capture=all \
+    --full-trace \
+    --durations=5 \
+    --timeout=600 \
+    --ignore=sales"""
+
+python_files = "tests_*.py"
+norecursedirs = ["static", ".git"]
+python_functions = ["test"]
