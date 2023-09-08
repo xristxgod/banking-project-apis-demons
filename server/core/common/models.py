@@ -6,7 +6,8 @@ from sqlalchemy import Column
 from config.database import Base
 
 
-class Model(Base, abc.ABC):
+class Model(Base):
+    __abstract__ = True
     __tablename__ = NotImplementedError
 
     id = Column(fields.Integer, primary_key=True, autoincrement=True)
