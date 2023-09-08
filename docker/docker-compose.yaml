@@ -1,0 +1,58 @@
+version: '3.5'
+
+networks:
+  merchant-nw:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: merchant-volume-postgres-data
+    driver: local
+
+  postgres-history:
+    name: merchant-volume-postgres-history
+    driver: local
+
+  redis-data:
+    name: merchant-volume-redis-data
+    driver: local
+
+services:
+  postgres:
+    container_name: merchant-database
+    image: postgres:13.8-alpine
+    restart: always
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-history:/root/
+    networks:
+      - merchant-nw
+    environment:
+      POSTGRES_USER: "merchant-user"
+      POSTGRES_PASSWORD: "merchant-password"
+      POSTGRES_DB: "merchant-db"
+
+  rabbitmq:
+    container_name: merchant-rabbitmq
+    image: rabbitmq:3.8-management-alpine
+    restart: always
+    expose:
+      - 5672
+      - 15672
+    networks:
+      - merchant-nw
+
+  redis:
+    container_name: merchant-redis
+    image: redis:alpine
+    restart: always
+    ports:
+      - "7000:6379"
+    expose:
+      - 6379
+    volumes:
+      - redis-data:/data
+    networks:
+      - merchant-nw
