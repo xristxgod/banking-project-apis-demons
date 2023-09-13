@@ -11,16 +11,17 @@ ModelType = TypeVar('ModelType', bound=Base)
 
 class RawCRUD(metaclass=abc.ABCMeta):
     model = ModelType
+    db: str = 'default'
 
     @classmethod
-    @db_query_handler
+    @db_query_handler(db=db)
     async def raw_get(cls, filters: list, session: AsyncSession):
         query = select(cls.model).where(*filters).limit(1)
         qs = await session.execute(query)
         return qs.scalar()
 
     @classmethod
-    @db_query_handler
+    @db_query_handler(db=db)
     async def raw_filter(cls, filters: list, session: AsyncSession, order_by: Optional[list] = None,
                          limit: Optional[int] = None, offset: Optional[int] = None):
         query = select(cls.model).where(*filters)
@@ -37,7 +38,7 @@ class RawCRUD(metaclass=abc.ABCMeta):
         return result.scalars()
 
     @classmethod
-    @db_query_handler
+    @db_query_handler(db=db)
     async def raw_create(cls, obj: model, session: AsyncSession, auto_commit: bool = True):
         session.add(obj)
         if auto_commit:
@@ -45,7 +46,7 @@ class RawCRUD(metaclass=abc.ABCMeta):
         return obj
 
     @classmethod
-    @db_query_handler
+    @db_query_handler(db=db)
     async def raw_update(cls, obj: model, data: dict, session: AsyncSession, auto_commit: bool = True):
         for column, value in data.items():
             setattr(obj, column, value)
@@ -55,7 +56,7 @@ class RawCRUD(metaclass=abc.ABCMeta):
         return obj
 
     @classmethod
-    @db_query_handler
+    @db_query_handler(db=db)
     async def raw_delete(cls, obj: model, session: AsyncSession, auto_commit: bool = True):
         await session.delete(obj)
         if auto_commit:
@@ -97,5 +98,5 @@ class BaseDAO(RawCRUD, metaclass=abc.ABCMeta):
         return await cls.raw_update(obj=obj, data=data, session=session, **kwargs)
 
     @classmethod
-    async def delete(cls, model: model, *, session: Optional[AsyncSession] = None, **kwargs):
-        return await cls.raw_delete(model=model, session=session, **kwargs)
+    async def delete(cls, obj: model, *, session: Optional[AsyncSession] = None, **kwargs):
+        return await cls.raw_delete(obj=obj, session=session, **kwargs)

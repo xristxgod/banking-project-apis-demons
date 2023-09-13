@@ -94,7 +94,12 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
 
     async def get_search_data(self) -> dict:
         # TODO
-        pass
+        return {
+            # address: order_id
+            'direct_payments': {},
+            # provider_address: order_id
+            'provider_payments': {},
+        }
 
     async def scrape_block(self, block_number: int):
         block = await self.node.get_block_detail(block_number=block_number)
