@@ -15,3 +15,5 @@ DATABASES = {
     'sync:default': DATABASE_URL + '/merchant-db',
     'sync:exchange-rate': DATABASE_URL + '/exchange-rate-db',
 }
+
+EXCHANGERATE_API_KEY = os.getenv('EXCHANGERATE_API_KEY')
