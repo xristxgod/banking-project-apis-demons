@@ -10,7 +10,11 @@ from config.database import Base
 from core.common.meta import Singleton
 
 
-class Cached(metaclass=Singleton):
+class Cache(metaclass=Singleton):
+    __slots__ = (
+        '_storage',
+    )
+
     @classmethod
     def _vary_on(cls, function: object, args, kwargs):
         args_names = inspect.getfullargspec(function)[0]
@@ -34,6 +38,9 @@ class Cached(metaclass=Singleton):
         return result
 
     def __init__(self):
+        self.setup()
+
+    def setup(self):
         self._storage: dict[str: tuple[Any, datetime]] = {}
 
     def get_slot_name(self, function: object, args, kwargs) -> str:
@@ -46,34 +53,40 @@ class Cached(metaclass=Singleton):
             ).encode('utf-8')).hexdigest() if params else ''
         ])
 
-    def _get_actual_result(self, key: str, ttl: int | float) -> tuple:
+    def _sync_get_actual_result(self, key: str, ttl: int | float) -> tuple:
         result, t = self._storage.get(key, (None, datetime.min))
         if datetime.now() > t + timedelta(seconds=ttl):
             self._storage.pop(key, None)
             result = None
         return result, t
 
-    def _set_actual_result(self, key: str, result: Any):
+    async def _async_get_actual_result(self, key: str, ttl: int | float) -> tuple:
+        return self._sync_get_actual_result(key=key, ttl=ttl)
+
+    def _sync_set_actual_result(self, key: str, result: Any):
         self._storage[key] = (result, datetime.now())
+
+    async def _async_set_actual_result(self, key: str, result: Any):
+        return self._sync_set_actual_result(key=key, result=result)
 
     def cached(self, ttl: float | int):
         def decorator(function):
             @functools.wraps(function)
             def sync_wrapper(*args, **kwargs):
                 key = self.get_slot_name(function, args, kwargs)
-                result, t = self._get_actual_result(key=key, ttl=ttl)
+                result, t = self._sync_get_actual_result(key=key, ttl=ttl)
                 if result is None:
                     result = function(*args, **kwargs)
-                    self._set_actual_result(key=key, result=result)
+                    self._sync_set_actual_result(key=key, result=result)
                 return result
 
             @functools.wraps(function)
             async def async_wrapper(*args, **kwargs):
                 key = self.get_slot_name(function, args, kwargs)
-                result, t = self._get_actual_result(key=key, ttl=ttl)
+                result, t = await self._async_get_actual_result(key=key, ttl=ttl)
                 if result is None:
                     result = await function(*args, **kwargs)
-                    self._set_actual_result(key=key, result=result)
+                    await self._async_set_actual_result(key=key, result=result)
                 return result
 
             if asyncio.iscoroutinefunction(function):
@@ -87,4 +100,4 @@ class Cached(metaclass=Singleton):
         return self.cached(ttl=ttl)
 
 
-cached = Cached()
+cached = Cache()
