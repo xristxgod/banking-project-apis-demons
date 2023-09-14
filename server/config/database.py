@@ -10,7 +10,6 @@ import settings
 Base = declarative_base()
 metadata = Base.metadata
 
-
 engine: AsyncEngine = create_async_engine(settings.DATABASES['default'])
 session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 extra_engines = {
