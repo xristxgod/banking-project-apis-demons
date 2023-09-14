@@ -1,4 +1,5 @@
 import celery
+from celery.schedules import crontab
 
 import settings
 
@@ -15,4 +16,13 @@ app.conf.update(
     timezone='UTC',
 )
 
-app.conf.beat_schedule = {}
+app.conf.beat_schedule = {
+    'parsing-crypto-rates': {
+        'task': 'apps.exchange_rates.tasks.parsing_crypto_rates_task',
+        'schedule': crontab(minute='*/5'),
+    },
+    'parsing-fiat-rates': {
+        'task': 'apps.exchange_rates.tasks.parsing_fiat_rates_task',
+        'schedule': crontab(day_of_week='*/1'),
+    },
+}
