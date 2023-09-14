@@ -16,8 +16,8 @@ DATABASES = {
     'sync:exchange-rate': DATABASE_URL + '/exchange-rate-db',
 }
 
-RABBITMQ_URL = os.getenv('RABBITMQ_URL')
-REDIS_URL = os.getenv('REDIS_URL')
+RABBITMQ_URL = os.getenv('RABBITMQ_URL', '')
+REDIS_URL = os.getenv('REDIS_URL', '')
 
 CACHED_BACKEND_URL = REDIS_URL + '/1'
 ADMIN_CACHED_BACKEND_URL = REDIS_URL + '/2'
