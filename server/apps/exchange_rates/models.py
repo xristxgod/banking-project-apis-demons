@@ -18,6 +18,7 @@ class FiatCurrency(models.Model):
     __tablename__ = 'exchange_rates__fiat_currency'
 
     name = Column(fields.String(length=255), nullable=False)
+    exchange_rate_id = Column(fields.String(length=255), nullable=True, default='')
 
     def __repr__(self):
         return f'Currency: {self.name}'
