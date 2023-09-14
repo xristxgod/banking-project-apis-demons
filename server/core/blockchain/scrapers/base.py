@@ -2,9 +2,10 @@ import abc
 import asyncio
 import decimal
 import json
-from typing import Optional
+from typing import Optional, Self
 from dataclasses import dataclass, asdict
 
+from config import celery_app
 from core.blockchain.gates import get_node
 from core.blockchain.storages import BlockNumberStorage
 from core.blockchain.dao import StableCoinDAO, OrderProviderDAO
@@ -30,6 +31,10 @@ class Message:
     outputs: list[Participant]
     currency_id: Optional[StableCoin.id] = None
 
+    @classmethod
+    def from_json(cls, raw_message: dict) -> Self:
+        return cls(**raw_message)
+
     def to_json(self) -> str:
         return json.dumps(asdict(self), default=str)
 
@@ -42,7 +47,7 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     dependency_update_interval_by_blocks: int = 100         # every 10 blocks
     sleep_after_new_block = 1                               # 1 sec
 
-    task_path = 'core.blockchain.tasks.message_parsing_task'
+    task_path = 'core.blockchain.tasks.parsing_daemons_messages_task'
 
     def __init__(self, network: Network):
         self.node = get_node(network=network)
@@ -89,8 +94,12 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     update_dependencies = setup_dependencies
 
     def send_to_task(self, message: Message):
-        json_message = message.to_json()
-        # TODO
+        celery_app.send_task(
+            self.task_path,
+            kwargs=dict(
+                message=message.to_json(),
+            )
+        )
 
     async def get_search_data(self) -> dict:
         # TODO
