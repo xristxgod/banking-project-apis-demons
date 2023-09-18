@@ -10,6 +10,12 @@ class AbstractNode(metaclass=abc.ABCMeta):
         'client',
     )
 
+    @abc.abstractclassmethod
+    def encode_data(cls, func_args: tuple, params: tuple) -> str: ...
+
+    @abc.abstractclassmethod
+    def decode_data(cls, func_args: tuple, data: str) -> tuple: ...
+
     def __init__(self, network: Network):
         self.network = network
 
