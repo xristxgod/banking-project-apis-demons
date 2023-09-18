@@ -13,7 +13,7 @@ class CurrencyDAOMixin:
     extra_db = 'exchange-rate'
 
     @classmethod
-    def __get_rate_table(cls, obj):
+    def get_rate_table(cls, obj):
         import time
         import sqlalchemy as fields
         from sqlalchemy import Table, Column
@@ -34,7 +34,7 @@ class CurrencyDAOMixin:
     @classmethod
     @db_query_handler(db='exchange-rate')
     async def create_rate_model(cls, obj, *, session: Optional[AsyncSession] = None, **kwargs):
-        table = cls.__get_rate_table(obj=obj)
+        table = cls.get_rate_table(obj=obj)
 
         sql = CreateTable(table)
         await session.execute(sql)
@@ -44,7 +44,7 @@ class CurrencyDAOMixin:
     @classmethod
     @db_query_handler(db='exchange-rate')
     async def drop_rate_model(cls, obj, *, session: Optional[AsyncSession] = None, **kwargs):
-        table = cls.__get_rate_table(obj=obj)
+        table = cls.get_rate_table(obj=obj)
         sql = DropTable(table)
         await session.execute(sql)
         if kwargs.get('auto_commit', False):
@@ -52,7 +52,7 @@ class CurrencyDAOMixin:
 
     @classmethod
     async def get_rate_dao(cls, obj) -> Type[BaseDAO]:
-        table = cls.__get_rate_table(obj=obj)
+        table = cls.get_rate_table(obj=obj)
 
         class RateDAO(BaseDAO):
             model = table
