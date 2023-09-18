@@ -24,8 +24,17 @@ async def client():
         yield client
 
 
+@pytest.fixture(scope='session', autouse=True)
+async def _create_tables():
+    from config.database import Base, engine
+    async with engine.connect() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+        yield
+        await connection.run_sync(Base.metadata.drop_all)
+
+
 @pytest.fixture(scope='session')
-async def db_session():
+async def dbsession():
     from config.database import session_maker
 
     async with session_maker() as session:
