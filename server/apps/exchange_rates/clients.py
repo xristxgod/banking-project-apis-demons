@@ -7,7 +7,7 @@ import aiohttp
 import settings
 
 
-class BaseClient(metaclass=abc.ABC):
+class BaseClient(metaclass=abc.ABCMeta):
     url: str
     headers: dict = {}
 
@@ -57,11 +57,11 @@ class ExchangeRateClient(BaseClient):
         )
         result = {}
         for coin in currencies:
-            price = response['conversion_rates'].get(coin.upper(), 0)
-            result.update({
-                coin: {
-                    'value': decimal.Decimal(repr(price)),
-                    'timestamp': response['time_last_update_unix'],
-                }
-            })
+            if price := response['conversion_rates'].get(coin.upper()):
+                result.update({
+                    coin: {
+                        'value': decimal.Decimal(repr(price)),
+                        'timestamp': response['time_last_update_unix'],
+                    }
+                })
         return result
