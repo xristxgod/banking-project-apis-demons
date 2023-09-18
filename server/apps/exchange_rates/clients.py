@@ -20,7 +20,7 @@ class BaseClient(metaclass=abc.ABC):
         return response
 
     @abc.abstractclassmethod
-    async def get_prices(cls, currency: list[str]) -> dict: ...
+    async def get_prices(cls, currencies: list[str]) -> dict: ...
 
 
 class CoinGeckoClient(BaseClient):
@@ -28,11 +28,11 @@ class CoinGeckoClient(BaseClient):
     url = 'https://api.coingecko.com/'
 
     @classmethod
-    async def get_prices(cls, currency: list[str]) -> dict:
+    async def get_prices(cls, currencies: list[str]) -> dict:
         response = await cls.make_request(
             method='/api/v3/simple/price/',
             params={
-                'ids': ','.join(currency),
+                'ids': ','.join(currencies),
                 'vs_currencies': 'usd',
                 'include_last_updated_at': 'true',
             }
@@ -51,12 +51,12 @@ class ExchangeRateClient(BaseClient):
     uri = 'https://v6.exchangerate-api.com/'
 
     @classmethod
-    async def get_prices(cls, currency: list[str]) -> dict:
+    async def get_prices(cls, currencies: list[str]) -> dict:
         response = await cls.make_request(
             method=f'/v6/{settings.EXCHANGERATE_API_KEY}/latest/USD',
         )
         result = {}
-        for coin in currency:
+        for coin in currencies:
             price = response['conversion_rates'].get(coin.upper(), 0)
             result.update({
                 coin: {

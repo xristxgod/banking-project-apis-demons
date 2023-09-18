@@ -9,7 +9,7 @@ from apps.exchange_rates.clients import BaseClient, CoinGeckoClient, ExchangeRat
 
 async def _parsing_rates(dao: Type[BaseDAO], client: Type[BaseClient], field_id: str):
     currencies = await dao.all()
-    result = await client.get_prices(currency=[
+    result = await client.get_prices(currencies=[
         getattr(currency, field_id)
         for currency in currencies
     ])
