@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import decimal
+import enum
 import json
 from typing import Optional, Self
 from dataclasses import dataclass, asdict
@@ -10,6 +11,12 @@ from core.blockchain.gates import get_node
 from core.blockchain.storages import BlockNumberStorage
 from core.blockchain.dao import StableCoinDAO, OrderProviderDAO
 from core.blockchain.models import Network, StableCoin, OrderProvider
+
+
+class TransactionType(enum.StrEnum):
+    INPUT_NATIVE_TRANSACTION = 0                # Transfer
+    INPUT_STABLE_COIN_TRANSACTION = 1           # Transfer
+    INPUT_PROVIDER_TRANSACTION = 2
 
 
 @dataclass()
@@ -53,7 +60,8 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
         self.node = get_node(network=network)
         self.storage = BlockNumberStorage(storage_name=str(self))
 
-        self.stable_coins: dict[str: int] = {}
+        self.stable_coins: dict[str: list[int, int]] = {}
+        self.points_to_stable_coin_address: dict[int: str] = {}
         self.order_providers: list[str] = []
 
         self.logger = self._get_logger()
@@ -76,6 +84,10 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
                 stable_coin.address: stable_coin.decimal_place
                 for stable_coin in stable_coins
             }
+            self.points_to_stable_coin_address = {
+                stable_coin.id: stable_coin.address
+                for stable_coin in stable_coins
+            }
 
     async def update_order_providers(self):
         if self.use_order_providers:
@@ -94,12 +106,13 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     update_dependencies = setup_dependencies
 
     def send_to_task(self, message: Message):
-        celery_app.send_task(
-            self.task_path,
-            kwargs=dict(
-                message=message.to_json(),
+        if message:
+            celery_app.send_task(
+                self.task_path,
+                kwargs=dict(
+                    message=message.to_json(),
+                )
             )
-        )
 
     async def get_search_data(self) -> dict:
         # TODO
