@@ -44,7 +44,13 @@ class CurrencyServiceMixin:
     @classmethod
     async def create(cls, models: list[JSONModel], **kwargs):
         for model in models:
-            await cls.simple_create(model=model)
+            await cls.simple_create(model=model, **kwargs)
+
+    @classmethod
+    async def delete(cls, models: list[JSONModel], **kwargs):
+        for model in models:
+            if model.get('id'):
+                await cls.simple_delete(model=model, **kwargs)
 
 
 class CryptoCurrencyService(CurrencyServiceMixin, AbstractModelService):
