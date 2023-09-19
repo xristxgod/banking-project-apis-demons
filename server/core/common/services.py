@@ -7,11 +7,11 @@ from core.common.dao import BaseDAO
 class JSONModel:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
-            setattr(self, f'field__{value}', value)
+            setattr(self, f'field__{key}', value)
 
     def to_json(self):
         result = {}
-        for key, value in self.__dict__:
+        for key, value in self.__dict__.items():
             if key.startswith('field__'):
                 result.update({
                     key.replace('field__', ''): value,
