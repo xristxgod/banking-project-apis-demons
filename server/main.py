@@ -5,6 +5,7 @@ from config.database import engine, extra_engines
 from config.auth import get_authentication_backend
 
 from core.blockchain import admin as blockchain_admin
+from core.blockchain import router as blockchain_router
 
 app = fastapi.FastAPI(
     title='Merchant',
@@ -27,6 +28,10 @@ admin_exchange_rate = Admin(
     base_url='/admin-exchange-rate'
 )
 
+# Include admin model
 admin.add_view(blockchain_admin.NetworkAdmin)
 admin.add_view(blockchain_admin.StableCoinAdmin)
 admin.add_view(blockchain_admin.OrderProviderAdmin)
+
+# Include routers
+app.include_router(router=blockchain_router.router, prefix='/api')
