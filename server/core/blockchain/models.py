@@ -64,6 +64,7 @@ class StableCoin(models.Model):
     decimal_place = Column(fields.Integer, nullable=True, default=18)
     abi_type = Column(fields.Enum(ABIType), nullable=True)
     extra = Column(fields.JSON, nullable=True, default=None)
+    is_active = Column(fields.Boolean, default=True, nullable=False)
 
     network_id = Column(fields.Integer, fields.ForeignKey('blockchain__network.id', ondelete='CASCADE'))
     network = relationship(Network, backref='stable_coins', lazy='selectin')
