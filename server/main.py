@@ -22,4 +22,3 @@ admin_exchange_rate = Admin(
     templates_dir='./templates',
     authentication_backend=None,    # TODO
 )
-

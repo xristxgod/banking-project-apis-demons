@@ -1,9 +1,11 @@
+import dataclasses
 import enum
 
 import sqlalchemy as fields
 from sqlalchemy import Column
 from sqlalchemy.orm import relationship
 
+import settings
 from core.common import models
 
 
@@ -24,7 +26,14 @@ class ABIType(enum.Enum):
 class Network(models.Model):
     __tablename__ = 'blockchain__network'
 
+    @dataclasses.dataclass()
+    class CentralWallet:
+        address: str
+        private_key: str
+        mnemonic: str
+
     name = Column(fields.String(length=255), nullable=False)
+    short_name = Column(fields.String(length=255), nullable=False)
 
     native_symbol = Column(fields.String(length=255), nullable=False)
     native_decimal_place = Column(fields.Integer, nullable=False, default=18)
@@ -32,6 +41,12 @@ class Network(models.Model):
     node_url = Column(fields.String(length=255), nullable=False)
     is_active = Column(fields.Boolean, default=True, nullable=False)
     family = Column(fields.Enum(NetworkFamily), nullable=False)
+
+    @property
+    def central_address(self) -> CentralWallet:
+        return self.CentralWallet(
+            **settings.BLOCKCHAIN_CENTRAL_WALLETS[self.short_name.lower()],
+        )
 
     def __repr__(self):
         return f'{self.name} ({self.family.value})'

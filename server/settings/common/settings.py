@@ -33,3 +33,21 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 EXCHANGERATE_API_KEY = os.getenv('EXCHANGERATE_API_KEY')
+
+BLOCKCHAIN_CENTRAL_WALLETS = {
+    'eth': {
+        'address': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_ADDRESS_ETH'),
+        'private_key': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_PRIVATE_KEY_ETH'),
+        'mnemonic': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_MNEMONIC_ETH'),
+    },
+    'bsc': {
+        'address': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_ADDRESS_BSC'),
+        'private_key': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_PRIVATE_KEY_BSC'),
+        'mnemonic': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_MNEMONIC_BSC'),
+    },
+    'tron': {
+        'address': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_ADDRESS_TRON'),
+        'private_key': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_PRIVATE_KEY_TRON'),
+        'mnemonic': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_MNEMONIC_TRON'),
+    },
+}

@@ -3,7 +3,6 @@ from __future__ import annotations
 import decimal
 from typing import Coroutine
 
-import settings
 from core.blockchain.scrapers.base import TransactionType
 from core.blockchain.scrapers.base import Message, Participant
 from core.blockchain.scrapers.base import AbstractTransactionScraper
@@ -89,7 +88,7 @@ async def get_input_provider_transaction_handler(scraper: TransactionScraper,
             amount=amount,
         )],
         outputs=[Participant(
-            address='',  # TODO
+            address=scraper.central_wallet.address,
             amount=amount
         )],
         currency_id=currency_id

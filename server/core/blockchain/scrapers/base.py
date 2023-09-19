@@ -59,6 +59,7 @@ class AbstractTransactionScraper(metaclass=abc.ABCMeta):
     def __init__(self, network: Network):
         self.node = get_node(network=network)
         self.storage = BlockNumberStorage(storage_name=str(self))
+        self.central_wallet = network.central_address
 
         self.stable_coins: dict[str: list[int, int]] = {}
         self.points_to_stable_coin_address: dict[int: str] = {}
