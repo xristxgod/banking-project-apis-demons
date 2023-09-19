@@ -1,7 +1,8 @@
+# JetBrains IDE
+.idea
+
+# smth else
+venv/
+logs/
+*.env
 local_*
-backend/.idea/
-backend/.pytest_cache/
-backend/venv/
-backend/db.sqlite3
-*__pycache__*
-frontend/node_modules/
