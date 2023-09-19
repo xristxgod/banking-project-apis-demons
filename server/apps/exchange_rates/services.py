@@ -8,7 +8,7 @@ from apps.exchange_rates.dao import CryptoCurrencyDAO, FiatCurrencyDAO
 
 class CurrencyServiceMixin:
     @classmethod
-    async def simple_create(cls, model: JSONModel, **kwargs) -> Model:
+    async def simple_create(cls, model: JSONModel, *, with_rate_model: bool = True, **kwargs) -> Model:
         async with session_maker() as session:
             if not hasattr(model, 'id') or not await cls.dao.exists(filters=[cls.dao.model.id == model.id]):
                 obj = await cls.dao.create(
@@ -18,7 +18,7 @@ class CurrencyServiceMixin:
                     session=session,
                     **kwargs,
                 )
-            if kwargs.get('with_rate_model', True):
+            if with_rate_model:
                 async with extra_session_maker[cls.dao.extra_db]() as extra_session:
                     if not await cls.dao.has_rate_table(obj=obj, session=extra_session):
                         await cls.dao.create_rate_model(
@@ -29,10 +29,10 @@ class CurrencyServiceMixin:
             return obj
 
     @classmethod
-    async def simple_delete(cls, model: JSONModel, **kwargs) -> Model:
+    async def simple_delete(cls, model: JSONModel, *, with_rate_model: bool = True, **kwargs) -> Model:
         async with session_maker() as session:
             if obj := await cls.dao.get_or_none(filters=[cls.dao.model.id == model.get('id')]):
-                if kwargs.get('with_rate_model', True):
+                if with_rate_model:
                     async with extra_session_maker[cls.dao.extra_db]() as extra_session:
                         if await cls.dao.has_rate_table(obj=obj, session=extra_session):
                             await cls.dao.drop_rate_model(obj=obj, session=extra_session)
@@ -45,14 +45,16 @@ class CurrencyServiceMixin:
 
     @classmethod
     async def create(cls, models: list[JSONModel], **kwargs):
+        with_rate_model = kwargs.pop('with_rate_model', True)
         for model in models:
-            await cls.simple_create(model=model, **kwargs)
+            await cls.simple_create(model=model, with_rate_model=with_rate_model, **kwargs)
 
     @classmethod
     async def delete(cls, models: list[JSONModel], **kwargs):
+        with_rate_model = kwargs.pop('with_rate_model', True)
         for model in models:
             if model.get('id'):
-                await cls.simple_delete(model=model, **kwargs)
+                await cls.simple_delete(model=model, with_rate_model=with_rate_model, **kwargs)
 
 
 class CryptoCurrencyService(CurrencyServiceMixin, AbstractModelService):

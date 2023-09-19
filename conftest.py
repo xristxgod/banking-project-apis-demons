@@ -1,8 +1,22 @@
 from typing import Optional
 
 import pytest
+from faker import Faker
 
 from config.database import create_database, drop_database
+
+
+"""
+
+--- Global fixtures ---
+
+"""
+
+
+@pytest.fixture(scope='session')
+def faker() -> Faker:
+    return Faker()
+
 
 
 """
