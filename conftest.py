@@ -2,6 +2,8 @@ from typing import Optional
 
 import pytest
 
+from config.database import create_database, drop_database
+
 
 """
 
@@ -48,12 +50,27 @@ async def client():
 
 
 @pytest.fixture(scope='session', autouse=True)
-async def _create_tables():
+async def init_default_database():
     from config.database import Base, engine
-    async with engine.connect() as connection:
+
+    await create_database(db_name='tests-merchant-db')
+
+    async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-        yield
+
+    yield
+
+    async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
+
+    await drop_database(db_name='tests-merchant-db')
+
+
+@pytest.fixture(scope='session', autouse=True)
+async def init_exchange_rate_database():
+    await create_database(db_name='tests-exchange-rate-db')
+    yield
+    await drop_database(db_name='tests-exchange-rate-db')
 
 
 @pytest.fixture(scope='session')

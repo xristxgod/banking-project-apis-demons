@@ -1,6 +1,7 @@
 import functools
 from typing import Callable, Optional
 
+from sqlalchemy import text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.asyncio.session import AsyncSession, async_sessionmaker
 from sqlalchemy.ext.asyncio.engine import AsyncEngine, create_async_engine
@@ -82,3 +83,37 @@ async def has_table(table_name: str, e: Optional[AsyncEngine] = None):
     e = e or engine
     tables = await get_tables(e=e)
     return table_name in tables
+
+
+async def create_database(db_name: str):
+    base_url = f'{settings.ASYNC_DATABASE_URL}/postgres'
+    eng = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+    async with eng.connect() as connection:
+        result = await connection.execute(
+            text(f"select 1 from pg_catalog.pg_database where datname='{db_name}'")
+        )
+        database_exists = result.scalar() == 1
+    if database_exists:
+        await drop_database(db_name=db_name)
+    async with eng.connect() as conn:
+        await conn.execute(
+            text(f'create database "{db_name}" encoding "utf8" template template1')
+        )
+    await eng.dispose()
+
+
+async def drop_database(db_name: str):
+    base_url = f'{settings.ASYNC_DATABASE_URL}/postgres'
+    eng = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+    async with eng.connect() as conn:
+        disc_users = """
+                SELECT pg_terminate_backend(pg_stat_activity.%(pid_column)s)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = '%(database)s'
+                  AND %(pid_column)s <> pg_backend_pid();
+                """ % {
+            "pid_column": "pid",
+            "database": db_name,
+        }
+        await conn.execute(text(disc_users))
+        await conn.execute(text(f'drop database "{db_name}"'))
