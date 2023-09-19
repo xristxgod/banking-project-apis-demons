@@ -18,7 +18,6 @@ def faker() -> Faker:
     return Faker()
 
 
-
 """
 
 --- Asyncio ---

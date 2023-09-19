@@ -12,7 +12,8 @@ from apps.exchange_rates.services import CryptoCurrencyService, FiatCurrencyServ
     (JSONModel(name='RUB', exchange_rate_id='rub'), FiatCurrency, FiatCurrencyDAO, FiatCurrencyService),
 ])
 async def test_currency_dao(model, obj, dao, service):
-    from config.database import extra_engines, has_table, get_tables
+    from config.database import extra_engines, has_table
+
     currency = await service.simple_create(model=model)
 
     assert currency.name == model.get('name')
@@ -27,4 +28,3 @@ async def test_currency_dao(model, obj, dao, service):
 
     assert not await dao.exists(filters=[obj.id == currency.id])
     assert not await has_table(sub_table_name, e=extra_engine)
-
