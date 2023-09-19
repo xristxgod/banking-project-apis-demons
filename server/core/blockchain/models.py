@@ -32,6 +32,9 @@ class Network(models.Model):
         private_key: str
         mnemonic: str
 
+        def __str__(self):
+            return self.address
+
     name = Column(fields.String(length=255), nullable=False)
     short_name = Column(fields.String(length=255), nullable=False)
 
