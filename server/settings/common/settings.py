@@ -4,6 +4,8 @@ import os
 
 NETWORK = os.getenv('NETWORK', 'COMMON')
 
+BACKEND_SECRET_KEY = os.getenv('BACKEND_SECRET_KEY')
+
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 ASYNC_DATABASE_URL = DATABASE_URL.replace('postgresql', 'postgresql+asyncpg')
 
@@ -50,4 +52,15 @@ BLOCKCHAIN_CENTRAL_WALLETS = {
         'private_key': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_PRIVATE_KEY_TRON'),
         'mnemonic': os.getenv('BLOCKCHAIN_CENTRAL_WALLET_MNEMONIC_TRON'),
     },
+}
+
+ADMIN_CREDENTIALS = {
+    'username': os.getenv('ADMIN_USERNAME'),
+    'password': os.getenv('ADMIN_PASSWORD'),
+}
+
+USE_AUTHORISATIONS = {
+    'swagger': True,
+    'admin': True,
+    'admin-exchange-rate': True,
 }

@@ -2,6 +2,7 @@ import fastapi
 from sqladmin import Admin
 
 from config.database import engine, extra_engines
+from config.auth import get_authentication_backend
 
 app = fastapi.FastAPI(
     title='Merchant',
@@ -12,7 +13,7 @@ admin = Admin(
     engine=engine,
     title='Merchant Admin',
     templates_dir='./templates',
-    authentication_backend=None,    # TODO
+    authentication_backend=get_authentication_backend(backend_name='admin'),
 )
 
 admin_exchange_rate = Admin(
@@ -20,5 +21,5 @@ admin_exchange_rate = Admin(
     engine=extra_engines['exchange-rate'],
     title='Exchange Rate',
     templates_dir='./templates',
-    authentication_backend=None,    # TODO
+    authentication_backend=get_authentication_backend(backend_name='admin-exchange-rate'),
 )
