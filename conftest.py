@@ -1,4 +1,13 @@
+from typing import Optional
+
 import pytest
+
+
+"""
+
+--- Asyncio ---
+
+"""
 
 
 @pytest.fixture(scope="session")
@@ -15,6 +24,13 @@ def event_loop():
     loop.close()
 
 
+"""
+
+--- FastApi ---
+
+"""
+
+
 @pytest.fixture(scope='session')
 async def client():
     from httpx import AsyncClient
@@ -22,6 +38,13 @@ async def client():
 
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
+
+
+"""
+
+--- Database ---
+
+"""
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -39,3 +62,13 @@ async def dbsession():
 
     async with session_maker() as session:
         yield session
+
+
+@pytest.fixture(scope='session')
+def get_dbsession():
+    async def dbsession(db_name: Optional[str] = None):
+        from config.database import session_maker, extra_session_maker
+        async with extra_session_maker.get(db_name, session_maker)() as session:
+            yield session
+
+    return dbsession
