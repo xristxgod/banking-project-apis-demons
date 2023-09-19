@@ -12,11 +12,19 @@ from apps.exchange_rates.services import CryptoCurrencyService, FiatCurrencyServ
     (JSONModel(name='RUB', exchange_rate_id='rub'), FiatCurrency, FiatCurrencyDAO, FiatCurrencyService),
 ])
 async def test_currency_dao(model, obj, dao, service):
-    from config.database import extra_engines, has_table
+    from config.database import extra_engines, has_table, get_tables
     currency = await service.simple_create(model=model)
 
-    assert currency.name == model.field__name
+    assert currency.name == model.get('name')
     assert isinstance(currency, obj)
 
+    extra_engine = extra_engines['exchange-rate']
+
     sub_table_name = dao.get_rate_table_name(obj=currency)
-    assert await has_table(table_name=sub_table_name, e=extra_engines['exchange-rate'])
+    assert await has_table(table_name=sub_table_name, e=extra_engine)
+
+    await service.simple_delete(model=JSONModel(id=currency.id))
+
+    assert not await dao.exists(filters=[obj.id == currency.id])
+    assert not await has_table(sub_table_name, e=extra_engine)
+

@@ -28,6 +28,20 @@ class CurrencyServiceMixin:
             return obj
 
     @classmethod
+    async def simple_delete(cls, model: JSONModel, **kwargs) -> Model:
+        async with session_maker() as session:
+            if obj := await cls.dao.get_or_none(filters=[cls.dao.model.id == model.get('id')]):
+                async with extra_session_maker[cls.dao.extra_db]() as extra_session:
+                    if await cls.dao.has_rate_table(obj=obj, session=extra_session):
+                        await cls.dao.drop_rate_model(obj=obj, session=extra_session)
+
+                await cls.dao.delete(
+                    obj=obj,
+                    session=session,
+                    **kwargs,
+                )
+
+    @classmethod
     async def create(cls, models: list[JSONModel], **kwargs):
         for model in models:
             await cls.simple_create(model=model)

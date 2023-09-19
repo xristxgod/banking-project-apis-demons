@@ -1,11 +1,11 @@
 from typing import Type, Optional
 
-from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.schema import DropTable, CreateTable
 
+from apps.exchange_rates.models import CryptoCurrency, FiatCurrency
 from config.database import metadata, db_query_handler, has_table
 from core.common.dao import BaseDAO
-from apps.exchange_rates.models import CryptoCurrency, FiatCurrency
 
 
 class CurrencyDAOMixin:
@@ -26,6 +26,7 @@ class CurrencyDAOMixin:
             cls.get_rate_table_name(obj=obj), metadata,
             Column('timestamp', fields.TIMESTAMP, default=time.time_ns(), primary_key=True),
             Column('price', fields.Numeric(25, 3), default=0.0),
+            extend_existing=True,
         )
         return table
 
