@@ -32,7 +32,7 @@ class CurrencyServiceMixin:
     async def simple_delete(cls, model: JSONModel, **kwargs) -> Model:
         async with session_maker() as session:
             if obj := await cls.dao.get_or_none(filters=[cls.dao.model.id == model.get('id')]):
-                if kwargs.get('with_rate_model'):
+                if kwargs.get('with_rate_model', True):
                     async with extra_session_maker[cls.dao.extra_db]() as extra_session:
                         if await cls.dao.has_rate_table(obj=obj, session=extra_session):
                             await cls.dao.drop_rate_model(obj=obj, session=extra_session)
